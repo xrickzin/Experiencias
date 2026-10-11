@@ -1,0 +1,127 @@
+# Laço
+
+## Projeto
+
+**Laço** é um aplicativo mobile privado para **casais** planejarem, viverem e preservarem experiências compartilhadas.
+
+Ciclo da experiência (entidade central): **Desejo → Planejamento → Vivendo → Memória**. **Nossa História** é a área que apresenta as memórias; não é um estado.
+
+Não é aplicativo de viagens, gerenciador de tarefas, Kanban, rede social, diário genérico nem simples galeria de fotos. Viagens são só um tipo de experiência.
+
+## Estado atual
+
+Documentação de produto, decisões e arquitetura consolidadas. O aplicativo em `app/` é uma casca mínima (uma tela "Laço") derivada do template do Expo, cuja demonstração foi removida na Fase 0; nenhuma funcionalidade de produto (conta, persistência, ciclo da experiência) foi implementada. A direção de UX está definida em `docs/ux/` e suas divergências com o produto foram resolvidas (ADR 022); a direção visual foi aprovada com pendências (ADR 026; proposta em `docs/ux/proposal/`) e a Fase 0 **não está concluída**: as etapas E0 a E6, E8 (configuração web removida), E10 (fontes Fraunces e Figtree), E11 (nome `Laço`, `slug`/`scheme` `laco`, id `com.xrickzin.laco`) e E13 (ESLint) foram executadas, com lint limpo (0 erros e 0 avisos) nos 7 arquivos de `src/` (`docs/development/phase-0-log.md`); **E12 foi parcial (`expo-device` e `expo-web-browser` removidos) e E7 e E9 não foram executadas e aguardam autorização** (plano em `docs/development/phase-0-plan.md`). Na Fase 1 foram implementados, sem validação em aparelho nem projeto Supabase configurado, o onboarding, a autenticação e o vínculo do casal (`docs/development/phase-1-log.md`). Depois da Fase 0 técnica foi implementada a **casca visual integrada** (navegação com `+` central, Início, Desejos, Nossa História e criação local de desejo; `docs/development/visual-shell.md`), com os desejos ainda locais e temporários. Nenhuma validação em aparelho ou emulador foi feita. Não executar etapas além das autorizadas nem implementar telas além das já entregues.
+
+---
+
+## Documentação
+
+`docs/product/` é a **fonte de verdade das regras de produto**. Ler apenas o que a tarefa exige, nunca a pasta inteira. Ponto de entrada: [product-definition.md](docs/product/product-definition.md).
+
+| Preciso de… | Consultar |
+|---|---|
+| Visão geral, terminologia, mapa dos documentos | [docs/product/product-definition.md](docs/product/product-definition.md) |
+| Identidade, princípios, o que o produto não é | [docs/product/vision.md](docs/product/vision.md) |
+| Estados, transições, criação, cancelamento | [docs/product/lifecycle.md](docs/product/lifecycle.md) |
+| Datas e automação | [docs/product/dates-and-automation.md](docs/product/dates-and-automation.md) |
+| Permissões, privacidade das impressões | [docs/product/permissions.md](docs/product/permissions.md) |
+| Memória, registros, Nossa História | [docs/product/memory.md](docs/product/memory.md) |
+| Áreas do app e entrada (Criar/Vincular Laço) | [docs/product/navigation.md](docs/product/navigation.md) |
+| O que entra no MVP / ideias futuras | [docs/product/mvp.md](docs/product/mvp.md) · [docs/product/future.md](docs/product/future.md) |
+| O que ainda não foi decidido | [docs/product/open-questions.md](docs/product/open-questions.md) |
+| Por que algo foi decidido | [docs/decisions/](docs/decisions/README.md) |
+| Camadas, modelo de dados, segurança, decisões técnicas | [docs/architecture/](docs/architecture/overview.md) |
+| Como implementar, convenções, roadmap | [docs/development/](docs/development/implementation-guidelines.md) |
+| Direção de UX e de design (telas ainda não implementadas) | [docs/ux/README.md](docs/ux/README.md) · [docs/ux/design-direction.md](docs/ux/design-direction.md) · [docs/ux/proposal/](docs/ux/proposal/visual-direction.md) · pendências: [docs/ux/open-questions-ux.md](docs/ux/open-questions-ux.md) |
+| Regras de Expo / React Native | [app/AGENTS.md](app/AGENTS.md) |
+
+> Antes de implementar uma funcionalidade de produto, consulte a documentação correspondente em `docs/product/` e as decisões relevantes em `docs/decisions/`.
+
+> Não assumir comportamento de produto que não esteja definido. Quando uma decisão estiver aberta e impactar o comportamento, parar e apresentar alternativas antes de implementar.
+
+**O que não está escrito não deve ser implementado.** Ideias em `future.md` ou em outros documentos conceituais não são requisitos; só o que está em `mvp.md` faz parte do escopo atual.
+
+Quando uma decisão de produto for consolidada: registrar em `docs/decisions/`, atualizar o documento de produto e remover a pendência de `open-questions.md`.
+
+---
+
+## Stack
+
+React Native · Expo · TypeScript · Expo Router · Supabase · PostgreSQL · Supabase Storage · Git/GitHub
+
+Camadas: UI → hooks / lógica de apresentação → regras de negócio / serviços → Supabase → PostgreSQL / Storage. Detalhes em [docs/architecture/overview.md](docs/architecture/overview.md).
+
+---
+
+## Princípios
+
+* Priorizar simplicidade; evitar overengineering; aplicar YAGNI.
+* Não implementar funcionalidades futuras, nem adicionar funcionalidades sem necessidade identificada.
+* Preferir soluções nativas e simples; não instalar dependências sem necessidade clara.
+* Reutilizar o que já existe no projeto antes de criar algo novo; não criar abstrações antecipadamente.
+* Criar componentes reutilizáveis só quando houver reutilização real.
+* Manter separação clara entre UI, regras de negócio e serviços.
+* Não alterar arquitetura sem justificar; não substituir código existente sem entender sua finalidade.
+
+---
+
+## Desenvolvimento orientado a etapas
+
+Antes de implementar:
+
+1. Entender o requisito e conferir a documentação (seção acima).
+2. Identificar arquivos e dependências relevantes e impactos na arquitetura.
+3. Propor abordagem quando houver decisão relevante.
+4. Implementar a menor solução adequada.
+5. Executar validações e corrigir problemas.
+6. Atualizar a documentação quando necessário.
+
+Detalhes em [docs/development/implementation-guidelines.md](docs/development/implementation-guidelines.md).
+
+---
+
+## Uso eficiente de contexto
+
+* Não ler arquivos irrelevantes para a tarefa; identificar os necessários antes de abrir.
+* Preferir alterações pequenas e focadas; evitar mexer em vários arquivos quando uma alteração localizada resolver.
+* Não repetir conteúdo já conhecido; não gerar código especulativo nem documentação extensa para mudanças triviais.
+* Tarefas simples: resposta objetiva. Tarefas complexas com decisão arquitetural: apresentar a estratégia primeiro.
+
+---
+
+## Qualidade
+
+Uma tarefa não está concluída só porque o código compila. Verificar, quando aplicável: TypeScript, lint, testes existentes, comportamento esperado, estados de erro, vazios e de carregamento, acessibilidade, diferentes tamanhos de tela e efeitos colaterais.
+
+Quando uma validação não puder ser executada, informar explicitamente.
+
+---
+
+## Git
+
+* Commits pequenos e relacionados a uma mudança específica; sem commits gigantes com funcionalidades não relacionadas.
+* Não criar commits automaticamente sem solicitação explícita.
+* Não alterar o histórico sem autorização explícita.
+
+---
+
+## Decisões indefinidas
+
+Se uma decisão de produto estiver indefinida:
+
+1. explicar brevemente o problema;
+2. apresentar alternativas relevantes;
+3. indicar os impactos de cada alternativa;
+4. perguntar antes de assumir uma solução.
+
+Se uma decisão técnica estiver indefinida, evitar escolher solução complexa apenas por preferência técnica.
+
+---
+
+## Comunicação
+
+* Determinar exatamente o que precisa ser alterado; não fazer alterações não relacionadas.
+* Informar quais arquivos pretende alterar quando a mudança for relevante.
+* Depois da implementação, informar o que foi alterado e quais validações foram executadas.
+* Problema fora do escopo: informar sem corrigir automaticamente, salvo se impedir a tarefa atual.
+* Priorizar clareza sobre quantidade de texto.

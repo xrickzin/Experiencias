@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laço — prévia da direção visual (proposta)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FAF6EE; --surface:#F2ECE0; --selected:#E8E0D1; --border:#D9CFBD; --outline:#8A806F;
+  --text:#2B2724; --muted:#6A6258; --accent:#B3242B; --accent-strong:#8E1A21; --accent-soft:#D38283; --warning:#8A5410; --error:#A3361C; --destructive:#A3361C;
+  --photo1:#C9B79C; --photo2:#A8957A; --page:#EDE6D8;
+}
+:root[data-mode="dark"]{
+  --bg:#1B1815; --surface:#26221E; --selected:#322D28; --border:#3D3731; --outline:#7F766B;
+  --text:#F3EDE2; --muted:#B5ACA0; --accent:#E5636A; --accent-strong:#E5636A; --accent-soft:#944548; --warning:#E3A24F; --error:#EE8A68; --destructive:#EE8A68;
+  --photo1:#6B5E4D; --photo2:#4A4036; --page:#100E0C;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:400 16px/24px Figtree,system-ui,sans-serif}
+header.top{padding:32px 24px 8px;max-width:1200px;margin:auto}
+header.top h1{font:600 30px/36px Fraunces,Georgia,serif;margin:0 0 8px}
+header.top p{margin:0 0 12px;color:var(--muted);max-width:60ch}
+.badge{display:inline-block;border:1px solid var(--outline);padding:2px 10px;border-radius:999px;font:500 13px/18px Figtree;color:var(--muted)}
+button.mode{margin-left:12px;border:1px solid var(--outline);background:var(--surface);color:var(--text);border-radius:14px;padding:8px 16px;font:600 14px Figtree;cursor:pointer}
+section.block{max-width:1200px;margin:auto;padding:24px}
+h2{font:600 24px/30px Fraunces,Georgia,serif;margin:0 0 16px}
+.swatches{display:flex;flex-wrap:wrap;gap:12px}
+.sw{width:120px;font:500 13px/18px Figtree}
+.sw i{display:block;height:56px;border-radius:4px;border:1px solid var(--border);margin-bottom:6px}
+.sw small{color:var(--muted);display:block}
+.type .t1{font:600 30px/36px Fraunces,serif}
+.type .t2{font:600 24px/30px Fraunces,serif}
+.type .t3{font:600 18px/24px Figtree}
+.type .t4{font:400 16px/24px Figtree}
+.type .t5{font:400 italic 18px/28px Fraunces,serif}
+.row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.phone{width:320px;min-height:600px;background:var(--bg);border:1px solid var(--border);border-radius:28px;padding:0 24px 24px;position:relative;overflow:hidden}
+.phone .label{position:absolute;top:-1px;left:0}
+.cap{font:500 13px/18px Figtree;color:var(--muted);margin:0 0 8px;max-width:320px}
+.thread{height:26px;margin:18px 0 8px}
+.thread svg{display:block}
+.title{font:600 30px/36px Fraunces,Georgia,serif;margin:0 0 4px}
+.etitle{font:600 24px/30px Fraunces,Georgia,serif;margin:0}
+.meta{font:500 13px/18px Figtree;color:var(--muted)}
+.sub{font:600 18px/24px Figtree;margin:24px 0 4px}
+.hr{height:1px;background:var(--border);margin:16px 0}
+.btn{display:block;width:100%;text-align:center;border-radius:14px;padding:14px 16px;font:600 16px/20px Figtree;margin:8px 0;border:1px solid var(--text)}
+.btn.primary{background:var(--text);color:var(--bg)}
+.btn.second{background:transparent;color:var(--text);border-color:var(--outline)}
+.link{font:600 14px/20px Figtree;color:var(--text);text-decoration:underline;display:inline-block;margin:6px 0}
+.field{border:1px solid var(--outline);background:var(--surface);border-radius:10px;padding:12px 14px;margin:8px 0;color:var(--muted)}
+.tabs{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:10px 8px 14px;font:500 12px/16px Figtree;color:var(--muted)}
+.tabs b{color:var(--text);font-weight:600;border-bottom:2px solid var(--accent);padding-bottom:2px}
+.tabs .plus{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--text);display:grid;place-items:center;font:500 22px Figtree;color:var(--text)}
+.photo{width:100%;aspect-ratio:4/5;border-radius:4px;background:linear-gradient(135deg,var(--photo1),var(--photo2));margin:8px 0}
+.nophoto{border-radius:4px;background:var(--selected);padding:18px 16px;margin:8px 0;position:relative;overflow:hidden}
+.nophoto .etitle{font-size:22px}
+.nophoto svg{position:absolute;right:-6px;bottom:6px}
+.timeline{border-left:1.5px solid var(--accent-soft);margin-left:4px;padding-left:16px}
+.month{font:600 18px/24px Figtree;margin:20px 0 8px}
+.voice{font:400 italic 18px/28px Fraunces,Georgia,serif}
+.note{font:500 13px/18px Figtree;color:var(--muted);border-left:2px solid var(--outline);padding-left:10px;margin:8px 0}
+.ill{margin:20px 0 8px}
+.hidden-block{border:1px dashed var(--outline);border-radius:10px;padding:12px 14px;margin:8px 0;color:var(--muted);background:var(--surface);font:500 14px/20px Figtree;min-height:96px}
+.thumb{display:inline-block;width:56px;height:70px;border-radius:4px;background:linear-gradient(135deg,var(--photo1),var(--photo2));vertical-align:middle;margin-right:10px}
+.line{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0}
+.small{font:500 14px/20px Figtree}
+.big{font:600 22px/28px Fraunces,Georgia,serif;margin:0}
+.mid{font:600 17px/22px Figtree}
+.fine{font:400 14px/20px Figtree;color:var(--muted)}
+.banner{border:1px solid var(--warning);color:var(--text);border-radius:10px;padding:10px 12px;margin:8px 0;font:500 14px/20px Figtree}
+.banner b{color:var(--warning)}
+.errfield{border:1.5px solid var(--error);background:var(--surface);border-radius:10px;padding:12px 14px;margin:8px 0 2px}
+.errmsg{color:var(--error);font:500 13px/18px Figtree;margin-bottom:8px}
+.selrow{background:var(--selected);border-radius:10px;padding:12px 14px;margin:8px 0;display:flex;justify-content:space-between}
+.btn.destr{background:transparent;color:var(--destructive);border-color:var(--destructive)}
+.focusring{outline:2px solid var(--text);outline-offset:2px}
+.sem{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.sem .box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px}
+.sem h3{font:600 16px/22px Figtree;margin:0 0 4px}
+.sem p.x{margin:0 0 10px;color:var(--muted);font:500 13px/18px Figtree}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="badge">PROPOSTA — não aprovada · mock estático, não é o aplicativo · MVP recomendado só no tema claro</span>
+  <h1>Laço — prévia da direção visual</h1>
+  <p>Papel de álbum: neutros quentes contam a história, o fio vermelho conecta. Fotos e ilustrações são provisórias. Fontes: Fraunces e Figtree (Google Fonts, licença OFL; conferir na fonte).
+  <button class="mode" id="mode">Prévia do escuro (preparado, fora do MVP)</button></p>
+</header>
+
+<section class="block">
+  <h2>Paleta</h2>
+  <div class="swatches" id="sw"></div>
+</section>
+
+<section class="block type">
+  <h2>Tipografia</h2>
+  <div class="t1">Nossa História</div>
+  <div class="t2">Conhecer Campos do Jordão</div>
+  <div class="t3">Estamos preparando</div>
+  <div class="t4">Pode ser uma palavra, data, apelido ou qualquer coisa que vocês dois saibam.</div>
+  <div class="t5">“Daqui a anos eu quero lembrar do cheiro de lenha e do frio.”</div>
+</section>
+
+<section class="block">
+  <h2>Telas</h2>
+  <div class="row">
+
+    <div>
+      <p class="cap">Entrada — roteador de intenção</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 C80 6 82 18 70 18 C58 18 60 6 84 6 L120 6"/></svg></div>
+        <div class="title">Laço</div>
+        <p style="margin:0 0 28px;color:var(--muted)">Um lugar para viver, guardar e contar a história de vocês.</p>
+        <div class="sub">O que traz você até aqui?</div>
+        <a class="btn primary">Quero começar nosso Laço</a>
+        <a class="btn second">Quero entrar no nosso Laço</a>
+        <svg class="ill" width="120" height="70" viewBox="0 0 120 70" fill="none" stroke="var(--text)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" opacity=".7"><path d="M14 44 h30 v10 a10 10 0 0 1 -10 10 h-10 a10 10 0 0 1 -10 -10z M44 48 h6 a5 5 0 0 1 0 10 h-6 M70 44 h30 v10 a10 10 0 0 1 -10 10 h-10 a10 10 0 0 1 -10 -10z M100 48 h6 a5 5 0 0 1 0 10 h-6"/><path d="M26 34 c-4 -6 4 -8 0 -14 M82 34 c-4 -6 4 -8 0 -14" stroke="var(--accent)"/></svg>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Início — o que acontece agora e o que vem depois</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 L120 6"/></svg></div>
+        <div class="etitle">Riquelme &amp; Bianca</div>
+        <div class="sub">Vivendo agora</div>
+        <div class="etitle" style="font-size:22px">Fim de semana em Campos do Jordão</div>
+        <div class="meta">12–14 de outubro · Campos do Jordão</div>
+        <a class="btn primary" style="margin-top:12px">Continuar experiência</a>
+        <div class="hr"></div>
+        <div class="meta">Nosso próximo momento</div>
+        <div class="t3" style="font:600 18px/24px Figtree">Jantar naquele restaurante que salvamos</div>
+        <div class="meta">18 de outubro · 20:00</div>
+        <div class="hr"></div>
+        <div class="meta">Estamos preparando</div>
+        <div>Teatro · Acampamento · Restaurante japonês</div>
+        <a class="link">Coisas que queremos viver · 12 desejos</a>
+        <div class="tabs"><b>Início</b><span>Desejos</span><span class="plus">+</span><span>Nossa História</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Início com muitos itens — a hierarquia se mantém</p>
+      <div class="phone" style="min-height:700px">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 L120 6"/></svg></div>
+        <div class="etitle">Riquelme &amp; Bianca</div>
+        <div class="sub">Vivendo agora</div>
+        <div class="big">Fim de semana em Campos do Jordão</div>
+        <div class="meta">12–14 de outubro · Campos do Jordão</div>
+        <a class="btn primary" style="margin-top:12px">Continuar experiência</a>
+        <div class="line"><span class="small">Também vivendo: Trilha de sábado</span><span class="fine">›</span></div>
+        <div class="hr"></div>
+        <div class="meta">Nossos próximos momentos</div>
+        <div class="line"><span class="mid">Jantar no restaurante japonês</span><span class="fine">18 out</span></div>
+        <div class="line"><span class="mid">Show da banda</span><span class="fine">02 nov</span></div>
+        <div class="line"><span class="mid">Viagem a Gramado</span><span class="fine">20 dez</span></div>
+        <a class="link">Ver todos</a>
+        <div class="hr"></div>
+        <div class="meta">Também estamos preparando</div>
+        <div class="fine" style="margin-bottom:2px">Teatro · Acampamento · Piquenique de inverno</div>
+        <a class="link">Ver planejamentos</a>
+        <div class="hr"></div>
+        <a class="link">Coisas que queremos viver · 40 desejos</a>
+        <div class="tabs"><b>Início</b><span>Desejos</span><span class="plus">+</span><span>Nossa História</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Desejos — lista editorial, sem cartões</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 L120 6"/></svg></div>
+        <div class="title">O que queremos viver</div>
+        <div class="hr"></div>
+        <div class="sub" style="margin-top:12px">Ver o nascer do sol juntos</div>
+        <div class="hr"></div>
+        <div class="sub" style="margin-top:12px">Conhecer Campos do Jordão</div>
+        <div class="meta">Outubro · Campos do Jordão</div>
+        <div class="hr"></div>
+        <div class="sub" style="margin-top:12px">Fazer um piquenique</div>
+        <div class="hr"></div>
+        <div class="field">O que vocês querem viver?</div>
+        <a class="btn primary">Adicionar desejo</a>
+        <div class="tabs"><span>Início</span><b>Desejos</b><span class="plus">+</span><span>Nossa História</span></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Planejamento — a mesma experiência, ganhando forma</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C26 20 34 4 56 8 C72 11 66 22 54 18 C46 15 56 4 80 6 L120 6"/></svg></div>
+        <div class="etitle">Conhecer Campos do Jordão</div>
+        <div class="meta">Planejando</div>
+        <div class="sub">12–14 de outubro</div>
+        <div>Campos do Jordão</div>
+        <div class="note">Reservar a pousada até sexta.</div>
+        <a class="link">+ Fotos e referências</a>
+        <div class="hr"></div>
+        <a class="btn primary">Começar a viver</a>
+        <a class="link">Voltar para desejos</a>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Vivendo — o que acontece agora</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 L120 6"/></svg></div>
+        <div class="etitle">Conhecer Campos do Jordão</div>
+        <div class="meta">12–14 de outubro · Campos do Jordão</div>
+        <a class="btn primary" style="margin-top:28px">Guardar este momento</a>
+        <a class="link">Planejamento ›</a>
+        <div class="hr"></div>
+        <a class="btn second">Finalizar experiência</a>
+        <a class="link">Voltar para planejamento</a>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Nossa História — álbum cronológico, fio sutil</p>
+      <div class="phone">
+        <div class="thread"><svg width="120" height="26" viewBox="0 0 120 26" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 20 C30 20 40 6 62 6 L120 6"/></svg></div>
+        <div class="title">Nossa História</div>
+        <div class="meta">Tudo o que já vivemos juntos.</div>
+        <div class="timeline">
+          <div class="month">Outubro de 2026</div>
+          <div class="photo" style="aspect-ratio:4/3"></div>
+          <div class="sub" style="margin:4px 0 0">Campos do Jordão</div>
+          <div class="meta">12–14 outubro · 2026</div>
+          <div class="nophoto"><div class="etitle">Nosso primeiro teatro</div><div class="meta">24 de outubro</div>
+            <svg width="90" height="40" viewBox="0 0 90 40" fill="none" stroke="var(--accent-soft)" stroke-width="1.5" stroke-linecap="round"><path d="M0 30 C20 30 30 8 50 10 L90 10"/></svg></div>
+          <div class="month">Setembro de 2026</div>
+          <div class="sub" style="margin:4px 0 0">Piquenique no parque</div>
+          <div class="meta">18 de setembro</div>
+        </div>
+        <p class="voice" style="margin:24px 0 0">E ainda tem muito por viver.</p>
+        <div class="tabs"><span>Início</span><span>Desejos</span><span class="plus">+</span><b>Nossa História</b></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Memória — estado 1: ainda não registrei a minha impressão (inclui “escrever depois”)</p>
+      <div class="phone" style="min-height:760px">
+        <div class="photo" style="margin-top:0;border-radius:0 0 4px 4px;margin-left:-24px;margin-right:-24px;width:calc(100% + 48px)"></div>
+        <div class="etitle">Campos do Jordão</div>
+        <div class="meta">12–14 outubro 2026 · Campos do Jordão</div>
+        <div class="sub">O que aconteceu</div>
+        <div>Chegamos com chuva, acendemos a lareira.</div>
+        <div class="sub">Nossos momentos</div>
+        <div class="line"><span><span class="thumb"></span><span class="small">Meu momento favorito</span></span><a class="link">Alterar</a></div>
+        <div class="hidden-block">A impressão e o momento favorito da outra pessoa serão revelados quando você registrar a sua impressão.</div>
+        <div class="sub">O que ficou para nós</div>
+        <div class="meta">Minha impressão</div>
+        <a class="btn second">Escrever minha impressão</a>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">Memória — estado 2: já registrei a minha impressão</p>
+      <div class="phone" style="min-height:760px">
+        <div class="photo" style="margin-top:0;border-radius:0 0 4px 4px;margin-left:-24px;margin-right:-24px;width:calc(100% + 48px)"></div>
+        <div class="etitle">Campos do Jordão</div>
+        <div class="meta">12–14 outubro 2026 · Campos do Jordão</div>
+        <div class="sub">O que aconteceu</div>
+        <div>Chegamos com chuva, acendemos a lareira.</div>
+        <div class="sub">Nossos momentos</div>
+        <div class="line"><span><span class="thumb"></span><span class="small">Meu momento favorito</span></span><a class="link">Alterar</a></div>
+        <div class="line"><span><span class="thumb" style="filter:saturate(.8)"></span><span class="small">Momento favorito de Bianca</span></span></div>
+        <div class="sub">O que ficou para nós</div>
+        <div class="meta">Minha impressão · <a class="link" style="margin:0">Editar</a></div>
+        <div class="voice">“Quero lembrar do silêncio depois da chuva.”</div>
+        <div class="meta" style="margin-top:12px">Impressão de Bianca</div>
+        <div class="voice">“Foi a primeira vez que a gente ficou sem pressa.”</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="block">
+  <h2>Semântica das cores (pendente de aprovação)</h2>
+  <p class="cap" style="max-width:70ch">O vermelho da marca é só o fio e o laço. Interação é grafite; seleção é o fundo selecionado; aviso é âmbar; erro e ação destrutiva usam ferrugem, separados por forma. Avalie se carmim, ferrugem e âmbar se distinguem bem.</p>
+  <div class="sem">
+    <div class="box"><h3>Marca</h3><p class="x">fio e laço; nunca botão, erro ou exclusão</p>
+      <svg width="200" height="40" viewBox="0 0 200 40" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M0 30 C40 30 50 8 90 10 C112 11 108 28 92 24 C80 20 92 6 120 8 L200 8"/></svg></div>
+    <div class="box"><h3>Interação</h3><p class="x">grafite: botão primário, link, foco</p>
+      <a class="btn primary">Adicionar desejo</a><a class="link focusring">Voltar para desejos</a></div>
+    <div class="box"><h3>Seleção</h3><p class="x">fundo selecionado e marca em grafite</p>
+      <div class="selrow"><span>Data</span><span>✓</span></div><div class="field" style="margin:0">Período</div></div>
+    <div class="box"><h3>Aviso</h3><p class="x">atenção que não é falha</p>
+      <div class="banner"><b>Sem conexão.</b> Nada foi salvo.</div></div>
+    <div class="box"><h3>Erro</h3><p class="x">falha, com ícone e mensagem</p>
+      <div class="errfield">seuemail@</div><div class="errmsg">⚠ Confira o e-mail: parece incompleto.</div></div>
+    <div class="box"><h3>Ação destrutiva</h3><p class="x">só dentro de confirmação, botão contornado</p>
+      <div class="mid">Excluir esta experiência?</div><div class="fine" style="margin-bottom:6px">Essa ação é definitiva e remove a experiência e seus registros.</div>
+      <a class="btn destr">Excluir</a><a class="btn second">Cancelar</a></div>
+  </div>
+</section>
+
+<script>
+const tokens=[['marfim','--bg'],['papel','--surface'],['selecionado','--selected'],['areia','--border'],['contorno','--outline'],['grafite','--text'],['cinza quente','--muted'],['fio','--accent'],['fio escuro','--accent-strong'],['fio suave','--accent-soft'],['aviso','--warning'],['erro','--error'],['destrutivo','--destructive']];
+function paint(){const sw=document.getElementById('sw');sw.innerHTML='';const cs=getComputedStyle(document.documentElement);
+  tokens.forEach(([n,v])=>{const h=cs.getPropertyValue(v).trim();sw.insertAdjacentHTML('beforeend',`<div class="sw"><i style="background:${h}"></i>${n}<small>${h}</small></div>`)})}
+document.getElementById('mode').onclick=()=>{const r=document.documentElement;r.dataset.mode=r.dataset.mode==='dark'?'light':'dark';paint()};
+paint();
+</script>
+</body>
+</html>
