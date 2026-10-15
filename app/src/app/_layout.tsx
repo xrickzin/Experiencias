@@ -89,6 +89,7 @@ function Navegacao() {
       <Stack.Protected guard={acessoLiberado}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="criar" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="desejo/[id]" />
         <Stack.Screen name="ajustes" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!acessoLiberado}>

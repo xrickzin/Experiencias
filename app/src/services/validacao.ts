@@ -12,6 +12,12 @@ export function validarNome(valor: string): string | undefined {
   if (nome.length > TAMANHO_MAXIMO_NOME) return `O nome deve ter até ${TAMANHO_MAXIMO_NOME} caracteres.`;
 }
 
+export function validarTituloDoDesejo(valor: string): string | undefined {
+  const titulo = valor.trim();
+  if (!titulo) return 'Escreva um título para continuar.';
+  if (titulo.length > 120) return 'O título deve ter até 120 caracteres.';
+}
+
 export function validarEmail(valor: string): string | undefined {
   const email = valor.trim();
   if (!email) return 'Escreva seu e-mail para continuar.';

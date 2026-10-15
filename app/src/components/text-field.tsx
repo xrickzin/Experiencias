@@ -9,12 +9,24 @@ import { useTheme } from '@/hooks/use-theme';
 type TextFieldProps = TextInputProps & {
   label: string;
   error?: string;
+  /** Marca o campo obrigatório com `*`. Campos sem a marca são entendidos como opcionais. */
+  required?: boolean;
   /** Ação curta ao lado do rótulo, como "Mostrar" em campos de senha. */
   action?: { label: string; onPress: () => void };
 };
 
 /** Erro e foco mudam a espessura da borda e o erro aparece também como texto, não só como cor. */
-export function TextField({ label, error, action, onFocus, onBlur, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  required,
+  action,
+  style,
+  multiline,
+  onFocus,
+  onBlur,
+  ...rest
+}: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -23,7 +35,7 @@ export function TextField({ label, error, action, onFocus, onBlur, ...rest }: Te
   return (
     <View style={{ gap: Spacing.two }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <ThemedText type="smallBold">{label}</ThemedText>
+        <ThemedText type="smallBold">{required ? `${label} *` : label}</ThemedText>
         {action ? (
           <Pressable
             accessibilityRole="button"
@@ -37,8 +49,9 @@ export function TextField({ label, error, action, onFocus, onBlur, ...rest }: Te
         ) : null}
       </View>
       <TextInput
-        accessibilityLabel={label}
+        accessibilityLabel={required ? `${label}, obrigatório` : label}
         placeholderTextColor={theme.textSecondary}
+        multiline={multiline}
         onFocus={(e) => {
           setFocused(true);
           onFocus?.(e);
@@ -47,18 +60,23 @@ export function TextField({ label, error, action, onFocus, onBlur, ...rest }: Te
           setFocused(false);
           onBlur?.(e);
         }}
-        style={{
-          minHeight: 52,
-          paddingHorizontal: Spacing.three,
-          paddingVertical: 14,
-          borderRadius: Radius.field,
-          borderWidth: error || focused ? 2 : 1,
-          borderColor,
-          backgroundColor: theme.backgroundElement,
-          color: theme.text,
-          fontFamily: FontFamily.body,
-          fontSize: 16,
-        }}
+        // O estilo recebido se soma ao padrão do campo, não o substitui.
+        style={[
+          {
+            minHeight: multiline ? 120 : 52,
+            paddingHorizontal: Spacing.three,
+            paddingVertical: 14,
+            borderRadius: Radius.field,
+            borderWidth: error || focused ? 2 : 1,
+            borderColor,
+            backgroundColor: theme.backgroundElement,
+            color: theme.text,
+            fontFamily: FontFamily.body,
+            fontSize: 16,
+          },
+          multiline ? { textAlignVertical: 'top' } : null,
+          style,
+        ]}
         {...rest}
       />
       {error ? <MensagemErro>{error}</MensagemErro> : null}

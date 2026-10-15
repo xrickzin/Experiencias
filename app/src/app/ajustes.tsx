@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { Confirmacao } from '@/components/confirmacao';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
@@ -92,30 +93,28 @@ export default function Ajustes() {
 
       <View style={{ gap: Spacing.two, marginTop: Spacing.four }}>
         <Button label="Salvar nome" loading={enviando && !saindo} disabled={saindo} onPress={salvar} />
-        {confirmandoSaida ? (
-          <View style={{ gap: Spacing.two }} accessibilityLiveRegion="polite">
-            <ThemedText type="small" themeColor="textSecondary">
-              Você volta para a tela de entrada. O Laço continua guardado.
-            </ThemedText>
-            {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
-            <Button label="Sim, sair da conta" loading={saindo} onPress={sairDaConta} />
-            <Button
-              label="Cancelar"
-              variant="text"
-              disabled={saindo}
-              onPress={() => setConfirmandoSaida(false)}
-            />
-          </View>
-        ) : (
-          <Button
-            label="Sair da conta"
-            variant="secondary"
-            disabled={enviando}
-            onPress={() => setConfirmandoSaida(true)}
-          />
-        )}
+        <Button
+          label="Sair da conta"
+          variant="secondary"
+          disabled={enviando}
+          onPress={() => {
+            setErroGeral(undefined);
+            setConfirmandoSaida(true);
+          }}
+        />
         <Button label="Fechar" variant="text" disabled={saindo} onPress={() => router.back()} />
       </View>
+
+      <Confirmacao
+        visible={confirmandoSaida}
+        title="Sair da conta?"
+        description="Você volta para a tela de entrada. O Laço de vocês continua guardado e você entra de novo com o seu e-mail e a sua senha."
+        confirmLabel="Sim, sair da conta"
+        loading={saindo}
+        error={erroGeral}
+        onConfirm={sairDaConta}
+        onCancel={() => setConfirmandoSaida(false)}
+      />
     </Screen>
   );
 }

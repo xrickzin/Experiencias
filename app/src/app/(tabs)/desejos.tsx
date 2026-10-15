@@ -1,5 +1,6 @@
-import { router } from 'expo-router';
-import { View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -12,7 +13,14 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function Desejos() {
   const theme = useTheme();
-  const { desejos } = useExperiencias();
+  const { desejos, carregando, erro, recarregar } = useExperiencias();
+
+  // A outra pessoa pode ter criado, editado ou excluído desde a última vez: relê ao voltar para a aba.
+  useFocusEffect(
+    useCallback(() => {
+      void recarregar();
+    }, [recarregar])
+  );
 
   return (
     <Screen>
@@ -22,10 +30,23 @@ export default function Desejos() {
         description="Coisas que ainda queremos viver juntos."
       />
 
-      {desejos.length === 0 ? (
+      {carregando ? (
+        <ThemedText themeColor="textSecondary" accessibilityLiveRegion="polite">
+          Carregando…
+        </ThemedText>
+      ) : erro && desejos.length === 0 ? (
+        <EmptyState
+          title="Não foi possível carregar"
+          description={erro}
+          actionLabel="Tentar de novo"
+          onAction={() => {
+            void recarregar();
+          }}
+        />
+      ) : desejos.length === 0 ? (
         <EmptyState
           title="Nenhum desejo ainda"
-          description="Aqui ficam as experiências que vocês querem viver. Comecem pela primeira: um título basta."
+          description="Aqui ficam as experiências que vocês querem viver. Comecem pela primeira."
           actionLabel="Adicionar o primeiro desejo"
           onAction={() => router.push('/criar')}
         />
@@ -33,23 +54,31 @@ export default function Desejos() {
         <View style={{ gap: Spacing.four }}>
           <View style={{ borderTopWidth: 1, borderTopColor: theme.border }}>
             {desejos.map((desejo) => (
-              <View
+              <Pressable
                 key={desejo.id}
-                style={{
+                accessibilityRole="button"
+                accessibilityLabel={desejo.local ? `${desejo.titulo}, ${desejo.local}` : desejo.titulo}
+                onPress={() => router.push({ pathname: '/desejo/[id]', params: { id: desejo.id } })}
+                style={({ pressed }) => ({
+                  minHeight: 64,
+                  justifyContent: 'center',
+                  gap: Spacing.half,
                   paddingVertical: Spacing.three,
                   borderBottomWidth: 1,
                   borderBottomColor: theme.border,
-                }}>
+                  backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
+                })}>
                 <ThemedText type="subtitle" style={{ fontSize: 22, lineHeight: 30 }}>
                   {desejo.titulo}
                 </ThemedText>
-              </View>
+                {desejo.local ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {desejo.local}
+                  </ThemedText>
+                ) : null}
+              </Pressable>
             ))}
           </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            Por enquanto os desejos ficam só neste aparelho e somem ao fechar o app. Guardá-los no
-            Laço vem na próxima entrega.
-          </ThemedText>
           <Button
             label="Adicionar desejo"
             variant="secondary"

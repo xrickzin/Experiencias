@@ -59,7 +59,7 @@ Domínio em português, `snake_case` ([ADR 021](../decisions/021-naming-and-iden
 
 ## Estado da implementação (Fase 1)
 
-Existem `lacos`, `membros`, `tentativas_vinculo`, `bloqueios_vinculo` e `configuracao_servidor`, mais as funções de vínculo e a RLS, na migração `supabase/migrations/20261010120000_fase1_laco_membros_vinculo.sql` ([phase-1-log.md](../development/phase-1-log.md)). `lacos` ganhou `nome_companheiro_provisorio` (nome informado por quem criou, limpo no vínculo). As demais entidades ainda não existem.
+Existem `lacos`, `membros`, `tentativas_vinculo`, `bloqueios_vinculo` e `configuracao_servidor`, mais as funções de vínculo e a RLS, na migração `supabase/migrations/20261010120000_fase1_laco_membros_vinculo.sql` ([phase-1-log.md](../development/phase-1-log.md)). `lacos` ganhou `nome_companheiro_provisorio` (nome informado por quem criou, limpo no vínculo). Na Fase 2 entrou `experiencias` (título, estado, local, observações; só Desejo é usado), ver [phase-2-log.md](../development/phase-2-log.md). As demais entidades ainda não existem.
 
 ## Em aberto
 

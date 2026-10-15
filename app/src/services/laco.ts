@@ -33,17 +33,19 @@ const MENSAGENS: Record<string, string> = {
   senha_igual: 'Escolha uma senha diferente da atual.',
   link_invalido: 'Esse link não é mais válido. Peça um novo.',
   link_expirado: 'Esse link expirou ou já foi usado. Peça um novo.',
+  desejo_invalido: 'Confira os dados do desejo: o título é obrigatório e os textos têm limite de tamanho.',
+  desejo_inexistente: 'Esse desejo não existe mais.',
 };
 
 const MENSAGEM_PADRAO = 'Algo deu errado. Tente novamente.';
 
-function falha(codigo: string): Falha {
+export function falha(codigo: string): Falha {
   return { ok: false, codigo, mensagem: MENSAGENS[codigo] ?? MENSAGEM_PADRAO };
 }
 
-type ErroServico = { message?: string; code?: string; name?: string; status?: number } | null;
+export type ErroServico = { message?: string; code?: string; name?: string; status?: number } | null;
 
-function ehErroDeRede(erro: NonNullable<ErroServico>) {
+export function ehErroDeRede(erro: NonNullable<ErroServico>) {
   return (
     erro.name === 'AuthRetryableFetchError' ||
     erro.status === 0 ||

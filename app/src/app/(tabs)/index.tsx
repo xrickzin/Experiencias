@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -6,12 +7,21 @@ import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useExperiencias } from '@/hooks/use-experiencias';
 import { useSessao } from '@/hooks/use-sessao';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function Inicio() {
   const theme = useTheme();
   const { perfil } = useSessao();
+  const { desejos, recarregar } = useExperiencias();
+
+  // A contagem de desejos vem do servidor: relê quando Início aparece.
+  useFocusEffect(
+    useCallback(() => {
+      void recarregar();
+    }, [recarregar])
+  );
 
   return (
     <Screen>
@@ -49,7 +59,7 @@ export default function Inicio() {
           O que vocês querem viver?
         </ThemedText>
         <ThemedText themeColor="textSecondary">
-          Comecem por uma ideia. Só o título é preciso; o resto vem depois, no tempo de vocês.
+          Comecem por uma ideia, no tempo de vocês.
         </ThemedText>
         <View style={{ marginTop: Spacing.two }}>
           <Button label="Criar uma experiência" onPress={() => router.push('/criar')} />
@@ -62,7 +72,11 @@ export default function Inicio() {
         </ThemedText>
         <Atalho
           titulo="Desejos"
-          descricao="Tudo o que queremos viver."
+          descricao={
+            desejos.length === 0
+              ? 'Tudo o que queremos viver.'
+              : `${desejos.length} ${desejos.length === 1 ? 'desejo' : 'desejos'} para viver juntos.`
+          }
           onPress={() => router.push('/desejos')}
         />
         <Atalho

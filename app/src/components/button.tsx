@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
-  variant?: 'primary' | 'secondary' | 'text';
+  variant?: 'primary' | 'secondary' | 'text' | 'destructive';
   /** Impede novos toques e avisa que há uma operação em andamento. */
   loading?: boolean;
 };
@@ -16,6 +16,8 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
   const theme = useTheme();
   const primary = variant === 'primary';
   const text = variant === 'text';
+  // Vermelho de ação irreversível: só dentro de uma confirmação, sempre com texto explícito.
+  const destructive = variant === 'destructive';
   const inativo = loading || Boolean(disabled);
 
   return (
@@ -32,13 +34,13 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
         justifyContent: 'center',
         backgroundColor: primary ? theme.text : 'transparent',
         borderWidth: primary || text ? 0 : 1,
-        borderColor: theme.outline,
+        borderColor: destructive ? theme.destructive : theme.outline,
         opacity: inativo ? 0.4 : pressed ? 0.7 : 1,
       })}
       {...rest}>
       <ThemedText
         type="smallBold"
-        themeColor={primary ? 'background' : 'text'}
+        themeColor={primary ? 'background' : destructive ? 'destructive' : 'text'}
         style={{
           fontSize: 16,
           lineHeight: 22,
