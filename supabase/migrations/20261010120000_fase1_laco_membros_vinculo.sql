@@ -8,6 +8,20 @@
 create extension if not exists pgcrypto with schema extensions;
 create extension if not exists unaccent with schema extensions;
 
+-- Confere o ambiente antes de criar qualquer coisa: se as funções não estiverem no schema
+-- `extensions` (projetos antigos), o script para aqui com uma mensagem clara.
+do $$
+begin
+  if to_regprocedure('extensions.hmac(bytea,bytea,text)') is null
+     or to_regprocedure('extensions.gen_random_bytes(integer)') is null then
+    raise exception 'pgcrypto não está no schema extensions';
+  end if;
+  if to_regprocedure('extensions.unaccent(text)') is null then
+    raise exception 'unaccent não está no schema extensions';
+  end if;
+end;
+$$;
+
 -- ---------------------------------------------------------------------------------------------
 -- Configuração do servidor. Guarda o segredo do HMAC (gerado aqui, nunca vai para o repositório)
 -- e os limites de tentativas (ADR 018), ajustáveis sem mudar o aplicativo.

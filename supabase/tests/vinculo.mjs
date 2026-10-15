@@ -26,7 +26,10 @@ await db.exec(`
   create extension unaccent with schema extensions;
   create table auth.users (id uuid primary key default gen_random_uuid(), email text, deleted_at timestamptz);
   create function auth.uid() returns uuid language sql stable as $$
-    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    select coalesce(
+      nullif(current_setting('request.jwt.claim.sub', true), ''),
+      (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
+    )::uuid $$;
   grant usage on schema public, auth, extensions to anon, authenticated;
   alter default privileges in schema public grant all on tables to anon, authenticated;
   alter default privileges in schema public grant all on functions to anon, authenticated;
@@ -40,8 +43,8 @@ for (const [k, e] of [['A', 'ana@exemplo.com'], ['B', 'bia@exemplo.com'], ['C', 
 
 async function como(papel, uid, ip, sql, params = []) {
   await db.exec(`set role ${papel}`);
-  await db.query(`select set_config('request.jwt.claim.sub', $1, false), set_config('request.headers', $2, false)`, [
-    uid ?? '',
+  await db.query(`select set_config('request.jwt.claims', $1, false), set_config('request.headers', $2, false)`, [
+    JSON.stringify(uid ? { sub: uid, role: papel } : { role: papel }),
     JSON.stringify(ip ? { 'cf-connecting-ip': ip } : {}),
   ]);
   try {

@@ -18,5 +18,8 @@ Apenas o que já está definido. O resto fica em aberto até haver necessidade.
 - Identificadores: termos de **domínio em português sem acentos** (`laco`, `experiencia`, `desejo`, `planejamento`, `vivendo`, `memoria`, `registro`, `impressao`, `momento_favorito`) e termos **técnicos em inglês**; banco em `snake_case` ([ADR 021](../decisions/021-naming-and-identifiers.md)).
 - Nome técnico: `slug` e `scheme` `laco`; migrações do banco versionadas no repositório (Supabase CLI), sem alterações manuais no painel.
 
+## Testes
+- `npm test` em `app/` antes de concluir uma mudança de tela, navegação ou serviço; testes novos em `app/src/__tests__/` ([testes.md](./testes.md)).
+
 ## Git
 Regras em [../../CLAUDE.md](../../CLAUDE.md#git): commits pequenos e focados, sem commit automático, sem reescrever o histórico.
