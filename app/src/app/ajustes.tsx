@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { MensagemErro } from '@/components/mensagem-erro';
@@ -14,12 +14,31 @@ import { atualizarMeuNome } from '@/services/laco';
 import { validarNome } from '@/services/validacao';
 
 export default function Ajustes() {
-  const { perfil, atualizar, sair } = useSessao();
+  const { perfil, atualizar, sair, acessoLiberado } = useSessao();
   const [nome, setNome] = useState(perfil?.nome ?? '');
   const [erro, setErro] = useState<string>();
   const [erroGeral, setErroGeral] = useState<string>();
   const [salvo, setSalvo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [saindo, setSaindo] = useState(false);
+
+  // Depois de encerrar a sessão, leva à entrada de forma explícita: a troca automática de telas
+  // da navegação não basta com este modal aberto sobre as abas.
+  useEffect(() => {
+    if (saindo && !acessoLiberado) router.replace('/entrada');
+  }, [saindo, acessoLiberado]);
+
+  // Se a saída não terminar, a tela volta a responder e avisa, em vez de ficar parada.
+  useEffect(() => {
+    if (!saindo) return;
+    const tempo = setTimeout(() => {
+      setSaindo(false);
+      setEnviando(false);
+      setErroGeral('Não foi possível sair agora. Tente de novo.');
+    }, 12000);
+    return () => clearTimeout(tempo);
+  }, [saindo]);
 
   async function salvar() {
     const invalido = validarNome(nome);
@@ -37,11 +56,11 @@ export default function Ajustes() {
     setEnviando(false);
   }
 
-  function confirmarSaida() {
-    Alert.alert('Sair da conta?', 'Você volta para a tela de entrada. O Laço continua guardado.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', onPress: () => sair() },
-    ]);
+  async function sairDaConta() {
+    setEnviando(true);
+    setErroGeral(undefined);
+    setSaindo(true);
+    await sair();
   }
 
   return (
@@ -63,7 +82,7 @@ export default function Ajustes() {
           returnKeyType="done"
           onSubmitEditing={salvar}
         />
-        {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
+        {erroGeral && !confirmandoSaida ? <MensagemErro>{erroGeral}</MensagemErro> : null}
         {salvo ? (
           <ThemedText type="small" accessibilityLiveRegion="polite">
             Nome atualizado.
@@ -72,9 +91,30 @@ export default function Ajustes() {
       </View>
 
       <View style={{ gap: Spacing.two, marginTop: Spacing.four }}>
-        <Button label="Salvar nome" loading={enviando} onPress={salvar} />
-        <Button label="Sair da conta" variant="secondary" disabled={enviando} onPress={confirmarSaida} />
-        <Button label="Fechar" variant="text" onPress={() => router.back()} />
+        <Button label="Salvar nome" loading={enviando && !saindo} disabled={saindo} onPress={salvar} />
+        {confirmandoSaida ? (
+          <View style={{ gap: Spacing.two }} accessibilityLiveRegion="polite">
+            <ThemedText type="small" themeColor="textSecondary">
+              Você volta para a tela de entrada. O Laço continua guardado.
+            </ThemedText>
+            {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
+            <Button label="Sim, sair da conta" loading={saindo} onPress={sairDaConta} />
+            <Button
+              label="Cancelar"
+              variant="text"
+              disabled={saindo}
+              onPress={() => setConfirmandoSaida(false)}
+            />
+          </View>
+        ) : (
+          <Button
+            label="Sair da conta"
+            variant="secondary"
+            disabled={enviando}
+            onPress={() => setConfirmandoSaida(true)}
+          />
+        )}
+        <Button label="Fechar" variant="text" disabled={saindo} onPress={() => router.back()} />
       </View>
     </Screen>
   );

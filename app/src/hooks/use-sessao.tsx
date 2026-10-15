@@ -110,7 +110,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   const sair = useCallback(async () => {
     setRetido(false);
     await sairDaConta();
-  }, []);
+    // Não depende só do evento de saída do Supabase para atualizar o estado.
+    await atualizar();
+  }, [atualizar]);
 
   return (
     <SessaoContext.Provider
