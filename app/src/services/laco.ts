@@ -1,4 +1,6 @@
-import { supabase } from '@/services/supabase';
+import { createURL } from 'expo-linking';
+
+import { apagarSessaoLocal, supabase } from '@/services/supabase';
 
 export type Perfil = {
   membro_id: string;
@@ -28,6 +30,9 @@ const MENSAGENS: Record<string, string> = {
   sessao_nao_iniciada: 'A conta foi criada, mas não foi possível iniciar a sessão. Tente entrar com o e-mail e a senha.',
   rede: 'Não foi possível conectar. Verifique sua internet e tente de novo.',
   sem_configuracao: 'O aplicativo ainda não está conectado ao servidor.',
+  senha_igual: 'Escolha uma senha diferente da atual.',
+  link_invalido: 'Esse link não é mais válido. Peça um novo.',
+  link_expirado: 'Esse link expirou ou já foi usado. Peça um novo.',
 };
 
 const MENSAGEM_PADRAO = 'Algo deu errado. Tente novamente.';
@@ -48,7 +53,18 @@ function ehErroDeRede(erro: NonNullable<ErroServico>) {
 
 function falhaDeAuth(erro: NonNullable<ErroServico>): Falha {
   if (ehErroDeRede(erro)) return falha('rede');
+  // Recuperação de senha: sessão ausente ou verificador do PKCE perdido (link aberto em outro aparelho).
+  if (erro.name === 'AuthSessionMissingError' || erro.name === 'AuthPKCECodeVerifierMissingError') {
+    return falha('link_invalido');
+  }
   switch (erro.code) {
+    case 'same_password':
+      return falha('senha_igual');
+    case 'session_not_found':
+    case 'session_expired':
+    case 'refresh_token_not_found':
+    case 'bad_jwt':
+      return falha('link_invalido');
     case 'invalid_credentials':
       return falha('credenciais_invalidas');
     case 'user_already_exists':
@@ -159,7 +175,63 @@ export async function cadastrar(email: string, senha: string): Promise<Resultado
       password: senha,
     });
     if (error) return falhaDeAuth(error);
-    return data.session ? { ok: true } : falha('sessao_nao_iniciada');
+    if (data.session) return { ok: true };
+    // Sem sessão na resposta do cadastro (ex.: fluxo PKCE): a conta já está confirmada, então entra
+    // com as mesmas credenciais em vez de pedir que a pessoa faça isso à mão.
+    const login = await entrar(email, senha);
+    return login.ok ? login : falha('sessao_nao_iniciada');
+  } catch {
+    return falha('rede');
+  }
+}
+
+/**
+ * Pede o e-mail de redefinição. O Supabase responde com sucesso mesmo quando não há conta com esse
+ * e-mail, e a interface mantém a mesma confirmação neutra nos dois casos.
+ */
+export async function solicitarRecuperacaoDeSenha(email: string): Promise<Resultado> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizarEmail(email), {
+      // Em build: laco://redefinir-senha. No Expo Go: exp://<endereço do servidor>/--/redefinir-senha.
+      redirectTo: createURL('redefinir-senha'),
+    });
+    return error ? falhaDeAuth(error) : { ok: true };
+  } catch {
+    return falha('rede');
+  }
+}
+
+/** Troca o código do link (PKCE) por uma sessão de recuperação. Só aceita links de recuperação. */
+export async function abrirSessaoDeRecuperacao(codigo: string, flowId?: string): Promise<Resultado> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(
+      codigo,
+      flowId ? { flowId } : undefined
+    );
+    if (error) return ehErroDeRede(error) ? falha('rede') : falha('link_invalido');
+    // `redirectType` vem da resposta, mas não consta na tipagem desta versão.
+    const tipo = (data as { redirectType?: string | null }).redirectType;
+    if (tipo !== 'recovery') {
+      // O código era de outro tipo de fluxo: não deixa uma sessão aberta por esta tela.
+      await supabase.auth.signOut();
+      return falha('link_invalido');
+    }
+    return { ok: true };
+  } catch {
+    return falha('rede');
+  }
+}
+
+/** Define a nova senha da sessão de recuperação e encerra as sessões desta conta em outros aparelhos. */
+export async function definirNovaSenha(senha: string): Promise<Resultado> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    if (error) return falhaDeAuth(error);
+    await supabase.auth.signOut({ scope: 'others' });
+    return { ok: true };
   } catch {
     return falha('rede');
   }
@@ -180,6 +252,21 @@ export async function atualizarMeuNome(membroId: string, nome: string): Promise<
   }
 }
 
+const ESPERA_DA_SAIDA_MS = 5000;
+
+/**
+ * Encerra a sessão. Se o servidor não responder (sem rede, travado) ou der erro, a sessão é
+ * apagada só deste aparelho: sair não pode depender de conexão.
+ */
 export async function sair(): Promise<void> {
-  await supabase?.auth.signOut();
+  if (!supabase) return;
+  let terminou = false;
+  try {
+    const limite = new Promise<'tempo'>((resolve) => setTimeout(() => resolve('tempo'), ESPERA_DA_SAIDA_MS));
+    const resultado = await Promise.race([supabase.auth.signOut().then(() => 'ok' as const), limite]);
+    terminou = resultado === 'ok';
+  } catch {
+    terminou = false;
+  }
+  if (!terminou) await apagarSessaoLocal();
 }

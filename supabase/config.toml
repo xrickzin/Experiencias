@@ -5,6 +5,9 @@ project_id = "laco"
 [auth]
 enable_signup = true
 minimum_password_length = 8
+# Destinos permitidos para os links dos e-mails (recuperação de senha). `exp://**` serve só ao Expo Go
+# em desenvolvimento: remover antes de publicar.
+additional_redirect_urls = ["laco://**", "exp://**"]
 
 [auth.email]
 # ADR 017: sem confirmação de e-mail no MVP; a pessoa entra em Início logo após criar o acesso.

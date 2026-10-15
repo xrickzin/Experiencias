@@ -46,6 +46,14 @@ const armazenamentoSeguro = {
 
 export const supabaseConfigurado = Boolean(url && chaveAnonima);
 
+// Mesma chave que o `supabase-js` usa por padrão para a sessão (`sb-<projeto>-auth-token`).
+const chaveDaSessao = url ? `sb-${new URL(url).hostname.split('.')[0]}-auth-token` : null;
+
+/** Apaga a sessão deste aparelho sem falar com o servidor. Último recurso da saída da conta. */
+export async function apagarSessaoLocal() {
+  if (chaveDaSessao) await armazenamentoSeguro.removeItem(chaveDaSessao);
+}
+
 export const supabase =
   url && chaveAnonima
     ? createClient(url, chaveAnonima, {
@@ -54,6 +62,8 @@ export const supabase =
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: false,
+          // Links de e-mail (recuperação de senha) trazem um código de uso único, não os tokens.
+          flowType: 'pkce',
         },
       })
     : null;

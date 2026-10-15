@@ -194,6 +194,14 @@ export default function Entrar() {
           <Acoes>
             <Button label="Entrar" loading={enviando} onPress={entrarComSenha} />
             <Button
+              label="Esqueci minha senha"
+              variant="text"
+              disabled={enviando}
+              onPress={() =>
+                router.push({ pathname: '/entrada/esqueci-senha', params: { email: email.trim() } })
+              }
+            />
+            <Button
               label="Voltar"
               variant="text"
               disabled={enviando}

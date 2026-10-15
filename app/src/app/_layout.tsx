@@ -94,6 +94,9 @@ function Navegacao() {
       <Stack.Protected guard={!acessoLiberado}>
         <Stack.Screen name="entrada" />
       </Stack.Protected>
+      {/* Link de recuperação de senha: acessível com ou sem sessão. Precisa ficar por último: quando
+          a sessão muda, a navegação cai na primeira tela disponível, que deve ser Início ou a entrada. */}
+      <Stack.Screen name="redefinir-senha" />
     </Stack>
   );
 }
