@@ -167,6 +167,28 @@ Autorizada separadamente. **Nada foi removido; `package.json` e `package-lock.js
 - **Conclusão:** remover só as declarações deixaria a árvore igual, dependente da instalação automática de *peers* pelo npm, sem o ganho que a etapa buscava. Para tirá-los de fato seria preciso remover ou substituir o `@expo/ui`, ou o `expo-router`, ou aceitar um estado frágil; isso exige decisão sua, junto com a pendência do `@expo/ui` e do `expo-glass-effect`.
 - **Código de saída das verificações após a restauração:** `npm ls` 0; `tsc` 0. O `package.json` e o `package-lock.json` foram comparados byte a byte com os backups feitos antes do comando.
 
+## E7 — `expo-glass-effect` removido das dependências diretas (2026-10-16; sem build nativo nem aparelho)
+
+Autorizada pelo usuário, sabendo que o `expo-router` também depende do pacote.
+
+- **Uso direto:** nenhum em `src/`, `app.json`, `eslint.config.js` nem `tsconfig.json`.
+- **Comando:** `npm uninstall expo-glass-effect`. **Alterados:** `package.json` e `package-lock.json` (uma linha cada: a declaração raiz).
+- **Efeito real:** o pacote **continua instalado**, porque o `expo-router` 57 o declara como dependência normal, não como *peer*. Agora `npm ls expo-glass-effect` o mostra só sob `expo-router`. A instalação dele não depende da instalação automática de *peers*, então o estado não fica frágil, ao contrário do caso da E12.3.
+- **Validação (códigos de saída reais):**
+  - `tsc` 0; `expo lint` 0;
+  - `npm test`: 17 arquivos, 242 testes;
+  - `npm ls` 0;
+  - `expo export` Android e iOS 0;
+  - `expo-doctor` saída 1, com a saída idêntica antes e depois da remoção.
+- **Linha de base do `expo-doctor` mudou (não por causa da E7):** agora são 19/21.
+  - Patches desatualizados: `@expo/ui`, `expo`, `expo-constants`, `expo-linking` e `expo-router`.
+  - Erro novo de esquema: `ios.icon` aponta para `./assets/expo.icon`, que é uma **pasta** (formato do Icon Composer, vinda do template), e o validador do Windows a rejeita como arquivo. Provavelmente veio com uma versão mais nova do `expo-doctor` baixada pelo `npx`. Fica para a E9, que troca o ícone.
+- **Não executado:** build nativo e aparelho.
+
+## E12 — encerrada sem remover `react-native-web` e `react-dom` (2026-10-16)
+
+Decisão do usuário, com base na avaliação da E12.3: o `expo-router` traz pacotes que exigem o `react-dom` como *peer* obrigatório, e o npm reinstala os dois automaticamente. Tirar só as declarações deixaria o projeto dependendo dessa instalação automática, sem nenhum ganho; tirá-los de fato exigiria abandonar o `expo-router`. Os dois ficam declarados como estão. A E12 está **concluída**, com a remoção de `expo-device` (E12.1) e de `expo-web-browser` (E12.2).
+
 ## Resumo
 
 E0 a E6 executadas sem condição de parada. Nada foi instalado, removido ou atualizado em dependências; ícone, abertura e bloco `web` intactos (`name`, `slug` e `scheme` mudaram depois, na E11); nenhum ADR alterado; nenhum commit. **E7 em diante (exceto a E8, a E10, a E11 e a E13, executadas à parte) aguarda nova autorização.**
