@@ -6,7 +6,7 @@ import { Button } from '@/components/button';
 import { CamposDaExperiencia, valoresVazios, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/screen-header';
+import { ScreenHeader, voltar } from '@/components/screen-header';
 import { Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { lerReferencia, lerReferenciaDaMemoria } from '@/services/referencia-temporal';
@@ -64,12 +64,14 @@ export default function Criar() {
           eyebrow="Uma memória"
           title="O que vocês já viveram?"
           description="Para algo que aconteceu antes do Laço. Só o título e quando aconteceu são necessários."
+          onBack={enviando ? undefined : voltar}
         />
       ) : (
         <ScreenHeader
           eyebrow="Nova experiência"
           title="O que vocês querem viver?"
           description="Contem o que já sabem sobre essa ideia."
+          onBack={enviando ? undefined : voltar}
         />
       )}
 

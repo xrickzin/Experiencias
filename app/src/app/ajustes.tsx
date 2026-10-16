@@ -6,7 +6,7 @@ import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/screen-header';
+import { ScreenHeader, voltar } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -66,7 +66,12 @@ export default function Ajustes() {
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScreenHeader eyebrow="Ajustes" title="Seu nome no Laço" description="É assim que você aparece para a outra pessoa." />
+      <ScreenHeader
+        eyebrow="Ajustes"
+        title="Seu nome no Laço"
+        description="É assim que você aparece para a outra pessoa."
+        onBack={saindo ? undefined : voltar}
+      />
 
       <View style={{ gap: Spacing.three }}>
         <TextField
@@ -102,7 +107,6 @@ export default function Ajustes() {
             setConfirmandoSaida(true);
           }}
         />
-        <Button label="Fechar" variant="text" disabled={saindo} onPress={() => router.back()} />
       </View>
 
       <Confirmacao

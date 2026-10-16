@@ -214,7 +214,10 @@ describe('a memória e a privacidade', () => {
     imp.listarImpressoes.mockResolvedValue({ ok: true, impressoes: lidas });
     lista(memoria());
     await abrir('/experiencia/1');
-    await screen.findByText('Já faz parte da história de vocês.');
+    // O título da experiência é o cabeçalho; abaixo dele, quando foi (por extenso).
+    await screen.findByText('12 de outubro de 2026');
+    expect(screen.getByRole('header', { name: 'Serra' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeTruthy();
     await esperar();
   }
   const AVISO = 'A impressão e o momento favorito de Bia serão revelados quando você registrar a sua impressão.';
@@ -402,12 +405,33 @@ describe('momentos: observações e momento favorito', () => {
     expect(screen.queryByRole('button', { name: /momento favorito/ })).toBeNull();
   });
 
+  it('em Vivendo guardar vem antes das fotos; na memória, as fotos vêm antes das ações', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    // Posição no texto da tela: o que aparece primeiro tem índice menor.
+    const ordem = () => {
+      const tela = JSON.stringify(screen.toJSON());
+      return { foto: tela.indexOf('Foto 1 de 1'), camera: tela.indexOf('Tirar foto') };
+    };
+
+    lista(experiencia('1', 'Serra', { estado: 'vivendo' }));
+    await abrir('/experiencia/1');
+    await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ });
+    expect(ordem().camera).toBeLessThan(ordem().foto);
+
+    lista(memoria());
+    await abrir('/experiencia/1');
+    await screen.findByText('12 de outubro de 2026');
+    await aba('Momentos');
+    await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ });
+    expect(ordem().foto).toBeLessThan(ordem().camera);
+  });
+
   it('na memória, escolher a foto como meu momento favorito', async () => {
     svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
     imp.escolherMomentoFavorito.mockResolvedValue({ ok: true });
     lista(memoria());
     await abrir('/experiencia/1');
-    await screen.findByText('Já faz parte da história de vocês.');
+    await screen.findByText('12 de outubro de 2026');
     await aba('Momentos');
     await act(async () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
@@ -441,7 +465,7 @@ describe('Nossa História', () => {
     await screen.findByText('Recente');
 
     const titulos = screen.getAllByRole('button').map((b) => b.props.accessibilityLabel).filter((l) => /Antiga|Recente|Vivendo/.test(l ?? ''));
-    expect(titulos).toEqual(['Recente, 12/10/2026', 'Antiga, março de 2019']);
+    expect(titulos).toEqual(['Recente, 12 de outubro de 2026', 'Antiga, março de 2019']);
   });
 
   it('agrupa por mês, mostra a foto de destaque e separa as memórias sem dia', async () => {

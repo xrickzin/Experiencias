@@ -28,7 +28,8 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
       disabled={inativo}
       style={({ pressed }) => ({
         minHeight: text ? 44 : 52,
-        paddingHorizontal: Spacing.four,
+        // Sem borda, o botão de texto alinha com a margem do conteúdo, como um link.
+        paddingHorizontal: text ? 0 : Spacing.four,
         borderRadius: Radius.button,
         alignItems: 'center',
         justifyContent: 'center',

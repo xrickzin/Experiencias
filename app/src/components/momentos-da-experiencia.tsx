@@ -73,6 +73,8 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
   const [erroDestaque, setErroDestaque] = useState<string>();
   // Observação em edição: `nova` para escrever uma, ou a que foi tocada.
   const [editando, setEditando] = useState<Observacao | 'nova' | null>(null);
+  // Três miniaturas por linha ocupando a largura toda: o lado sai da largura medida da grade.
+  const [lado, setLado] = useState<number>();
   // Foto de destaque: compartilhada, escolhida à mão (ADR 012 e 028). Aparece no Início.
   const destaqueId = experiencia.fotoDestaque?.id ?? null;
   const carregarObservacoes = observacoes.carregar;
@@ -163,22 +165,28 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
   const posicao = new Map(ordem.map((f, i) => [f.id, i + 1]));
   const ehFavorito = (id: string) => favorito?.fotoId === id;
 
+  // Vivendo: guardar o momento vem primeiro, com a câmera em destaque. Antes e depois, o que já
+  // foi guardado é o protagonista e as ações ficam abaixo, discretas.
+  const vivendo = experiencia.estado === 'vivendo';
+  const acoes = (
+    <View style={{ gap: Spacing.two }}>
+      <Button label="Tirar foto" variant={vivendo ? 'primary' : 'secondary'} disabled={enviando} onPress={tirarFoto} />
+      <Button label="Escolher da galeria" variant="secondary" disabled={enviando} onPress={escolherDaGaleria} />
+      <Button label="Escrever observação do momento" variant="secondary" onPress={() => setEditando('nova')} />
+      {enviando ? (
+        <ThemedText type="small" accessibilityLiveRegion="polite">
+          {envio.total > 1 ? `Guardando foto ${envio.atual} de ${envio.total}…` : 'Guardando foto…'}
+        </ThemedText>
+      ) : null}
+      {erro ? <MensagemErro>{erro}</MensagemErro> : null}
+      {observacoes.erro ? <MensagemErro>{observacoes.erro}</MensagemErro> : null}
+      {erroDaAcao ? <MensagemErro>{erroDaAcao}</MensagemErro> : null}
+    </View>
+  );
+
   return (
     <View style={{ gap: Spacing.four }}>
-      {/* Guardar o momento vem primeiro. */}
-      <View style={{ gap: Spacing.two }}>
-        <Button label="Tirar foto" disabled={enviando} onPress={tirarFoto} />
-        <Button label="Escolher da galeria" variant="secondary" disabled={enviando} onPress={escolherDaGaleria} />
-        <Button label="Escrever observação do momento" variant="secondary" onPress={() => setEditando('nova')} />
-        {enviando ? (
-          <ThemedText type="small" accessibilityLiveRegion="polite">
-            {envio.total > 1 ? `Guardando foto ${envio.atual} de ${envio.total}…` : 'Guardando foto…'}
-          </ThemedText>
-        ) : null}
-        {erro ? <MensagemErro>{erro}</MensagemErro> : null}
-        {observacoes.erro ? <MensagemErro>{observacoes.erro}</MensagemErro> : null}
-        {erroDaAcao ? <MensagemErro>{erroDaAcao}</MensagemErro> : null}
-      </View>
+      {vivendo ? acoes : null}
 
       {carregando && itens.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -189,12 +197,19 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
           Nenhum momento ainda. Fotos e observações aparecem aqui, organizadas por dia e período.
         </ThemedText>
       ) : (
-        grupos.map((grupo) => (
+        grupos.map((grupo, i) => (
           <View key={grupo.dia} style={{ gap: Spacing.three }}>
+            {/* O primeiro dia encosta na linha das abas; o filete só separa das ações ou do dia anterior. */}
             <ThemedText
               type="subtitle"
               accessibilityRole="header"
-              style={{ fontSize: 22, lineHeight: 30, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.three }}>
+              style={{
+                fontSize: 22,
+                lineHeight: 30,
+                borderTopWidth: i > 0 || vivendo ? 1 : 0,
+                borderTopColor: theme.border,
+                paddingTop: i > 0 || vivendo ? Spacing.three : 0,
+              }}>
               {grupo.rotulo}
             </ThemedText>
             {grupo.periodos.map(({ periodo, fotos: doPeriodo }) => {
@@ -206,7 +221,9 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
                     {ROTULO_DO_PERIODO[periodo].toUpperCase()}
                   </ThemedText>
                   {fotosDoPeriodo.length > 0 ? (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}>
+                    <View
+                      style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}
+                      onLayout={(e) => setLado(Math.floor((e.nativeEvent.layout.width - 2 * Spacing.two) / 3))}>
                       {fotosDoPeriodo.map((foto) => {
                         const marcas = [
                           foto.id === destaqueId ? 'foto de destaque' : null,
@@ -222,7 +239,7 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
                               setAberta(foto);
                             }}
                             style={{
-                              width: '31%',
+                              width: lado ?? '31%',
                               aspectRatio: 1,
                               borderRadius: Radius.photo,
                               overflow: 'hidden',
@@ -283,6 +300,10 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
             })}
           </View>
         ))
+      )}
+
+      {vivendo ? null : (
+        <View style={{ borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>{acoes}</View>
       )}
 
       <EditorDeObservacao

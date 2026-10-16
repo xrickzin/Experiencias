@@ -5,13 +5,14 @@ import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { BarraDeAbas } from '@/components/barra-de-abas';
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // A altura padrão da barra (49 pt) é menor que o círculo; a barra recorta o que passa dela.
 // Por isso a altura do conteúdo é definida aqui e o círculo cabe com folga dentro dela.
-const ALTURA_CONTEUDO_BARRA = 64;
+const ALTURA_CONTEUDO_BARRA = 72;
 const TAMANHO_BOTAO_CRIAR = 48;
 
 /**
@@ -21,6 +22,8 @@ const TAMANHO_BOTAO_CRIAR = 48;
 function CriarExperienciaButton() {
   const theme = useTheme();
   const [escolhendo, setEscolhendo] = useState(false);
+  // O modal desenha por baixo da barra de navegação do Android: a folha sobe acima dela.
+  const { bottom } = useSafeAreaInsets();
 
   function ir(destino: '/criar' | '/criar?tipo=memoria') {
     setEscolhendo(false);
@@ -38,7 +41,13 @@ function CriarExperienciaButton() {
         onRequestClose={() => setEscolhendo(false)}>
         <View
           accessibilityViewIsModal
-          style={{ flex: 1, justifyContent: 'flex-end', padding: Spacing.four, backgroundColor: 'rgba(43, 39, 36, 0.55)' }}>
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            padding: Spacing.four,
+            paddingBottom: Spacing.four + bottom,
+            backgroundColor: 'rgba(43, 39, 36, 0.55)',
+          }}>
           <Pressable
             accessibilityLabel="Fechar"
             accessibilityRole="button"
@@ -91,39 +100,14 @@ function CriarExperienciaButton() {
   );
 }
 
-/** Fio vermelho curto sobre o rótulo da aba ativa: a seleção não depende só da cor do texto. */
-function tabIndicator(accent: string) {
-  return function Indicator({ focused }: { focused: boolean }) {
-    return (
-      <View
-        style={{ width: 20, height: 2, backgroundColor: focused ? accent : 'transparent' }}
-      />
-    );
-  };
-}
-
 export default function TabsLayout() {
-  const theme = useTheme();
-  const { bottom } = useSafeAreaInsets();
-
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.text,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarLabelStyle: { fontFamily: FontFamily.bodyStrong, fontSize: 12 },
-        tabBarIcon: tabIndicator(theme.accent),
-        // A altura informada é a total: o conteúdo mais a área segura inferior (o padding é da própria barra).
-        tabBarStyle: {
-          height: ALTURA_CONTEUDO_BARRA + bottom,
-          backgroundColor: theme.background,
-          borderTopColor: theme.border,
-        },
-      }}>
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <BarraDeAbas {...props} altura={ALTURA_CONTEUDO_BARRA} centro={<CriarExperienciaButton />} />}>
       <Tabs.Screen name="index" options={{ title: 'Início' }} />
       <Tabs.Screen name="desejos" options={{ title: 'Desejos' }} />
-      <Tabs.Screen name="novo" options={{ title: 'Criar', tabBarButton: CriarExperienciaButton }} />
+      <Tabs.Screen name="novo" options={{ title: 'Criar' }} />
       <Tabs.Screen name="nossa-historia" options={{ title: 'Nossa História' }} />
     </Tabs>
   );

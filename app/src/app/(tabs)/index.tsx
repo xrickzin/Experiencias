@@ -44,6 +44,11 @@ export default function Inicio() {
             ? `${perfil.companheiro_nome} ainda não entrou no Laço. Enquanto isso, o app é todo seu.`
             : undefined
         }
+        action={{
+          icon: 'ajustes',
+          label: 'Ajustes',
+          onPress: () => router.push('/ajustes'),
+        }}
       />
 
       {inicio.vivendo.length > 0 ? (
@@ -130,10 +135,6 @@ export default function Inicio() {
           descricao="As memórias que vamos guardar."
           onPress={() => router.push('/nossa-historia')}
         />
-      </View>
-
-      <View style={{ marginTop: Spacing.four, alignItems: 'flex-start' }}>
-        <Button label="Ajustes" variant="text" onPress={() => router.push('/ajustes')} />
       </View>
     </Screen>
   );

@@ -17,13 +17,16 @@ type LinhaDaExperienciaProps = {
    * experiência tem destaque; sem ele, fica a composição tipográfica.
    */
   fotoDestaqueUrl?: string | null;
+  /** Nossa História, sob "Em algum dia de {mês}": o mês já foi dito, a linha mostra só o local. */
+  semQuando?: boolean;
 };
 
 /** Item de lista editorial: título, quando e onde. Abre a experiência. Sem cartão, só filete. */
-export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaqueUrl }: LinhaDaExperienciaProps) {
+export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaqueUrl, semQuando = false }: LinhaDaExperienciaProps) {
   const theme = useTheme();
   const quando = descreverReferencia(experiencia.referencia);
   const detalhes = [quando, experiencia.local].filter(Boolean).join(' · ');
+  const detalhesVisiveis = semQuando ? experiencia.local : detalhes;
 
   return (
     <Pressable
@@ -45,7 +48,7 @@ export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaque
           style={{
             width: '100%',
             aspectRatio: 3 / 2,
-            borderRadius: Radius.button,
+            borderRadius: Radius.photo,
             overflow: 'hidden',
             backgroundColor: theme.backgroundSelected,
             marginBottom: Spacing.two,
@@ -59,7 +62,12 @@ export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaque
               transition={200}
               accessible={false}
             />
-          ) : null}
+          ) : (
+            // Enquanto carrega, o fio no lugar da foto, como no cartão de Vivendo.
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 48, height: 2, backgroundColor: theme.accent }} />
+            </View>
+          )}
         </View>
       ) : null}
       <ThemedText
@@ -67,9 +75,9 @@ export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaque
         style={destaque ? { fontSize: 26, lineHeight: 34 } : { fontSize: 22, lineHeight: 30 }}>
         {experiencia.titulo}
       </ThemedText>
-      {detalhes ? (
+      {detalhesVisiveis ? (
         <ThemedText type="small" themeColor="textSecondary">
-          {detalhes}
+          {detalhesVisiveis}
         </ThemedText>
       ) : null}
       {destaque ? (

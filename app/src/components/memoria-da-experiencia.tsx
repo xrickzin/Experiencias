@@ -14,7 +14,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { useUrlAssinada } from '@/hooks/use-url-assinada';
 import type { Experiencia } from '@/services/experiencias';
 import { LIMITE_DA_IMPRESSAO } from '@/services/impressoes';
-import { descreverReferencia } from '@/services/referencia-temporal';
 
 type Props = {
   experiencia: Experiencia;
@@ -24,17 +23,15 @@ type Props = {
 };
 
 /**
- * A memória (screens.md, "Detalhe de uma memória"): destaque, nossos momentos e o que ficou para nós.
+ * A memória (screens.md, "Detalhe de uma memória"): nossos momentos e o que ficou para nós. A foto de
+ * destaque, o título e quando foi ficam no topo da tela, comuns às três abas.
  * O que é da outra pessoa só aparece se o servidor mandar (regra de privacidade no banco).
  */
 export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada = false }: Props) {
   const theme = useTheme();
   const { perfil } = useSessao();
-  const destaque = useUrlAssinada(experiencia.fotoDestaque?.caminho ?? null);
   const { minha, daOutra, registrei, salvar } = impressoes;
   const outra = perfil?.companheiro_vinculado ? (perfil.companheiro_nome ?? 'A outra pessoa') : null;
-  const quando = descreverReferencia(experiencia.referencia);
-  const detalhes = [quando, experiencia.local].filter(Boolean).join(' · ');
 
   const [escrevendo, setEscrevendo] = useState(recemFinalizada);
   const [texto, setTexto] = useState('');
@@ -83,24 +80,8 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
         </View>
       ) : null}
 
-      {destaque ? (
-        <View style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: Radius.photo, overflow: 'hidden' }}>
-          <Image
-            source={{ uri: destaque }}
-            contentFit="cover"
-            style={{ flex: 1 }}
-            accessibilityLabel={`Foto de destaque de ${experiencia.titulo}`}
-          />
-        </View>
-      ) : null}
-      <View style={{ gap: Spacing.one }}>
-        <ThemedText type="subtitle" style={{ fontSize: 28, lineHeight: 36 }}>
-          {experiencia.titulo}
-        </ThemedText>
-        {detalhes ? <ThemedText themeColor="textSecondary">{detalhes}</ThemedText> : null}
-      </View>
-
-      <Secao titulo="Nossos momentos">
+      {/* A linha das abas já separa: a primeira seção não leva filete próprio. */}
+      <Secao titulo="Nossos momentos" filete={false}>
         <Favorito rotulo="Meu momento favorito" caminho={minha?.momentoFavorito?.caminho ?? null}>
           Você ainda não escolheu. Abra uma foto na aba Momentos para escolher.
         </Favorito>
@@ -202,10 +183,16 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
   );
 }
 
-function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Secao({ titulo, filete = true, children }: { titulo: string; filete?: boolean; children: React.ReactNode }) {
   const theme = useTheme();
   return (
-    <View style={{ gap: Spacing.two, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.three }}>
+    <View
+      style={{
+        gap: Spacing.two,
+        borderTopWidth: filete ? 1 : 0,
+        borderTopColor: theme.border,
+        paddingTop: filete ? Spacing.three : 0,
+      }}>
       <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
         {titulo}
       </ThemedText>

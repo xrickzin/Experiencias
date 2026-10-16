@@ -39,11 +39,12 @@ export default function NossaHistoria() {
     };
   }, [chaveDosCaminhos]);
 
-  const item = (m: Experiencia) => (
+  const item = (m: Experiencia, semQuando = false) => (
     <LinhaDaExperiencia
       key={m.id}
       experiencia={m}
       fotoDestaqueUrl={m.fotoDestaque ? (urls.get(m.fotoDestaque.caminho) ?? null) : null}
+      semQuando={semQuando}
     />
   );
 
@@ -85,16 +86,20 @@ export default function NossaHistoria() {
           <View style={{ borderLeftWidth: 1, borderLeftColor: theme.accent, paddingLeft: Spacing.three }}>
             {meses.map((mes) => (
               <View key={mes.chave} style={{ marginBottom: Spacing.four }}>
-                <ThemedText type="smallBold" accessibilityRole="header" style={{ marginBottom: Spacing.one }}>
+                {/* Cada mês é um capítulo do álbum: título na voz editorial. */}
+                <ThemedText
+                  type="subtitle"
+                  accessibilityRole="header"
+                  style={{ fontSize: 22, lineHeight: 30, marginBottom: Spacing.one }}>
                   {mes.rotulo}
                 </ThemedText>
-                {mes.comDia.map(item)}
+                {mes.comDia.map((m) => item(m))}
                 {mes.semDia.length > 0 ? (
                   <>
                     <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: Spacing.three }}>
                       {`Em algum dia de ${mes.rotulo.split(' de ')[0].toLowerCase()}`}
                     </ThemedText>
-                    {mes.semDia.map(item)}
+                    {mes.semDia.map((m) => item(m, true))}
                   </>
                 ) : null}
               </View>

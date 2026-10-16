@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { AccessibilityInfo, Modal, View } from 'react-native';
@@ -11,15 +12,17 @@ import { MensagemErro } from '@/components/mensagem-erro';
 import { MomentosDaExperiencia } from '@/components/momentos-da-experiencia';
 import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/screen-header';
+import { ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { useImpressoes } from '@/hooks/use-impressoes';
 import { useTheme } from '@/hooks/use-theme';
+import { useUrlAssinada } from '@/hooks/use-url-assinada';
 import type { Estado, Experiencia } from '@/services/experiencias';
 import {
   camposDaReferencia,
+  descreverReferencia,
   lerReferencia,
   lerReferenciaDaMemoria,
   SEM_DATA,
@@ -27,17 +30,17 @@ import {
 } from '@/services/referencia-temporal';
 import { validarTituloDoDesejo } from '@/services/validacao';
 
-/** Texto de cada estado. A mudança de estado parece evolução da experiência, não troca de coluna. */
-const POR_ESTADO: Record<Estado, { eyebrow: string; titulo: string; descricao: string }> = {
-  desejo: { eyebrow: 'Desejo', titulo: 'Ainda é só uma ideia por enquanto.', descricao: 'Guardem o que já sabem.' },
-  planejamento: {
-    eyebrow: 'Planejando',
-    titulo: 'Vamos começar a dar forma a isso.',
-    descricao: 'Juntem o que já decidiram, no tempo de vocês.',
-  },
-  vivendo: { eyebrow: 'Vivendo', titulo: 'Está acontecendo.', descricao: 'Guardem o que estão vivendo.' },
-  memoria: { eyebrow: 'Memória', titulo: 'Já faz parte da história de vocês.', descricao: '' },
+/**
+ * Texto de cada estado, abaixo do título da experiência. A mudança de estado parece evolução da
+ * experiência, não troca de coluna. Na memória, o lugar da frase é de quando e onde foi.
+ */
+const POR_ESTADO: Record<Estado, { eyebrow: string; frase: string }> = {
+  desejo: { eyebrow: 'Desejo', frase: 'Ainda é só uma ideia por enquanto.' },
+  planejamento: { eyebrow: 'Planejando', frase: 'Vamos começar a dar forma a isso.' },
+  vivendo: { eyebrow: 'Vivendo', frase: 'Está acontecendo.' },
+  memoria: { eyebrow: 'Memória', frase: 'Já faz parte da história de vocês.' },
 };
+
 
 type Aba = 'memoria' | 'momentos' | 'detalhes';
 // A aba principal vem primeiro: a memória, os momentos em Vivendo, os detalhes em Planejamento.
@@ -126,6 +129,8 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
   const memoria = estado === 'memoria';
   const abas = ABAS[estado];
   const textos = POR_ESTADO[estado];
+  const destaque = useUrlAssinada(memoria ? (experiencia.fotoDestaque?.caminho ?? null) : null);
+  const ondeEQuando = [descreverReferencia(experiencia.referencia), experiencia.local].filter(Boolean).join(' · ');
   const impressoes = useImpressoes(experiencia.id);
   const carregarImpressoes = impressoes.carregar;
   // O que importa em cada momento: a memória; vivendo, os momentos; planejando, os detalhes.
@@ -320,7 +325,36 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScreenHeader eyebrow={textos.eyebrow} title={textos.titulo} description={textos.descricao || undefined} />
+      <ScreenHeader
+        eyebrow={textos.eyebrow}
+        title={experiencia.titulo}
+        description={memoria ? ondeEQuando || textos.frase : textos.frase}
+        onBack={voltar}
+      />
+
+      {/* Na memória, a foto de destaque assume (screens.md) e acompanha as três abas. */}
+      {memoria && experiencia.fotoDestaque ? (
+        <View
+          style={{
+            width: '100%',
+            aspectRatio: 4 / 3,
+            borderRadius: Radius.photo,
+            overflow: 'hidden',
+            backgroundColor: theme.backgroundSelected,
+            marginTop: -Spacing.two,
+            marginBottom: Spacing.four,
+          }}>
+          {destaque ? (
+            <Image
+              source={{ uri: destaque }}
+              contentFit="cover"
+              style={{ flex: 1 }}
+              transition={200}
+              accessibilityLabel={`Foto de destaque de ${experiencia.titulo}`}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Registros existem a partir de Planejamento (memory.md); em Desejo não há abas. */}
       {abas ? (
@@ -348,10 +382,6 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
       ) : (
         detalhes
       )}
-
-      <View style={{ marginTop: Spacing.two }}>
-        <Button label="Voltar" variant="text" disabled={ocupado} onPress={() => router.back()} />
-      </View>
 
       <Confirmacao
         visible={confirmandoFinal}

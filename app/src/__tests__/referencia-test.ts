@@ -125,11 +125,11 @@ describe('descreverReferencia', () => {
   it.each([
     [SEM_DATA, null],
     [{ precisao: 'mes_ano', inicio: '2026-10-01', fim: null, horario: null }, 'outubro de 2026'],
-    [{ precisao: 'data', inicio: '2026-10-12', fim: null, horario: null }, '12/10/2026'],
-    [{ precisao: 'data_horario', inicio: '2026-10-12', fim: null, horario: '19:30' }, '12/10/2026, 19:30'],
+    [{ precisao: 'data', inicio: '2026-10-12', fim: null, horario: null }, '12 de outubro de 2026'],
+    [{ precisao: 'data_horario', inicio: '2026-10-12', fim: null, horario: '19:30' }, '12 de outubro de 2026, 19:30'],
     [{ precisao: 'periodo', inicio: '2026-10-12', fim: '2026-10-15', horario: null }, '12 a 15 de outubro de 2026'],
     [{ precisao: 'periodo', inicio: '2026-10-28', fim: '2026-11-02', horario: null }, '28 de outubro a 2 de novembro de 2026'],
-    [{ precisao: 'periodo', inicio: '2026-12-28', fim: '2027-01-02', horario: null }, '28/12/2026 a 02/01/2027'],
+    [{ precisao: 'periodo', inicio: '2026-12-28', fim: '2027-01-02', horario: null }, '28 de dezembro de 2026 a 2 de janeiro de 2027'],
   ] as const)('%j → %j', (referencia, texto) => expect(descreverReferencia(referencia)).toBe(texto));
 });
 

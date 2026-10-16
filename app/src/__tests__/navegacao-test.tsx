@@ -1,4 +1,4 @@
-import { act, screen } from 'expo-router/testing-library';
+import { act, fireEvent, screen } from 'expo-router/testing-library';
 
 import { abrir, esperar } from './apoio/abrir';
 import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
@@ -13,6 +13,24 @@ async function mudarSessao(parcial: Parameters<typeof definirSessao>[0]) {
 }
 
 beforeEach(() => reiniciarSessao());
+
+describe('barra de abas', () => {
+  it('abas com rótulo e estado de selecionada; tocar troca de aba', async () => {
+    definirSessao({ estado: 'com-laco' });
+    const { tela } = await abrir('/');
+    const aba = (nome: string) => screen.getByRole('tab', { name: nome });
+    expect(aba('Início').props.accessibilityState).toMatchObject({ selected: true });
+    expect(aba('Desejos').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByRole('button', { name: 'Criar experiência' })).toBeTruthy();
+
+    await act(async () => {
+      await fireEvent.press(aba('Desejos'));
+    });
+    await esperar();
+    expect(tela.getPathname()).toBe('/desejos');
+    expect(aba('Desejos').props.accessibilityState).toMatchObject({ selected: true });
+  });
+});
 
 describe('navegação conforme a sessão', () => {
   it('sem sessão, abre na entrada', async () => {

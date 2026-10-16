@@ -1,11 +1,10 @@
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
-import { Button } from '@/components/button';
 import { LinhaDaExperiencia } from '@/components/linha-da-experiencia';
 import { Screen } from '@/components/screen';
-import { ScreenHeader } from '@/components/screen-header';
+import { ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +38,7 @@ export default function Lista() {
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScreenHeader eyebrow={textos.eyebrow} title={textos.titulo} />
+      <ScreenHeader eyebrow={textos.eyebrow} title={textos.titulo} onBack={voltar} />
       {itens.length === 0 ? (
         <ThemedText themeColor="textSecondary">{textos.vazio}</ThemedText>
       ) : (
@@ -49,9 +48,6 @@ export default function Lista() {
           ))}
         </View>
       )}
-      <View style={{ alignItems: 'flex-start' }}>
-        <Button label="Voltar" variant="text" onPress={() => router.back()} />
-      </View>
     </Screen>
   );
 }

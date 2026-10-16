@@ -153,7 +153,16 @@ const partes = (iso: string) => {
   return { ano, mes, dia };
 };
 
-/** "outubro de 2026", "12/10/2026", "12/10/2026, 19:30", "12 a 15 de outubro de 2026". Nulo se sem data. */
+/** "12 de outubro de 2026": a data por extenso, como as outras precisões. */
+const porExtenso = (iso: string) => {
+  const { ano, mes, dia } = partes(iso);
+  return `${dia} de ${MESES[mes - 1]} de ${ano}`;
+};
+
+/**
+ * Sempre por extenso: "outubro de 2026", "12 de outubro de 2026", "12 de outubro de 2026, 19:30",
+ * "12 a 15 de outubro de 2026". Nulo se sem data.
+ */
 export function descreverReferencia(r: ReferenciaTemporal): string | null {
   if (r.precisao === 'sem_data' || !r.inicio) return null;
   const i = partes(r.inicio);
@@ -161,11 +170,11 @@ export function descreverReferencia(r: ReferenciaTemporal): string | null {
     case 'mes_ano':
       return `${MESES[i.mes - 1]} de ${i.ano}`;
     case 'data':
-      return paraTextoDeData(r.inicio);
+      return porExtenso(r.inicio);
     case 'data_horario':
-      return `${paraTextoDeData(r.inicio)}, ${(r.horario ?? '').slice(0, 5)}`;
+      return `${porExtenso(r.inicio)}, ${(r.horario ?? '').slice(0, 5)}`;
     case 'periodo': {
-      if (!r.fim) return paraTextoDeData(r.inicio);
+      if (!r.fim) return porExtenso(r.inicio);
       const f = partes(r.fim);
       if (i.ano === f.ano && i.mes === f.mes) {
         return i.dia === f.dia
@@ -173,7 +182,7 @@ export function descreverReferencia(r: ReferenciaTemporal): string | null {
           : `${i.dia} a ${f.dia} de ${MESES[i.mes - 1]} de ${i.ano}`;
       }
       if (i.ano === f.ano) return `${i.dia} de ${MESES[i.mes - 1]} a ${f.dia} de ${MESES[f.mes - 1]} de ${i.ano}`;
-      return `${paraTextoDeData(r.inicio)} a ${paraTextoDeData(r.fim)}`;
+      return `${porExtenso(r.inicio)} a ${porExtenso(r.fim)}`;
     }
   }
 }
