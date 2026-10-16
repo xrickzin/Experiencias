@@ -443,4 +443,23 @@ describe('Nossa História', () => {
     const titulos = screen.getAllByRole('button').map((b) => b.props.accessibilityLabel).filter((l) => /Antiga|Recente|Vivendo/.test(l ?? ''));
     expect(titulos).toEqual(['Recente, 12/10/2026', 'Antiga, março de 2019']);
   });
+
+  it('agrupa por mês, mostra a foto de destaque e separa as memórias sem dia', async () => {
+    lista(
+      memoria({ id: 'a', titulo: 'Com foto', fotoDestaque: { id: 'f1', caminho: 'l1/a/f1.jpg' } }),
+      memoria({ id: 'b', titulo: 'Sem foto', referencia: { precisao: 'data', inicio: '2026-09-05', fim: null, horario: null } }),
+      memoria({ id: 'c', titulo: 'Só o mês', referencia: { precisao: 'mes_ano', inicio: '2026-10-01', fim: null, horario: null } })
+    );
+    svc.assinarCaminhos.mockResolvedValue(new Map([['l1/a/f1.jpg', 'https://assinada/f1']]));
+    await abrir('/nossa-historia');
+    await screen.findByText('Com foto');
+
+    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(
+      expect.arrayContaining(['Outubro de 2026', 'Setembro de 2026'])
+    );
+    expect(screen.getByText('Em algum dia de outubro')).toBeTruthy();
+    expect(svc.assinarCaminhos).toHaveBeenCalledWith(['l1/a/f1.jpg']);
+    expect(screen.getAllByTestId('historia-foto')).toHaveLength(1);
+    expect(screen.getByText('E ainda tem muito por viver.')).toBeTruthy();
+  });
 });

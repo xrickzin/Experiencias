@@ -30,7 +30,7 @@ export const PRECISOES: { valor: Precisao; rotulo: string }[] = [
   { valor: 'periodo', rotulo: 'Período' },
 ];
 
-const MESES = [
+export const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ];
