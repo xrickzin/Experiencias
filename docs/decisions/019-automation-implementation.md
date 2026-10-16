@@ -1,6 +1,6 @@
 # 019 — Automação do início: execução, fuso e anti-loop
 
-**Status:** Aceita. Decisão técnica delegada pelo produto; validar disponibilidade no plano do Supabase na Fase 7.
+**Status:** Aceita. Decisão técnica delegada pelo produto. Implementada na Fase 7 com `pg_cron` ([phase-7-log.md](../development/phase-7-log.md)).
 
 ## Contexto
 O [004](./004-dates-and-automation.md) define o que a automação faz (servidor, 00:00 no fuso do Laço, data passada não dispara, não repete após decisão manual). Faltava o como.

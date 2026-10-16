@@ -42,5 +42,6 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [028](./028-cover-photo-before-memory.md) | Foto de destaque antes da Memória e no Início (amplia 012) | [memory.md](../product/memory.md#foto-de-destaque) |
 | [029](./029-moments-tab-and-create-choice.md) | Aba Momentos (observações como registro) e escolha no "+" | [memory.md](../product/memory.md#registros) |
 | [030](./030-photo-caption-and-observation-moment.md) | Legenda nas fotos e observação do momento (ajusta 029) | [memory.md](../product/memory.md#registros) |
+| [031](./031-month-only-memories-in-our-story.md) | Memórias só com mês/ano em Nossa História (resolve UX-V11) | [memory.md](../product/memory.md#nossa-história) |
 
 Pendências ainda sem decisão: [../product/open-questions.md](../product/open-questions.md).

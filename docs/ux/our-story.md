@@ -15,7 +15,7 @@ Cronológica: **ano → mês → experiências**, agrupada por **mês + ano**. O
 > **Outubro de 2026** — 03 de outubro · 12 de outubro · 24 de outubro
 > **Setembro de 2026** — 05 de setembro · 19 de setembro
 
-**Memória só com mês/ano** aparece no mês correspondente. Não inventar um dia para ela: a posição dentro do mês usa uma regra visual que preserve a ausência de precisão, e a memória não aparenta ter data mais precisa do que realmente tem (UX-V11).
+**Memória só com mês/ano** aparece no mês correspondente. Não inventar um dia para ela: a posição dentro do mês usa uma regra visual que preserve a ausência de precisão, e a memória não aparenta ter data mais precisa do que realmente tem Elas ficam no fim do mês, sob "Em algum dia de {mês}" ([ADR 031](../decisions/031-month-only-memories-in-our-story.md)).
 
 ## Item da História
 

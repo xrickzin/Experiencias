@@ -11,8 +11,8 @@
 | 3 | **Concluída** (migração aplicada no projeto real e validada no celular pelo usuário; ver [phase-3-log.md](./phase-3-log.md)). Planejamento e Início: transições, referência temporal (com instante de início e `armado_em`), local e observações | Fase 2 | — |
 | 4 | **Concluída** (migrações aplicadas no projeto real e validadas no celular pelo usuário; ver [phase-4-log.md](./phase-4-log.md)). Fotos: câmera, galeria e Storage privado, em Planejamento e Vivendo, com abas, agrupamento por dia e período e foto de destaque ([ADR 028](../decisions/028-cover-photo-before-memory.md)) | Fase 3 | — |
 | 5 | **Concluída** (migrações aplicadas no projeto real e validadas no celular pelo usuário; ver [phase-5-log.md](./phase-5-log.md)). Memória: finalizar, registrar memória, impressão, momento favorito, privacidade no banco, observações simples do momento e legenda nas fotos ([ADR 029](../decisions/029-moments-tab-and-create-choice.md), [030](../decisions/030-photo-caption-and-observation-moment.md)) | Fase 4 | — |
-| 6 | Nossa História: agrupamento por mês de início e foto de destaque | Fase 5 | — |
-| 7 | Automação do início: rotina no PostgreSQL, fuso do Laço | Fase 3 | rotina agendada disponível no plano |
+| 6 | **Concluída** (validada no celular pelo usuário; ver [phase-6-log.md](./phase-6-log.md)). Nossa História: agrupamento por mês de início e foto de destaque ([ADR 031](../decisions/031-month-only-memories-in-our-story.md)) | Fase 5 | — |
+| 7 | **Concluída** (migração aplicada no projeto real e validada no celular pelo usuário; ver [phase-7-log.md](./phase-7-log.md)). Automação do início: rotina no PostgreSQL (`pg_cron`, a cada minuto), fuso do Laço | Fase 3 | `pg_cron` disponível em todos os planos do Supabase |
 
 As telas de cada fase dependem da proposta visual aprovada ([../ux/design-direction.md](../ux/design-direction.md#10-resultado-esperado-antes-da-implementação-visual-ampla)); dados e serviços podem começar antes.
 

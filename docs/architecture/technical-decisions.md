@@ -31,7 +31,7 @@ Cada experiência guarda `armado_em`, atualizado a cada edição da referência 
 
 Não são decisões abertas: são premissas a conferir; se falharem, reabrem o ADR indicado.
 
-- Existência e limites da rotina agendada no plano do Supabase usado ([019](../decisions/019-automation-implementation.md)).
+- Existência e limites da rotina agendada no plano do Supabase usado ([019](../decisions/019-automation-implementation.md)). **Implementado na Fase 7:** `pg_cron` (disponível em todos os planos do Supabase), rotina `iniciar-experiencias` a cada minuto; funcionando no Supabase local e no projeto real ([phase-7-log.md](../development/phase-7-log.md)).
 - Segredo no servidor para o HMAC da palavra-chave e leitura do IP da requisição nas funções ([018](../decisions/018-keyword-protection-implementation.md)). **Implementado na Fase 1:** segredo em `configuracao_servidor` (gerado na migração) e IP lido dos cabeçalhos da requisição; falta conferir os cabeçalhos num projeto Supabase real ([phase-1-log.md](../development/phase-1-log.md)).
 - Armazenamento seguro de sessão no aparelho, com o limite de tamanho de valor ([017](../decisions/017-account-and-session-details.md)). **Implementado na Fase 1:** `expo-secure-store` com a sessão dividida em blocos; não validado em aparelho.
 - Formato do "esqueci a senha" (link ou código) e dependência do `scheme` ([017](../decisions/017-account-and-session-details.md)). **Implementado na Fase 1 como link por e-mail (PKCE) e `scheme` `laco`; falta o teste real** ([phase-1-log.md](../development/phase-1-log.md)).

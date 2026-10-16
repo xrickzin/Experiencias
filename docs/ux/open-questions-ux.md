@@ -22,7 +22,6 @@ Nenhuma. UX-F17 (entrada pelo e-mail) e UX-F18 (informações de um Desejo) fora
 | UX-V7 | Acessibilidade visual (tamanho de fonte, leitor de tela, alvos de toque) e telas pequenas. |
 | UX-V8 | Tratamento visual do e-mail, sem confirmação de e-mail (o [ADR 017](../decisions/017-account-and-session-details.md) prevê dupla digitação opcional). |
 | UX-V9 | Ponto de entrada visual para as configurações da conta (editar nome, sair da conta), sem nova área principal. |
-| UX-V11 | Posição e aparência em Nossa História de memórias só com mês/ano, sem sugerir data mais precisa. |
 | UX-V12 | Interação do seletor de precisão da referência temporal (mês/ano, data, data + horário, período). |
 | UX-V15 | Cores semânticas (marca, interação, aviso, erro, destrutivo): valores implementados em `theme.ts` na E6 como primeira versão, ainda sujeitos à avaliação visual da proximidade carmim / ferrugem / âmbar ([visual-direction.md](./proposal/visual-direction.md#semântica-das-cores-valores-pendentes-de-verificação)). |
 | UX-V13 | Redação final dos textos de interface ("código do casal", mensagens, nomes das ações de transição). |
