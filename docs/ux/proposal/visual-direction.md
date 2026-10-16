@@ -146,7 +146,7 @@ Linguagem contínua, **sutil e abstrata**. Traço de 1,5 pt (2 pt no topo), pont
 | Nossa História | linha vertical `fio suave` à esquerda, ligando os meses; sem pontos em todo item |
 | Mudança de estado | o fio se desenha durante a transição (ver [motion-and-accessibility.md](./motion-and-accessibility.md)) |
 | Carregamento longo | filete que se traça no topo; só depois de 400 ms |
-| Navegação | **exceção aprovada pelo usuário (2026-10-16):** na aba ativa, o fio forma um laço próprio de cada ícone; ao trocar de aba, o mesmo fio se desfaz, atravessa a barra e se enrola no ícone novo (650 ms; com menos movimento pedido pelo sistema, só muda de lugar). Substitui o traço sob o item ativo |
+| Navegação | **exceção aprovada pelo usuário (2026-10-16):** na aba ativa, o fio forma um laço próprio de cada ícone; ao trocar de aba, o mesmo fio se desfaz, atravessa a barra em ondas e se enrola no ícone novo (de 1 a 1,5 s; com menos movimento pedido pelo sistema, só muda de lugar). O ícone é sólido e o laço é um anel em volta dele, passando por trás em cima e pela frente embaixo. Substitui o traço sob o item ativo |
 
 Nunca em: botões, campos, cartões, ícones (salvo a exceção da navegação acima), cada item de lista.
 

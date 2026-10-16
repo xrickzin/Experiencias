@@ -43,5 +43,9 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [029](./029-moments-tab-and-create-choice.md) | Aba Momentos (observações como registro) e escolha no "+" | [memory.md](../product/memory.md#registros) |
 | [030](./030-photo-caption-and-observation-moment.md) | Legenda nas fotos e observação do momento (ajusta 029) | [memory.md](../product/memory.md#registros) |
 | [031](./031-month-only-memories-in-our-story.md) | Memórias só com mês/ano em Nossa História (resolve UX-V11) | [memory.md](../product/memory.md#nossa-história) |
+| [032](./032-photo-capture-date.md) | Quando a foto foi tirada: leitura automática e correção manual | [memory.md](../product/memory.md#registros) |
+| [033](./033-gallery-access-save-share-quality.md) | Acesso às fotos, salvar e compartilhar, qualidade das fotos | [memory.md](../product/memory.md#registros) |
+| [034](./034-photo-thumbnails.md) | Miniaturas das fotos (listas leves, foto inteira ao abrir) e estimativa de capacidade | [memory.md](../product/memory.md#registros) |
+| [035](./035-photo-size.md) | Tamanho da foto guardada (2560 px) | [memory.md](../product/memory.md#registros) |
 
 Pendências ainda sem decisão: [../product/open-questions.md](../product/open-questions.md).

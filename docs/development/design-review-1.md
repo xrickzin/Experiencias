@@ -40,6 +40,12 @@ Primeira revisão de design do app, feita com o Impeccable (`critique`) sobre pr
   - **Toque contido:** sem o efeito de toque padrão do Android, que passava da barra e entrava na área da barra do sistema; ao tocar, ícone e rótulo só clareiam.
 - A barra ficou 8 pt mais alta (72) para caber ícone, laço e rótulo.
 
+**Fio entrelaçado em 3D (pedido do usuário, 2026-10-16)**
+- Os ícones da barra ficaram **sólidos** (preenchidos com a cor do papel; `Icone` ganhou `preenchimento` e a silhueta de cada um). O fio é desenhado em duas camadas: a de trás, que some atrás do ícone, e a da frente, só com os trechos que cruzam por cima, com uma borda cor de papel que faz um traço passar sobre o outro.
+- Cada laço virou um **anel em volta do ícone, como o de Saturno**: a metade de cima passa por trás e a de baixo pela frente; depois da volta, o fio cruza a própria chegada no nó. Casa: anel quase deitado, nó à esquerda. Estrela: anel inclinado para o outro lado, nó à direita. Álbum: anel em pé, como fita amarrando o livro pela lombada. Uma primeira tentativa, com o fio cruzando a frente em diagonal, formava um X sobre a casa ("cancelado") e foi descartada.
+- **Fio mais marcado:** espessura 2,5.
+- **Viagem mais lenta e em ondas:** cerca de 1 s entre abas vizinhas e 1,5 s de Início a Nossa História (800 ms + 230 ms por aba); a travessia ondula com uma crista por aba atravessada, passando por trás dos ícones e do `+`.
+
 ## Fora desta rodada
 - Os chips de "Quando" continuam quebrando em duas linhas: cinco opções não cabem numa linha sem diminuir o toque.
 - O filete vermelho à esquerda das observações foi mantido: é o fio do Laço.

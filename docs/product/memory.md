@@ -30,6 +30,8 @@ A memória é a experiência que terminou, no estado final **Memória**. **Não 
 - A observação é um registro próprio, só texto, e não uma legenda de foto. Fotos e observações aparecem juntas na aba **Momentos** da experiência ([ADR 029](../decisions/029-moments-tab-and-create-choice.md)).
 - A observação é **do momento**: pertence a um dia e a um período (madrugada, manhã, tarde, noite), por padrão o atual, que a pessoa pode escolher e alterar (nunca no futuro).
 - Cada foto pode ter uma **legenda** opcional (até 300 caracteres), escrita ou alterada por qualquer um dos dois ([ADR 030](../decisions/030-photo-caption-and-observation-moment.md)).
+- Cada foto fica no dia e no período em que **foi tirada**: automático quando a imagem traz a data, senão o momento do envio. Qualquer um dos dois pode **corrigir** essa data na foto aberta ([ADR 032](../decisions/032-photo-capture-date.md)). No Android, com acesso às fotos, a data vem da galeria do aparelho ([ADR 033](../decisions/033-gallery-access-save-share-quality.md)).
+- Na foto aberta, qualquer um dos dois pode **salvar a foto no celular** ou **compartilhá-la** pelas opções do aparelho ([ADR 033](../decisions/033-gallery-access-save-share-quality.md)).
 - Outros tipos (vídeos, gastos, roteiro…) são futuro: [future.md](./future.md).
 
 ## Impressão pessoal
