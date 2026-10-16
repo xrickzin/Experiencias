@@ -98,6 +98,14 @@ r = await caio.from('registros').update({ capturada_em: '2026-10-10T00:00:00Z' }
 confere('outro Laço não muda o momento', !r.error && r.data?.length === 0, j(r));
 
 // Limpeza: arquivo antes da linha.
+// --- Quando a foto foi tirada, escolhido à mão (ADR 032) ------------------------------------------
+r = await bia.from('registros').update({ capturada_em: '2022-06-11T00:00:00Z' }).eq('id', foto.id).select('capturada_em, autor_id');
+confere('a outra pessoa corrige quando a foto foi tirada', r.data?.[0]?.capturada_em?.startsWith('2022-06-11T00:00:00'), j(r));
+r = await ana.from('registros').update({ capturada_em: '2099-01-01T00:00:00Z' }).eq('id', foto.id).select('id');
+confere('data da foto no futuro distante é recusada', Boolean(r.error), j(r));
+r = await caio.from('registros').update({ capturada_em: '2020-01-01T00:00:00Z' }).eq('id', foto.id).select('id');
+confere('outro Laço não muda a data da foto', !r.error && r.data?.length === 0, j(r));
+
 await ana.storage.from('experiencias').remove([caminho]);
 await ana.from('experiencias').delete().eq('id', exp.id);
 
