@@ -1,0 +1,46 @@
+# Mantém o projeto Supabase ativo: o plano gratuito pausa o projeto depois de 7 dias sem uso.
+# A cada 3 dias, faz uma consulta à API com a chave anônima. A consulta é recusada (a chave anônima
+# não lê nenhuma tabela), mas a recusa vem do próprio PostgreSQL: o banco recebeu a requisição.
+#
+# Segredos do repositório (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       = a mesma URL do EXPO_PUBLIC_SUPABASE_URL do app
+#   SUPABASE_ANON_KEY  = a mesma chave do EXPO_PUBLIC_SUPABASE_ANON_KEY do app
+#
+# Atenção: o GitHub desliga rotinas agendadas de repositórios sem commits há 60 dias (avisa por e-mail).
+
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: '17 12 */3 * *' # a cada 3 dias, 12:17 UTC (09:17 em Brasília)
+  workflow_dispatch: # permite rodar à mão pela aba Actions
+
+permissions: {}
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar o banco
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os segredos SUPABASE_URL e SUPABASE_ANON_KEY no repositório."
+            exit 1
+          fi
+          resposta=$(curl -s -w '\n%{http_code}' --max-time 60 \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/experiencias?select=id&limit=1")
+          codigo=$(echo "$resposta" | tail -n 1)
+          echo "Resposta HTTP: $codigo"
+          # 401 com o erro 42501 (permissão negada) é o esperado: quem respondeu foi o PostgreSQL.
+          if [ "$codigo" = "200" ] || echo "$resposta" | grep -q '"42501"'; then
+            echo "Banco consultado; o projeto conta como ativo."
+          else
+            echo "::error::O banco não respondeu como esperado (HTTP $codigo). Confira se o projeto está pausado no painel do Supabase."
+            exit 1
+          fi
