@@ -11,6 +11,8 @@ export const experiencia = (id: string, titulo: string, extra: Partial<Experienc
   referencia: SEM_DATA,
   inicioEm: null,
   fotoDestaque: null,
+  tamanho: null,
+  categorias: [],
   criadoEm: '2026-10-15T12:00:00Z',
   atualizadoEm: '2026-10-15T12:00:00Z',
   ...extra,

@@ -13,25 +13,30 @@ type Resposta = { data: unknown; error: { code?: string; message?: string; name?
 
 const mockChamadas: { metodo: string; args: unknown[] }[] = [];
 let mockResposta: Resposta = { data: [], error: null };
+// Resposta própria de uma tabela; as demais usam `mockResposta`.
+let mockPorTabela: Record<string, Resposta> = {};
 let mockExcecao: Error | null = null;
 
 // Construtor encadeável: registra cada chamada e, ao ser aguardado, devolve a resposta combinada.
-function mockConstrutor() {
+function mockConstrutor(tabela: string) {
   const c: Record<string, unknown> = {};
-  for (const metodo of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'single']) {
+  for (const metodo of ['select', 'insert', 'update', 'delete', 'eq', 'in', 'order', 'single']) {
     c[metodo] = (...args: unknown[]) => {
       mockChamadas.push({ metodo, args });
       return c;
     };
   }
   c.then = (resolve: (r: Resposta) => unknown, rejeitar: (e: unknown) => unknown) =>
-    (mockExcecao ? Promise.reject(mockExcecao) : Promise.resolve(mockResposta)).then(resolve, rejeitar);
+    (mockExcecao ? Promise.reject(mockExcecao) : Promise.resolve(mockPorTabela[tabela] ?? mockResposta)).then(
+      resolve,
+      rejeitar
+    );
   return c;
 }
 
 jest.mock('@/services/supabase', () => ({
   supabase: {
-    from: () => mockConstrutor(),
+    from: (tabela: string) => mockConstrutor(tabela),
     rpc: (...args: unknown[]) => {
       mockChamadas.push({ metodo: 'rpc', args });
       return mockExcecao ? Promise.reject(mockExcecao) : Promise.resolve(mockResposta);
@@ -63,6 +68,7 @@ const filtros = () => mockChamadas.filter((c) => c.metodo === 'eq').map((c) => c
 beforeEach(() => {
   mockChamadas.length = 0;
   mockResposta = { data: [], error: null };
+  mockPorTabela = {};
   mockExcecao = null;
 });
 
@@ -95,6 +101,8 @@ describe('listarExperiencias', () => {
           referencia: { precisao: 'data_horario', inicio: '2026-12-10', fim: null, horario: '19:30' },
           inicioEm: '2026-12-10T22:30:00+00:00',
           fotoDestaque: null,
+          tamanho: null,
+          categorias: [],
           criadoEm: '2026-10-15T12:00:00Z',
           atualizadoEm: '2026-10-15T12:00:00Z',
         },
@@ -122,6 +130,38 @@ describe('listarExperiencias', () => {
   });
 });
 
+describe('categorias e tamanho', () => {
+  it('ao editar, tira as categorias que saíram, marca as novas e envia o tamanho', async () => {
+    mockResposta = { data: [linha({ categorias: [{ categoria_id: 'a' }, { categoria_id: 'b' }] })], error: null };
+    mockPorTabela.categorias = { data: [{ id: 'c' }], error: null };
+    const r = await atualizarExperiencia('d1', { titulo: 'Filme', tamanho: 'noite', categorias: ['b', 'c'] });
+
+    expect(r).toMatchObject({ ok: true, experiencia: { categorias: ['b', 'c'] } });
+    expect(enviado('update')).toMatchObject({ tamanho: 'noite' });
+    expect(mockChamadas.find((c) => c.metodo === 'in')?.args).toEqual(['categoria_id', ['a']]);
+    const insercoes = mockChamadas.filter((c) => c.metodo === 'insert');
+    expect(insercoes.at(-1)?.args[0]).toEqual([{ experiencia_id: 'd1', categoria_id: 'c' }]);
+  });
+
+  it('categoria excluída com o formulário aberto é ignorada, sem erro', async () => {
+    mockResposta = { data: [linha({ categorias: [{ categoria_id: 'a' }] })], error: null };
+    mockPorTabela.categorias = { data: [{ id: 'c' }], error: null }; // 'sumiu' já não existe
+    const r = await atualizarExperiencia('d1', { titulo: 'Filme', categorias: ['a', 'sumiu', 'c'] });
+
+    expect(r).toMatchObject({ ok: true, experiencia: { categorias: ['a', 'c'] } });
+    const insercoes = mockChamadas.filter((c) => c.metodo === 'insert');
+    expect(insercoes.at(-1)?.args[0]).toEqual([{ experiencia_id: 'd1', categoria_id: 'c' }]);
+  });
+
+  it('sem categorias no pedido, não mexe nas que já estão', async () => {
+    mockResposta = { data: [linha({ categorias: [{ categoria_id: 'a' }] })], error: null };
+    const r = await atualizarExperiencia('d1', { titulo: 'Filme' });
+
+    expect(r).toMatchObject({ ok: true, experiencia: { categorias: ['a'] } });
+    expect(mockChamadas.some((c) => c.metodo === 'delete')).toBe(false);
+  });
+});
+
 describe('criarDesejo', () => {
   it('apara o título, converte texto vazio em nulo e manda "sem data" por padrão', async () => {
     mockResposta = { data: linha(), error: null };
@@ -136,6 +176,7 @@ describe('criarDesejo', () => {
       referencia_inicio: null,
       referencia_fim: null,
       referencia_horario: null,
+      tamanho: null,
     });
   });
 

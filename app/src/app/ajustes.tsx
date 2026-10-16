@@ -4,17 +4,22 @@ import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
+import { GerenciarCategorias } from '@/components/gerenciar-categorias';
 import { MensagemErro } from '@/components/mensagem-erro';
+import { Opcoes } from '@/components/opcoes';
 import { Screen } from '@/components/screen';
 import { ScreenHeader, voltar } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useSessao } from '@/hooks/use-sessao';
+import { useTheme } from '@/hooks/use-theme';
 import { atualizarMeuNome } from '@/services/laco';
+import { escolherTema, lerPreferenciaDeTema, type PreferenciaDeTema } from '@/services/tema';
 import { validarNome } from '@/services/validacao';
 
 export default function Ajustes() {
+  const theme = useTheme();
   const { perfil, atualizar, sair, acessoLiberado } = useSessao();
   const [nome, setNome] = useState(perfil?.nome ?? '');
   const [erro, setErro] = useState<string>();
@@ -23,6 +28,11 @@ export default function Ajustes() {
   const [enviando, setEnviando] = useState(false);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   const [saindo, setSaindo] = useState(false);
+  const [tema, setTema] = useState<PreferenciaDeTema>('automatico');
+
+  useEffect(() => {
+    void lerPreferenciaDeTema().then(setTema);
+  }, []);
 
   // Depois de encerrar a sessão, leva à entrada de forma explícita: a troca automática de telas
   // da navegação não basta com este modal aberto sobre as abas.
@@ -98,9 +108,40 @@ export default function Ajustes() {
 
       <View style={{ gap: Spacing.two, marginTop: Spacing.four }}>
         <Button label="Salvar nome" loading={enviando && !saindo} disabled={saindo} onPress={salvar} />
+      </View>
+
+      {/* Aparência: vale só neste aparelho; cada pessoa escolhe a sua (ADR 037). */}
+      <View style={{ gap: Spacing.two, marginTop: Spacing.five, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>
+        <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
+          Aparência
+        </ThemedText>
+        <Opcoes<PreferenciaDeTema>
+          rotulo="Tema"
+          opcoes={[
+            { valor: 'automatico', rotulo: 'Automático' },
+            { valor: 'claro', rotulo: 'Claro' },
+            { valor: 'escuro', rotulo: 'Escuro' },
+          ]}
+          atual={tema}
+          onChange={(escolhido) => {
+            setTema(escolhido);
+            void escolherTema(escolhido);
+          }}
+        />
+        <ThemedText type="small" themeColor="textSecondary">
+          No automático, o Laço segue o tema do celular: fica claro ou escuro conforme o que estiver
+          escolhido no sistema. A escolha vale só para este aparelho.
+        </ThemedText>
+      </View>
+
+      <View style={{ marginTop: Spacing.five, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>
+        <GerenciarCategorias />
+      </View>
+
+      <View style={{ gap: Spacing.two, marginTop: Spacing.five }}>
         <Button
           label="Sair da conta"
-          variant="secondary"
+          variant="destructive"
           disabled={enviando}
           onPress={() => {
             setErroGeral(undefined);

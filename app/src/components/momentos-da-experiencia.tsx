@@ -2,12 +2,15 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
+import { FolhaDeEdicao } from '@/components/folha-de-edicao';
+import { FotoEmTelaCheia } from '@/components/foto-em-tela-cheia';
 import { MensagemErro } from '@/components/mensagem-erro';
+import { Opcoes } from '@/components/opcoes';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -76,7 +79,14 @@ export type MeuFavorito = {
  * Momentos de uma experiência em Planejamento, Vivendo ou Memória: fotos e observações (registros,
  * memory.md), agrupadas por dia e por período no horário de Brasília, das mais recentes para as antigas.
  */
-export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: Experiencia; favorito?: MeuFavorito }) {
+type MomentosProps = {
+  experiencia: Experiencia;
+  favorito?: MeuFavorito;
+  /** Em Vivendo: finalizar fica à vista, logo abaixo de guardar o momento. */
+  finalizar?: { onPress: () => void; disabled?: boolean };
+};
+
+export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: MomentosProps) {
   const theme = useTheme();
   const { perfil } = useSessao();
   const { fotos, carregando, erro, envio, carregar, enviar, excluir, legendar, datar } = useFotos(experiencia.id);
@@ -84,6 +94,7 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
   const observacoes = useObservacoes(experiencia.id);
   const [erroDaAcao, setErroDaAcao] = useState<string>();
   const [aberta, setAberta] = useState<Foto | null>(null);
+  const [telaCheia, setTelaCheia] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string>();
@@ -208,6 +219,17 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
   return (
     <View style={{ gap: Spacing.four }}>
       {vivendo ? acoes : null}
+
+      {vivendo && finalizar ? (
+        // A passagem para Memória à vista, com o fio, sem disputar com "Tirar foto" (o principal).
+        <View style={{ gap: Spacing.two, borderLeftWidth: 2, borderLeftColor: theme.accent, paddingLeft: Spacing.three }}>
+          <ThemedText type="smallBold">Essa experiência terminou?</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Ao finalizar, ela vira uma memória em Nossa História. Fotos e observações vão junto.
+          </ThemedText>
+          <Button label="Finalizar experiência" variant="secondary" disabled={finalizar.disabled} onPress={finalizar.onPress} />
+        </View>
+      ) : null}
 
       {carregando && itens.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -353,9 +375,12 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
         visible={aberta !== null}
         animationType="fade"
         statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setAberta(null)}>
-        {/* O modal desenha por baixo das barras do sistema: o conteúdo fica entre elas. */}
-        <View
+        {/* O modal desenha por baixo das barras do sistema: o conteúdo fica entre elas. No Android, a
+            foto encolhe para a legenda e a data ficarem acima do teclado. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'android' ? 'padding' : undefined}
           style={{
             flex: 1,
             backgroundColor: theme.background,
@@ -366,12 +391,18 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
           }}>
           <View style={{ flex: 1, borderRadius: Radius.photo, overflow: 'hidden' }}>
             {aberta?.url ? (
-              <Image
-                source={{ uri: aberta.url, cacheKey: aberta.caminho }}
-                contentFit="contain"
+              <Pressable
                 style={{ flex: 1 }}
-                accessibilityLabel="Foto em tela cheia"
-              />
+                accessibilityRole="imagebutton"
+                accessibilityLabel="Ver a foto em tela cheia"
+                accessibilityHint="Abre a foto na tela inteira, com zoom."
+                onPress={() => setTelaCheia(true)}>
+                <Image
+                  source={{ uri: aberta.url, cacheKey: aberta.caminho }}
+                  contentFit="contain"
+                  style={{ flex: 1 }}
+                />
+              </Pressable>
             ) : (
               <ThemedText themeColor="textSecondary">Não foi possível mostrar esta foto agora.</ThemedText>
             )}
@@ -420,14 +451,14 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
           {aberta ? <SalvarOuCompartilhar key={`levar-${aberta.id}`} foto={aberta} /> : null}
           <Button
             label="Excluir foto"
-            variant="secondary"
+            variant="destructive"
             onPress={() => {
               setErroExclusao(undefined);
               setConfirmando(true);
             }}
           />
           <Button label="Fechar" variant="text" onPress={() => setAberta(null)} />
-        </View>
+        </KeyboardAvoidingView>
         <Confirmacao
           visible={confirmando}
           title="Excluir esta foto?"
@@ -439,6 +470,14 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
           onConfirm={excluirAberta}
           onCancel={() => setConfirmando(false)}
         />
+        {telaCheia && aberta ? (
+          <FotoEmTelaCheia
+            url={aberta.url}
+            cacheKey={aberta.caminho}
+            legenda={aberta.legenda}
+            onFechar={() => setTelaCheia(false)}
+          />
+        ) : null}
       </Modal>
     </View>
   );
@@ -537,7 +576,6 @@ function EscolhaDoMomento({ momento, onChange, hoje, ontem, agora, erro, rotuloD
  * (agora, por padrão), junto das fotos desse momento (ADR 030). Excluir pede confirmação.
  */
 function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: EditorProps) {
-  const theme = useTheme();
   const [agora] = useState(() => new Date());
   const inicial = momentoInicial(
     observacao && observacao !== 'nova' ? (observacao.capturadaEm ?? observacao.criadoEm) : agora.toISOString(),
@@ -590,8 +628,9 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
       visible={observacao !== null}
       animationType="fade"
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: theme.background, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' }}>
+      <FolhaDeEdicao>
         <ThemedText type="subtitle" style={{ fontSize: 24, lineHeight: 32 }} accessibilityRole="header">
           Observação do momento
         </ThemedText>
@@ -629,7 +668,7 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
         {onExcluir ? (
           <Button
             label="Excluir observação"
-            variant="secondary"
+            variant="destructive"
             disabled={salvando}
             onPress={() => {
               setErroExclusao(undefined);
@@ -638,7 +677,7 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
           />
         ) : null}
         <Button label="Cancelar" variant="text" disabled={salvando} onPress={onFechar} />
-      </View>
+      </FolhaDeEdicao>
       <Confirmacao
         visible={confirmando}
         title="Excluir esta observação?"
@@ -651,48 +690,6 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
         onCancel={() => setConfirmando(false)}
       />
     </Modal>
-  );
-}
-
-type OpcoesProps<T extends string> = {
-  rotulo: string;
-  opcoes: { valor: T; rotulo: string }[];
-  atual: T;
-  onChange: (valor: T) => void;
-};
-
-/** Escolha única em botões (dia e período da observação). A escolhida tem borda e fundo, não só cor. */
-function Opcoes<T extends string>({ rotulo, opcoes, atual, onChange }: OpcoesProps<T>) {
-  const theme = useTheme();
-  return (
-    <View
-      accessibilityRole="radiogroup"
-      accessibilityLabel={rotulo}
-      style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}>
-      {opcoes.map(({ valor, rotulo: texto }) => {
-        const escolhida = valor === atual;
-        return (
-          <Pressable
-            key={valor}
-            accessibilityRole="radio"
-            accessibilityLabel={texto}
-            accessibilityState={{ checked: escolhida }}
-            onPress={() => onChange(valor)}
-            style={({ pressed }) => ({
-              minHeight: 44,
-              justifyContent: 'center',
-              paddingHorizontal: Spacing.three,
-              borderRadius: Radius.field,
-              borderWidth: escolhida ? 2 : 1,
-              borderColor: escolhida ? theme.text : theme.outline,
-              backgroundColor: escolhida ? theme.backgroundSelected : 'transparent',
-              opacity: pressed ? 0.7 : 1,
-            })}>
-            <ThemedText type={escolhida ? 'smallBold' : 'small'}>{texto}</ThemedText>
-          </Pressable>
-        );
-      })}
-    </View>
   );
 }
 

@@ -7,11 +7,14 @@ import { Abas } from '@/components/abas';
 import { Button } from '@/components/button';
 import { CamposDaExperiencia, valoresDe, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
+import { FolhaDeEdicao } from '@/components/folha-de-edicao';
+import { MarcoDoLaco, type Marco } from '@/components/marco-do-laco';
 import { MemoriaDaExperiencia } from '@/components/memoria-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { MomentosDaExperiencia } from '@/components/momentos-da-experiencia';
 import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { Screen } from '@/components/screen';
+import { SecoesDePlanejamento } from '@/components/secoes-de-planejamento';
 import { ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -66,6 +69,8 @@ export default function ExperienciaDetalhe() {
   const experiencia = experiencias.find((e) => e.id === id);
   // Sobrevive à troca de estado (o formulário remonta ao virar memória) para mostrar o marco.
   const [finalizando, setFinalizando] = useState(false);
+  // O marco da fase nova sobrevive à troca de estado (o formulário remonta a cada estado).
+  const [marco, setMarco] = useState<Marco | null>(null);
 
   // Abre direto (link, app reaberto) ou volta para a tela: relê, a outra pessoa pode ter mudado algo.
   useFocusEffect(
@@ -89,12 +94,16 @@ export default function ExperienciaDetalhe() {
 
   // O formulário monta com a experiência carregada (já preenchido) e de novo a cada estado.
   return (
-    <Formulario
-      key={`${experiencia.id}-${experiencia.estado}`}
-      experiencia={experiencia}
-      recemFinalizada={finalizando}
-      onFinalizando={setFinalizando}
-    />
+    <>
+      <Formulario
+        key={`${experiencia.id}-${experiencia.estado}`}
+        experiencia={experiencia}
+        recemFinalizada={finalizando}
+        onFinalizando={setFinalizando}
+        onMarco={setMarco}
+      />
+      <MarcoDoLaco marco={marco} onFim={() => setMarco(null)} />
+    </>
   );
 }
 
@@ -102,9 +111,11 @@ type FormularioProps = {
   experiencia: Experiencia;
   recemFinalizada: boolean;
   onFinalizando: (valor: boolean) => void;
+  /** A fase avançou (planejamento, vivendo ou memória): mostra o marco com o laço. */
+  onMarco: (marco: Marco) => void;
 };
 
-function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioProps) {
+function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: FormularioProps) {
   const theme = useTheme();
   const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(() => valoresDe(experiencia));
@@ -151,6 +162,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
 
     setEnviando(true);
     setErroGeral(undefined);
+    setSalvo(false);
     const r = await atualizarExperiencia(experiencia.id, { ...valores, referencia: referencia.referencia });
     setEnviando(false);
     if (r.ok) {
@@ -169,6 +181,9 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
     setMudando(false);
     if (r.ok) {
       AccessibilityInfo.announceForAccessibility(anuncio);
+      // Só a fase que avança ganha marco; voltar de fase não.
+      const avancou = (estado === 'desejo' && novo === 'planejamento') || (estado === 'planejamento' && novo === 'vivendo');
+      if (avancou) onMarco(novo as Marco);
     } else if (r.codigo === 'desejo_inexistente') {
       router.replace(desejo ? '/desejos' : '/');
     } else {
@@ -193,6 +208,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
     const r = await finalizar(experiencia.id, referencia);
     if (r.ok) {
       AccessibilityInfo.announceForAccessibility('Essa experiência virou uma memória.');
+      onMarco('memoria');
       return; // A tela remonta como memória.
     }
     onFinalizando(false);
@@ -260,16 +276,6 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
             />
           </>
         ) : null}
-        {estado === 'vivendo' ? (
-          <Button
-            label="Finalizar experiência"
-            disabled={ocupado}
-            onPress={() => {
-              setErroFinal(undefined);
-              setConfirmandoFinal(true);
-            }}
-          />
-        ) : null}
         {erroTransicao && estado !== 'vivendo' ? <MensagemErro>{erroTransicao}</MensagemErro> : null}
       </View>
 
@@ -296,6 +302,10 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
         <Button label="Salvar" loading={enviando} disabled={excluindo || mudando} onPress={salvar} />
       </View>
 
+      <View style={{ marginTop: Spacing.five }}>
+        <SecoesDePlanejamento experiencia={experiencia} />
+      </View>
+
       {/* Ações secundárias: em Vivendo, voltar para o planejamento fica aqui, longe dos momentos. */}
       <View style={{ gap: Spacing.two, marginTop: Spacing.five }}>
         {estado === 'vivendo' ? (
@@ -312,7 +322,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
         ) : null}
         <Button
           label={desejo ? 'Excluir desejo' : memoria ? 'Excluir memória' : 'Excluir experiência'}
-          variant="secondary"
+          variant="destructive"
           disabled={ocupado}
           onPress={() => {
             setErroExclusao(undefined);
@@ -365,6 +375,17 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
           ) : aba === 'momentos' ? (
             <MomentosDaExperiencia
               experiencia={experiencia}
+              finalizar={
+                estado === 'vivendo'
+                  ? {
+                      disabled: ocupado,
+                      onPress: () => {
+                        setErroFinal(undefined);
+                        setConfirmandoFinal(true);
+                      },
+                    }
+                  : undefined
+              }
               favorito={
                 memoria
                   ? {
@@ -400,8 +421,9 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
         visible={pedindoData}
         animationType="fade"
         statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={mudando ? undefined : () => setPedindoData(false)}>
-        <View style={{ flex: 1, backgroundColor: theme.background, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' }}>
+        <FolhaDeEdicao>
           <ThemedText type="subtitle" style={{ fontSize: 26, lineHeight: 34 }} accessibilityRole="header">
             Quando vocês viveram isso?
           </ThemedText>
@@ -420,7 +442,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
           {erroFinal ? <MensagemErro>{erroFinal}</MensagemErro> : null}
           <Button label="Finalizar" loading={mudando} onPress={() => concluirFinal(true)} />
           <Button label="Ainda não" variant="secondary" disabled={mudando} onPress={() => setPedindoData(false)} />
-        </View>
+        </FolhaDeEdicao>
       </Modal>
 
       <Confirmacao

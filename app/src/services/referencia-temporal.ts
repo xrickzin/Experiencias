@@ -79,7 +79,7 @@ function lerMesAno(texto: string): string | null {
   return `${ano}-${dois(mes)}-01`;
 }
 
-function lerHorario(texto: string): string | null {
+export function lerHorario(texto: string): string | null {
   const m = texto.trim().match(/^(\d{2}):(\d{2})$/);
   if (!m) return null;
   const [hora, minuto] = [Number(m[1]), Number(m[2])];

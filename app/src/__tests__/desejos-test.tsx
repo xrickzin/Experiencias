@@ -1,5 +1,6 @@
 import { act, fireEvent, screen } from 'expo-router/testing-library';
 
+import * as categoriasDoLaco from '@/services/categorias';
 import * as experiencias from '@/services/experiencias';
 import * as fotos from '@/services/fotos';
 import { SEM_DATA } from '@/services/referencia-temporal';
@@ -11,11 +12,18 @@ import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
 jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa').modulo);
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
+// Links e reservas abrem vazios; têm testes próprios (links-test.tsx, reservas-test.tsx).
+jest.mock('@/services/links', () => ({ ...jest.requireActual('@/services/links'), listarLinks: async () => ({ ok: true, links: [] }) }));
+jest.mock('@/services/reservas', () => ({ ...jest.requireActual('@/services/reservas'), listarReservas: async () => ({ ok: true, reservas: [] }) }));
 jest.mock('@/services/fotos');
+jest.mock('@/services/categorias');
 jest.mock('expo-image-picker');
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 
 const servico = jest.mocked(experiencias);
+const cat = jest.mocked(categoriasDoLaco);
+const FILME = { id: 'c-filme', nome: 'Filme' };
+const VIAGEM = { id: 'c-viagem', nome: 'Viagem' };
 const OK = { ok: true as const };
 const falha = (codigo: string, mensagem: string) => ({ ok: false as const, codigo, mensagem });
 const SEM_REDE = 'Não foi possível conectar. Verifique sua internet e tente de novo.';
@@ -40,6 +48,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   jest.mocked(fotos.listarFotos).mockResolvedValue({ ok: true, fotos: [] });
   jest.mocked(fotos.removerFotosDaExperiencia).mockResolvedValue({ ok: true });
+  jest.mocked(categoriasDoLaco.listarCategorias).mockResolvedValue({ ok: true, categorias: [] });
   definirSessao({
     estado: 'com-laco',
     usuarioId: 'u1',
@@ -99,6 +108,8 @@ describe('criar desejo', () => {
       local: 'Praia',
       observacoes: 'Levar café',
       referencia: SEM_DATA,
+      tamanho: null,
+      categorias: [],
     });
     expect(tela.getPathname()).toBe('/desejos');
     expect(await screen.findByText('Ver o nascer do sol')).toBeTruthy();
@@ -162,6 +173,8 @@ describe('editar e excluir', () => {
       local: 'Praia',
       observacoes: 'Levar café',
       referencia: SEM_DATA,
+      tamanho: null,
+      categorias: [],
     });
     expect(await screen.findByText('Salvo.')).toBeTruthy();
   });
@@ -226,5 +239,72 @@ describe('editar e excluir', () => {
     await tocar('Salvar');
 
     expect(tela.getPathname()).toBe('/desejos');
+  });
+});
+
+describe('categorias e tamanho', () => {
+  beforeEach(() => {
+    cat.listarCategorias.mockResolvedValue({ ok: true, categorias: [FILME, VIAGEM] });
+  });
+
+  async function tocarEm(papel: 'radio' | 'checkbox', nome: string) {
+    await act(async () => {
+      await fireEvent.press(screen.getByRole(papel, { name: nome }));
+    });
+  }
+
+  it('filtra os desejos por categoria e por tamanho, com só o que está em uso', async () => {
+    servico.listarExperiencias.mockResolvedValue({
+      ok: true,
+      experiencias: [
+        experiencia('1', 'Sessão de cinema', { categorias: [FILME.id], tamanho: 'noite' }),
+        experiencia('2', 'Lisboa', { categorias: [VIAGEM.id], tamanho: 'viagem' }),
+        experiencia('3', 'Sem nada'),
+      ],
+    });
+    await abrir('/desejos');
+    await screen.findByText('Sessão de cinema');
+    expect(screen.queryByRole('radio', { name: 'Um dia' })).toBeNull(); // nenhum desejo de um dia
+
+    await tocarEm('radio', 'Filme');
+    expect(screen.getByText('Sessão de cinema')).toBeTruthy();
+    expect(screen.queryByText('Lisboa')).toBeNull();
+    expect(screen.queryByText('Sem nada')).toBeNull();
+
+    await tocarEm('radio', 'Viagem');
+    expect(screen.getByText('Lisboa')).toBeTruthy();
+    await tocarEm('radio', 'Uma noite');
+    expect(screen.getByText('Nenhum desejo com esse filtro.')).toBeTruthy();
+  });
+
+  it('criar um desejo com tamanho, categoria marcada e categoria nova', async () => {
+    servico.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [] });
+    servico.criarDesejo.mockImplementation(async (campos) => ({
+      ok: true,
+      desejo: experiencia('9', campos.titulo, { categorias: campos.categorias ?? [] }),
+    }));
+    cat.criarCategoria.mockResolvedValue({ ok: true, categoria: { id: 'c-nerd', nome: 'Coisas nerds' } });
+    await abrir('/criar');
+    await act(async () => {
+      await fireEvent.changeText(await screen.findByLabelText('Título, obrigatório'), 'Maratona de Star Wars');
+    });
+    await tocarEm('radio', 'Uma noite');
+    await tocarEm('checkbox', 'Filme');
+    await tocarEm('checkbox', '+ Nova categoria');
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Nome da categoria'), 'Coisas nerds');
+    });
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('button', { name: 'Criar categoria' }));
+    });
+    expect(cat.criarCategoria).toHaveBeenCalledWith('Coisas nerds');
+    expect(screen.getByRole('checkbox', { name: 'Coisas nerds' }).props.accessibilityState).toMatchObject({ checked: true });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('button', { name: 'Adicionar desejo' }));
+    });
+    expect(servico.criarDesejo).toHaveBeenCalledWith(
+      expect.objectContaining({ titulo: 'Maratona de Star Wars', tamanho: 'noite', categorias: [FILME.id, 'c-nerd'] })
+    );
   });
 });

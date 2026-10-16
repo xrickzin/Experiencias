@@ -13,6 +13,9 @@ import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
 jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa').modulo);
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
+// Links e reservas abrem vazios; têm testes próprios (links-test.tsx, reservas-test.tsx).
+jest.mock('@/services/links', () => ({ ...jest.requireActual('@/services/links'), listarLinks: async () => ({ ok: true, links: [] }) }));
+jest.mock('@/services/reservas', () => ({ ...jest.requireActual('@/services/reservas'), listarReservas: async () => ({ ok: true, reservas: [] }) }));
 jest.mock('@/services/fotos');
 jest.mock('@/services/observacoes');
 jest.mock('@/services/impressoes');
@@ -78,6 +81,25 @@ describe('transições na experiência', () => {
     expect(screen.getByRole('button', { name: 'Voltar para desejo' })).toBeTruthy();
   });
 
+  it('avançar de fase mostra o marco com o laço; "Continuar" fecha; voltar de fase não tem marco', async () => {
+    lista(experiencia('1', 'Viagem'));
+    mock.mudarEstado.mockImplementation(async (_id, estado) => ({ ok: true, estado }));
+    await abrir('/experiencia/1');
+    await screen.findByText('Ainda é só uma ideia por enquanto.');
+
+    await tocar('Começar planejamento');
+    expect(screen.getByTestId('marco-do-laco')).toBeTruthy();
+    expect(screen.getByText('Próximo passo dado.')).toBeTruthy();
+    expect(screen.getByText('Planejamento')).toBeTruthy();
+
+    await tocar('Continuar');
+    expect(screen.queryByTestId('marco-do-laco')).toBeNull();
+
+    await tocar('Voltar para desejo');
+    expect(mock.mudarEstado).toHaveBeenLastCalledWith('1', 'desejo');
+    expect(screen.queryByTestId('marco-do-laco')).toBeNull();
+  });
+
   it('Planejamento → Vivendo e de volta', async () => {
     lista(experiencia('1', 'Viagem', { estado: 'planejamento' }));
     mock.mudarEstado.mockImplementation(async (_id, estado) => ({ ok: true, estado }));
@@ -106,12 +128,14 @@ describe('transições na experiência', () => {
     lista(experiencia('1', 'Viagem', { estado: 'vivendo' }));
     await abrir('/experiencia/1');
     await screen.findByText('Está acontecendo.');
+    // Finalizar fica à vista em Momentos, a aba que abre em Vivendo.
+    expect(screen.getByRole('button', { name: 'Finalizar experiência' })).toBeTruthy();
     await act(async () => {
       await fireEvent.press(screen.getByRole('tab', { name: 'Detalhes' }));
     });
 
     expect(screen.queryByRole('button', { name: 'Voltar para desejo' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Finalizar experiência' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Finalizar experiência' })).toBeNull();
   });
 
   it('falha na transição: avisa e mantém o estado', async () => {

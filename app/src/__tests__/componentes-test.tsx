@@ -5,6 +5,11 @@ import { CamposDaExperiencia, valoresVazios } from '@/components/campos-da-exper
 import { Confirmacao } from '@/components/confirmacao';
 import { TextField } from '@/components/text-field';
 
+// Fora da navegação: as categorias vêm prontas, sem reler ao voltar o foco.
+jest.mock('@/hooks/use-categorias', () => ({
+  useCategorias: () => ({ categorias: [], criar: jest.fn(), renomear: jest.fn(), excluir: jest.fn() }),
+}));
+
 describe('TextField', () => {
   it('marca o campo obrigatório com * e avisa o leitor de tela', async () => {
     await render(<TextField label="Título" required value="" onChangeText={() => {}} />);

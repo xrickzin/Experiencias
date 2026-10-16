@@ -1,8 +1,11 @@
 import { ehErroDeRede, falha, type ErroServico, type Falha, type Resultado } from '@/services/laco';
 import { SEM_DATA, type Precisao, type ReferenciaTemporal } from '@/services/referencia-temporal';
+import type { Tamanho } from '@/services/tamanho';
 import { supabase } from '@/services/supabase';
 
 export type Estado = 'desejo' | 'planejamento' | 'vivendo' | 'memoria';
+
+export type { Tamanho } from '@/services/tamanho';
 
 /** A experiência é uma só em todos os estados (lifecycle.md). */
 export type Experiencia = {
@@ -16,6 +19,9 @@ export type Experiencia = {
   inicioEm: string | null;
   /** Foto de destaque, compartilhada e escolhida à mão (ADR 012 e 028); nula se ninguém escolheu. */
   fotoDestaque: { id: string; caminho: string } | null;
+  tamanho: Tamanho | null;
+  /** Ids das categorias do Laço marcadas nesta experiência. */
+  categorias: string[];
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -28,6 +34,9 @@ export type CamposDaExperiencia = {
   local?: string;
   observacoes?: string;
   referencia?: ReferenciaTemporal;
+  tamanho?: Tamanho | null;
+  /** Ids das categorias; ausente mantém as que já estão. */
+  categorias?: string[];
 };
 
 type Linha = {
@@ -43,13 +52,16 @@ type Linha = {
   inicio_em: string | null;
   foto_destaque_id: string | null;
   foto_destaque: { caminho: string } | null;
+  tamanho: Tamanho | null;
+  categorias: { categoria_id: string }[] | null;
   criado_em: string;
   atualizado_em: string;
 };
 
 const COLUNAS =
   'id, titulo, estado, local, observacoes, referencia_precisao, referencia_inicio, referencia_fim, ' +
-  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, ' +
+  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, ' +
+  'categorias:experiencia_categorias(categoria_id), ' +
   // Há duas ligações entre as tabelas; o nome da chave diz qual é a do destaque.
   'foto_destaque:registros!experiencias_foto_destaque_id_fkey(caminho)';
 
@@ -68,6 +80,8 @@ export const paraExperiencia = (l: Linha): Experiencia => ({
   inicioEm: l.inicio_em,
   fotoDestaque:
     l.foto_destaque_id && l.foto_destaque ? { id: l.foto_destaque_id, caminho: l.foto_destaque.caminho } : null,
+  tamanho: l.tamanho ?? null,
+  categorias: (l.categorias ?? []).map((c) => c.categoria_id),
   criadoEm: l.criado_em,
   atualizadoEm: l.atualizado_em ?? l.criado_em,
 });
@@ -88,8 +102,39 @@ const paraColunas = (campos: CamposDaExperiencia) => {
     referencia_inicio: r.inicio,
     referencia_fim: r.fim,
     referencia_horario: r.horario,
+    tamanho: campos.tamanho ?? null,
   };
 };
+
+/**
+ * Deixa a experiência com exatamente estas categorias: tira as que saíram e marca as novas.
+ * Ausente (`undefined`) não mexe. Devolve as categorias que ficaram.
+ */
+async function definirCategorias(experienciaId: string, ids: string[] | undefined, atuais: string[]) {
+  if (!supabase || ids === undefined) return atuais;
+  const sair = atuais.filter((id) => !ids.includes(id));
+  const entrar = ids.filter((id) => !atuais.includes(id));
+  if (sair.length) {
+    const { error } = await supabase
+      .from('experiencia_categorias')
+      .delete()
+      .eq('experiencia_id', experienciaId)
+      .in('categoria_id', sair);
+    if (error) throw error;
+  }
+  if (!entrar.length) return ids;
+  // Uma categoria pode ter sido excluída com o formulário aberto (aqui ou pela outra pessoa): só liga as que existem.
+  const { data, error: erroLeitura } = await supabase.from('categorias').select('id').in('id', entrar);
+  if (erroLeitura) throw erroLeitura;
+  const existem = (data ?? []).map((c: { id: string }) => c.id);
+  if (existem.length) {
+    const { error } = await supabase
+      .from('experiencia_categorias')
+      .insert(existem.map((categoria_id) => ({ experiencia_id: experienciaId, categoria_id })));
+    if (error) throw error;
+  }
+  return ids.filter((id) => !entrar.includes(id) || existem.includes(id));
+}
 
 function falhaDoServico(erro: NonNullable<ErroServico>): Falha {
   if (ehErroDeRede(erro)) return falha('rede');
@@ -123,7 +168,13 @@ export async function criarDesejo(campos: CamposDaExperiencia): Promise<Resultad
       .select(COLUNAS)
       .single();
     if (error) return falhaDoServico(error);
-    return { ok: true, desejo: paraExperiencia(data as unknown as Linha) };
+    const desejo = paraExperiencia(data as unknown as Linha);
+    try {
+      desejo.categorias = await definirCategorias(desejo.id, campos.categorias, []);
+    } catch (e) {
+      return falhaDoServico(e as NonNullable<ErroServico>);
+    }
+    return { ok: true, desejo };
   } catch {
     return falha('rede');
   }
@@ -143,7 +194,13 @@ export async function atualizarExperiencia(
     if (error) return falhaDoServico(error);
     // Nenhuma linha: a outra pessoa excluiu.
     if (data.length === 0) return falha('desejo_inexistente');
-    return { ok: true, experiencia: paraExperiencia(data[0] as unknown as Linha) };
+    const experiencia = paraExperiencia(data[0] as unknown as Linha);
+    try {
+      experiencia.categorias = await definirCategorias(id, campos.categorias, experiencia.categorias);
+    } catch (e) {
+      return falhaDoServico(e as NonNullable<ErroServico>);
+    }
+    return { ok: true, experiencia };
   } catch {
     return falha('rede');
   }
@@ -200,7 +257,13 @@ export async function registrarMemoria(campos: CamposDaExperiencia): Promise<Res
       if (ehErroDeRede(error)) return falha('rede');
       return falha(error.code === '23514' ? 'memoria_invalida' : 'desconhecido');
     }
-    return { ok: true, memoria: paraExperiencia(data as unknown as Linha) };
+    const memoria = paraExperiencia(data as unknown as Linha);
+    try {
+      memoria.categorias = await definirCategorias(memoria.id, campos.categorias, []);
+    } catch (e) {
+      return falhaDoServico(e as NonNullable<ErroServico>);
+    }
+    return { ok: true, memoria };
   } catch {
     return falha('rede');
   }

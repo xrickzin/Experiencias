@@ -18,6 +18,9 @@ import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
 jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa').modulo);
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
+// Links e reservas abrem vazios; têm testes próprios (links-test.tsx, reservas-test.tsx).
+jest.mock('@/services/links', () => ({ ...jest.requireActual('@/services/links'), listarLinks: async () => ({ ok: true, links: [] }) }));
+jest.mock('@/services/reservas', () => ({ ...jest.requireActual('@/services/reservas'), listarReservas: async () => ({ ok: true, reservas: [] }) }));
 jest.mock('@/services/fotos');
 jest.mock('@/services/observacoes');
 jest.mock('@/services/impressoes');
@@ -138,7 +141,7 @@ describe('finalizar', () => {
     lista(experiencia('1', 'Serra', { estado: 'vivendo', ...extra }));
     await abrir('/experiencia/1');
     await screen.findByText('Está acontecendo.');
-    await aba('Detalhes');
+    // Finalizar fica à vista na aba Momentos, a primeira de Vivendo.
     await tocar('Finalizar experiência');
   }
 
@@ -154,6 +157,10 @@ describe('finalizar', () => {
 
     expect(exp.finalizarExperiencia).toHaveBeenCalledWith('1', null);
     expect(await screen.findByText('Essa experiência virou uma memória.')).toBeTruthy();
+    // O marco da fase nova vem por cima; ao continuar, fica a memória.
+    expect(screen.getByText('A experiência termina.')).toBeTruthy();
+    await tocar('Continuar');
+    expect(screen.queryByTestId('marco-do-laco')).toBeNull();
     expect(screen.getByRole('tab', { name: 'Memória' }).props.accessibilityState.selected).toBe(true);
     expect(screen.getByLabelText('Como foi essa experiência para você?')).toBeTruthy();
 

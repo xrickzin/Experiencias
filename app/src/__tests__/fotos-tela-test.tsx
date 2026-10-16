@@ -14,6 +14,9 @@ import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
 jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa').modulo);
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
+// Links e reservas abrem vazios; têm testes próprios (links-test.tsx, reservas-test.tsx).
+jest.mock('@/services/links', () => ({ ...jest.requireActual('@/services/links'), listarLinks: async () => ({ ok: true, links: [] }) }));
+jest.mock('@/services/reservas', () => ({ ...jest.requireActual('@/services/reservas'), listarReservas: async () => ({ ok: true, reservas: [] }) }));
 jest.mock('@/services/fotos');
 jest.mock('@/services/observacoes');
 jest.mock('@/services/impressoes');
@@ -242,6 +245,27 @@ describe('salvar no celular ou compartilhar', () => {
 
     await tocar('Compartilhar');
     expect(screen.getByText('Não foi possível preparar a foto para compartilhar. Tente de novo.')).toBeTruthy();
+  });
+});
+
+describe('foto em tela cheia', () => {
+  it('tocar na foto aberta mostra a tela cheia; o X volta para a foto', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
+    });
+    expect(screen.queryByTestId('foto-em-tela-cheia')).toBeNull();
+
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('imagebutton', { name: 'Ver a foto em tela cheia' }));
+    });
+    expect(screen.getByTestId('foto-em-tela-cheia')).toBeTruthy();
+    expect(screen.getByLabelText('Foto em tela cheia')).toBeTruthy();
+
+    await tocar('Fechar tela cheia');
+    expect(screen.queryByTestId('foto-em-tela-cheia')).toBeNull();
+    expect(screen.getByTestId('foto-aberta')).toBeTruthy();
   });
 });
 
