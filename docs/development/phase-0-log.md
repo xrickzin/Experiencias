@@ -189,6 +189,29 @@ Autorizada pelo usuário, sabendo que o `expo-router` também depende do pacote.
 
 Decisão do usuário, com base na avaliação da E12.3: o `expo-router` traz pacotes que exigem o `react-dom` como *peer* obrigatório, e o npm reinstala os dois automaticamente. Tirar só as declarações deixaria o projeto dependendo dessa instalação automática, sem nenhum ganho; tirá-los de fato exigiria abandonar o `expo-router`. Os dois ficam declarados como estão. A E12 está **concluída**, com a remoção de `expo-device` (E12.1) e de `expo-web-browser` (E12.2).
 
+## Atualização de patches do SDK 57 (2026-10-16; fora das etapas, a pedido do usuário)
+
+- **Comando:** `npx expo install --fix`, que usa as versões que o SDK indica. O `npm audit fix` sugerido pelo npm **não** foi executado.
+- **Versões:**
+
+  | Pacote | Antes | Depois |
+  |---|---|---|
+  | `@expo/ui` | 57.0.21 | 57.0.25 |
+  | `expo` | 57.0.26 | 57.0.30 |
+  | `expo-linking` | 57.0.11 | 57.0.13 |
+  | `expo-router` | 57.0.24 | 57.0.28 |
+  | `expo-splash-screen` | 57.0.9 | 57.0.10 |
+  | `expo-constants` (transitiva, por meio de `expo`) | 57.0.20 | 57.0.22 |
+
+- **Validação:**
+  - `expo install --check`: "Dependencies are up to date";
+  - `tsc` 0; `expo lint` 0;
+  - `npm test`: 17 arquivos, 242 testes;
+  - `npm ls` 0;
+  - `expo export` Android e iOS 0;
+  - `expo-doctor` 20/21. A única falha é o `ios.icon` em `./assets/expo.icon`, que fica para a E9 (ver E7).
+- **No aparelho:** validado pelo usuário no Expo Go (Android), com cache limpo.
+
 ## Resumo
 
 E0 a E6 executadas sem condição de parada. Nada foi instalado, removido ou atualizado em dependências; ícone, abertura e bloco `web` intactos (`name`, `slug` e `scheme` mudaram depois, na E11); nenhum ADR alterado; nenhum commit. **E7 em diante (exceto a E8, a E10, a E11 e a E13, executadas à parte) aguarda nova autorização.**

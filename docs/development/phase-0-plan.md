@@ -1,4 +1,4 @@
-# Plano da Fase 0 (E0 a E6, E8, E10, E11 e E13 executadas; as demais **não executadas**)
+# Plano da Fase 0 (E0 a E8 e E10 a E13 executadas; só a E9 **pendente**)
 
 > **Etapas E0 a E8 e E10 a E13 executadas** (registro em [phase-0-log.md](./phase-0-log.md)); **E7 e E12 executadas em 2026-10-16** (a E12 sem remover `react-native-web` e `react-dom`); **só a E9 continua pendente** e depende da arte do ícone e da abertura. Cada etapa só roda com o seu comando explícito. Decisões que o sustentam: [ADR 021](../decisions/021-naming-and-identifiers.md), [026](../decisions/026-visual-direction-and-platforms.md), [027](../decisions/027-home-limits-and-past-planning.md). Contexto: [roadmap.md](./roadmap.md), [technical-decisions.md](../architecture/technical-decisions.md), [proposal/](../ux/proposal/visual-direction.md).
 
