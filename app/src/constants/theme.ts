@@ -82,8 +82,9 @@ export const Spacing = {
   six: 64,
 } as const;
 
-/** Raios com função: campos e botões. Superfícies e listas editoriais ficam retas. */
+/** Raios com função: fotos, campos e botões. Superfícies e listas editoriais ficam retas. */
 export const Radius = {
+  photo: 4,
   field: 10,
   button: 14,
 } as const;

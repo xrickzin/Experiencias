@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-import { CamposDoDesejo } from '@/components/campos-do-desejo';
+import { CamposDaExperiencia, valoresVazios } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
 import { TextField } from '@/components/text-field';
 
@@ -50,12 +50,12 @@ describe('TextField', () => {
   });
 });
 
-describe('CamposDoDesejo', () => {
-  const vazio = { titulo: '', local: '', observacoes: '' };
+describe('CamposDaExperiencia', () => {
+  const vazio = valoresVazios();
 
   it('título obrigatório, local e observações no mesmo padrão dos demais campos', async () => {
     const onChange = jest.fn();
-    await render(<CamposDoDesejo valores={vazio} onChange={onChange} />);
+    await render(<CamposDaExperiencia valores={vazio} onChange={onChange} />);
 
     expect(screen.getByLabelText('Título, obrigatório')).toBeTruthy();
     const observacoes = screen.getByLabelText('Observações');
@@ -63,11 +63,11 @@ describe('CamposDoDesejo', () => {
     expect(StyleSheet.flatten(observacoes.props.style).borderRadius).toBeGreaterThan(0);
 
     await fireEvent.changeText(screen.getByLabelText('Local'), 'Praia');
-    expect(onChange).toHaveBeenCalledWith({ titulo: '', local: 'Praia', observacoes: '' });
+    expect(onChange).toHaveBeenCalledWith({ ...vazio, local: 'Praia' });
   });
 
   it('respeita os limites de tamanho do banco', async () => {
-    await render(<CamposDoDesejo valores={vazio} onChange={() => {}} />);
+    await render(<CamposDaExperiencia valores={vazio} onChange={() => {}} />);
 
     expect(screen.getByLabelText('Título, obrigatório').props.maxLength).toBe(120);
     expect(screen.getByLabelText('Local').props.maxLength).toBe(120);
@@ -75,7 +75,7 @@ describe('CamposDoDesejo', () => {
   });
 
   it('não repete que algo é opcional', async () => {
-    await render(<CamposDoDesejo valores={vazio} onChange={() => {}} />);
+    await render(<CamposDaExperiencia valores={vazio} onChange={() => {}} />);
     expect(screen.queryByText(/opcional/i)).toBeNull();
   });
 });

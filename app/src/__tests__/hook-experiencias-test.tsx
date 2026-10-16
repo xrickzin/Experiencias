@@ -3,22 +3,20 @@ import type { ReactNode } from 'react';
 
 import { ExperienciasProvider, useExperiencias } from '@/hooks/use-experiencias';
 import * as servico from '@/services/experiencias';
-import type { Desejo } from '@/services/experiencias';
+import * as fotos from '@/services/fotos';
+import type { Experiencia } from '@/services/experiencias';
 
+import { experiencia } from './apoio/experiencia';
 import { definirSessao, reiniciarSessao } from './apoio/sessao-falsa';
 
 jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa').modulo);
 jest.mock('@/services/experiencias');
+jest.mock('@/services/fotos');
+jest.mock('expo-image-picker');
 
 const mock = jest.mocked(servico);
 
-const desejo = (id: string, titulo: string): Desejo => ({
-  id,
-  titulo,
-  local: null,
-  observacoes: null,
-  criadoEm: '2026-10-15T12:00:00Z',
-});
+const desejo = (id: string, titulo: string) => experiencia(id, titulo);
 
 const perfil = (lacoId: string) => ({
   membro_id: 'm1',
@@ -39,12 +37,14 @@ async function montar() {
 beforeEach(() => {
   reiniciarSessao();
   jest.resetAllMocks();
+  jest.mocked(fotos.listarFotos).mockResolvedValue({ ok: true, fotos: [] });
+  jest.mocked(fotos.removerFotosDaExperiencia).mockResolvedValue({ ok: true });
   definirSessao({ estado: 'com-laco', usuarioId: 'u1', perfil: perfil('laco-1') });
 });
 
 describe('use-experiencias', () => {
   it('começa carregando e passa a mostrar o que o servidor devolveu', async () => {
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [desejo('1', 'A')] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [desejo('1', 'A')] });
     const { result } = await montar();
 
     expect(result.current.carregando).toBe(true);
@@ -58,24 +58,24 @@ describe('use-experiencias', () => {
   });
 
   it('chamadas simultâneas viram uma só ida ao servidor', async () => {
-    let liberar: (v: { ok: true; desejos: Desejo[] }) => void = () => {};
-    mock.listarDesejos.mockReturnValue(new Promise((ok) => (liberar = ok)));
+    let liberar: (v: { ok: true; experiencias: Experiencia[] }) => void = () => {};
+    mock.listarExperiencias.mockReturnValue(new Promise((ok) => (liberar = ok)));
     const { result } = await montar();
 
     await act(async () => {
       const a = result.current.recarregar();
       const b = result.current.recarregar();
-      liberar({ ok: true, desejos: [] });
+      liberar({ ok: true, experiencias: [] });
       await Promise.all([a, b]);
     });
 
-    expect(mock.listarDesejos).toHaveBeenCalledTimes(1);
+    expect(mock.listarExperiencias).toHaveBeenCalledTimes(1);
   });
 
   it('falha ao carregar guarda a mensagem; uma carga boa a limpa', async () => {
-    mock.listarDesejos
+    mock.listarExperiencias
       .mockResolvedValueOnce({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' })
-      .mockResolvedValueOnce({ ok: true, desejos: [desejo('1', 'A')] });
+      .mockResolvedValueOnce({ ok: true, experiencias: [desejo('1', 'A')] });
     const { result } = await montar();
 
     await act(async () => {
@@ -92,7 +92,7 @@ describe('use-experiencias', () => {
   });
 
   it('criar coloca o desejo no topo só se o servidor confirmou', async () => {
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [desejo('1', 'A')] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [desejo('1', 'A')] });
     const { result } = await montar();
     await act(async () => {
       await result.current.recarregar();
@@ -112,58 +112,58 @@ describe('use-experiencias', () => {
   });
 
   it('editar troca o desejo; se a outra pessoa excluiu, ele sai da lista', async () => {
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [desejo('1', 'A'), desejo('2', 'B')] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [desejo('1', 'A'), desejo('2', 'B')] });
     const { result } = await montar();
     await act(async () => {
       await result.current.recarregar();
     });
 
-    mock.atualizarDesejo.mockResolvedValueOnce({ ok: true, desejo: desejo('1', 'A2') });
+    mock.atualizarExperiencia.mockResolvedValueOnce({ ok: true, experiencia: desejo('1', 'A2') });
     await act(async () => {
-      await result.current.atualizarDesejo('1', { titulo: 'A2' });
+      await result.current.atualizarExperiencia('1', { titulo: 'A2' });
     });
     expect(result.current.desejos.map((d) => d.titulo)).toEqual(['A2', 'B']);
 
-    mock.atualizarDesejo.mockResolvedValueOnce({
+    mock.atualizarExperiencia.mockResolvedValueOnce({
       ok: false,
       codigo: 'desejo_inexistente',
       mensagem: 'Esse desejo não existe mais.',
     });
     await act(async () => {
-      await result.current.atualizarDesejo('2', { titulo: 'B2' });
+      await result.current.atualizarExperiencia('2', { titulo: 'B2' });
     });
     expect(result.current.desejos.map((d) => d.id)).toEqual(['1']);
   });
 
   it('excluir tira da lista só com a confirmação do servidor', async () => {
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [desejo('1', 'A')] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [desejo('1', 'A')] });
     const { result } = await montar();
     await act(async () => {
       await result.current.recarregar();
     });
 
-    mock.excluirDesejo.mockResolvedValueOnce({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' });
+    mock.excluirExperiencia.mockResolvedValueOnce({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' });
     await act(async () => {
-      await result.current.excluirDesejo('1');
+      await result.current.excluirExperiencia('1');
     });
     expect(result.current.desejos).toHaveLength(1);
 
-    mock.excluirDesejo.mockResolvedValueOnce({ ok: true });
+    mock.excluirExperiencia.mockResolvedValueOnce({ ok: true });
     await act(async () => {
-      await result.current.excluirDesejo('1');
+      await result.current.excluirExperiencia('1');
     });
     expect(result.current.desejos).toHaveLength(0);
   });
 
   it('ao trocar de conta (outro Laço), não mostra os desejos da anterior', async () => {
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [desejo('1', 'Da Ana')] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [desejo('1', 'Da Ana')] });
     const { result } = await montar();
     await act(async () => {
       await result.current.recarregar();
     });
     expect(result.current.desejos).toHaveLength(1);
 
-    mock.listarDesejos.mockResolvedValue({ ok: true, desejos: [] });
+    mock.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [] });
     await act(async () => {
       definirSessao({ perfil: perfil('laco-2') });
     });
@@ -185,7 +185,7 @@ describe('use-experiencias', () => {
       await result.current.recarregar();
     });
 
-    expect(mock.listarDesejos).not.toHaveBeenCalled();
+    expect(mock.listarExperiencias).not.toHaveBeenCalled();
     expect(result.current.carregando).toBe(false);
   });
 });

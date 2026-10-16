@@ -35,6 +35,12 @@ const MENSAGENS: Record<string, string> = {
   link_expirado: 'Esse link expirou ou já foi usado. Peça um novo.',
   desejo_invalido: 'Confira os dados do desejo: o título é obrigatório e os textos têm limite de tamanho.',
   desejo_inexistente: 'Esse desejo não existe mais.',
+  transicao_invalida: 'Essa mudança não é possível a partir do estado atual.',
+  destaque_invalido: 'Não foi possível usar essa foto como destaque. Tente de novo.',
+  foto_grande: 'Essa foto é grande demais. Tente outra.',
+  foto_nao_enviada: 'Não foi possível guardar a foto. Tente de novo.',
+  foto_nao_removida: 'Não foi possível apagar a foto. Tente de novo.',
+  fotos_nao_removidas: 'Não foi possível apagar as fotos desta experiência. Nada foi excluído; tente de novo.',
 };
 
 const MENSAGEM_PADRAO = 'Algo deu errado. Tente novamente.';

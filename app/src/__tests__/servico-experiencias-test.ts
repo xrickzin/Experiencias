@@ -1,12 +1,13 @@
+// Serviço de experiências contra um cliente do Supabase simulado: o que é enviado, o que volta e como
+// os erros viram mensagens. O comportamento real do banco é coberto por supabase/tests/*.mjs.
 import {
-  atualizarDesejo,
+  atualizarExperiencia,
   criarDesejo,
-  excluirDesejo,
-  listarDesejos,
+  definirFotoDestaque,
+  excluirExperiencia,
+  listarExperiencias,
+  mudarEstado,
 } from '@/services/experiencias';
-
-// Serviço de desejos contra um cliente do Supabase simulado: o que é enviado, o que volta e como os
-// erros viram mensagens. O comportamento real do banco é coberto por supabase/tests/experiencias.mjs.
 
 type Resposta = { data: unknown; error: { code?: string; message?: string; name?: string } | null };
 
@@ -29,19 +30,35 @@ function mockConstrutor() {
 }
 
 jest.mock('@/services/supabase', () => ({
-  supabase: { from: () => mockConstrutor() },
+  supabase: {
+    from: () => mockConstrutor(),
+    rpc: (...args: unknown[]) => {
+      mockChamadas.push({ metodo: 'rpc', args });
+      return mockExcecao ? Promise.reject(mockExcecao) : Promise.resolve(mockResposta);
+    },
+  },
 }));
 
 const linha = (extra: Record<string, unknown> = {}) => ({
   id: 'd1',
   titulo: 'Ver o nascer do sol',
+  estado: 'desejo',
   local: null,
   observacoes: null,
+  referencia_precisao: 'sem_data',
+  referencia_inicio: null,
+  referencia_fim: null,
+  referencia_horario: null,
+  inicio_em: null,
+  foto_destaque_id: null,
+  foto_destaque: null,
   criado_em: '2026-10-15T12:00:00Z',
+  atualizado_em: '2026-10-15T12:00:00Z',
   ...extra,
 });
 
 const enviado = (metodo: string) => mockChamadas.find((c) => c.metodo === metodo)?.args[0];
+const filtros = () => mockChamadas.filter((c) => c.metodo === 'eq').map((c) => c.args);
 
 beforeEach(() => {
   mockChamadas.length = 0;
@@ -49,105 +66,175 @@ beforeEach(() => {
   mockExcecao = null;
 });
 
-describe('listarDesejos', () => {
-  it('pede só desejos, do mais novo para o mais antigo, e converte as colunas', async () => {
-    mockResposta = { data: [linha({ local: 'Praia' })], error: null };
-    const r = await listarDesejos();
+describe('listarExperiencias', () => {
+  it('traz todos os estados, do mais novo para o mais antigo, e converte as colunas', async () => {
+    mockResposta = {
+      data: [
+        linha({
+          estado: 'planejamento',
+          local: 'Praia',
+          referencia_precisao: 'data_horario',
+          referencia_inicio: '2026-12-10',
+          referencia_horario: '19:30:00',
+          inicio_em: '2026-12-10T22:30:00+00:00',
+        }),
+      ],
+      error: null,
+    };
+    const r = await listarExperiencias();
 
     expect(r).toEqual({
       ok: true,
-      desejos: [
-        { id: 'd1', titulo: 'Ver o nascer do sol', local: 'Praia', observacoes: null, criadoEm: '2026-10-15T12:00:00Z' },
+      experiencias: [
+        {
+          id: 'd1',
+          titulo: 'Ver o nascer do sol',
+          estado: 'planejamento',
+          local: 'Praia',
+          observacoes: null,
+          referencia: { precisao: 'data_horario', inicio: '2026-12-10', fim: null, horario: '19:30' },
+          inicioEm: '2026-12-10T22:30:00+00:00',
+          fotoDestaque: null,
+          criadoEm: '2026-10-15T12:00:00Z',
+          atualizadoEm: '2026-10-15T12:00:00Z',
+        },
       ],
     });
-    expect(mockChamadas.find((c) => c.metodo === 'eq')?.args).toEqual(['estado', 'desejo']);
+    expect(filtros()).toEqual([]);
     expect(mockChamadas.find((c) => c.metodo === 'order')?.args).toEqual(['criado_em', { ascending: false }]);
   });
 
   it('falha de rede vira a mensagem de conexão', async () => {
     mockResposta = { data: null, error: { name: 'TypeError', message: 'Network request failed' } };
-    const r = await listarDesejos();
-    expect(r).toMatchObject({ ok: false, codigo: 'rede' });
+    expect(await listarExperiencias()).toMatchObject({ ok: false, codigo: 'rede' });
   });
 
   it('exceção do cliente também vira falha de rede', async () => {
     mockExcecao = new Error('boom');
-    const r = await listarDesejos();
-    expect(r).toMatchObject({ ok: false, codigo: 'rede' });
+    expect(await listarExperiencias()).toMatchObject({ ok: false, codigo: 'rede' });
   });
 
   it('erro do servidor vira uma falha genérica, sem detalhes', async () => {
     mockResposta = { data: null, error: { code: 'PGRST205', message: 'tabela interna x' } };
-    const r = await listarDesejos();
+    const r = await listarExperiencias();
     expect(r).toMatchObject({ ok: false, codigo: 'desconhecido' });
     expect(JSON.stringify(r)).not.toContain('tabela interna x');
   });
 });
 
 describe('criarDesejo', () => {
-  it('apara o título e converte texto vazio em nulo', async () => {
+  it('apara o título, converte texto vazio em nulo e manda "sem data" por padrão', async () => {
     mockResposta = { data: linha(), error: null };
     const r = await criarDesejo({ titulo: '  Ver o nascer do sol  ', local: '   ', observacoes: '' });
 
     expect(r.ok).toBe(true);
-    expect(enviado('insert')).toEqual({ titulo: 'Ver o nascer do sol', local: null, observacoes: null });
+    expect(enviado('insert')).toEqual({
+      titulo: 'Ver o nascer do sol',
+      local: null,
+      observacoes: null,
+      referencia_precisao: 'sem_data',
+      referencia_inicio: null,
+      referencia_fim: null,
+      referencia_horario: null,
+    });
   });
 
-  it('envia local e observações preenchidos, sem o Laço nem o estado', async () => {
-    mockResposta = { data: linha({ local: 'Praia', observacoes: 'Levar café' }), error: null };
-    await criarDesejo({ titulo: 'Ver o nascer do sol', local: ' Praia ', observacoes: ' Levar café ' });
+  it('envia a referência temporal e nunca o Laço, o estado ou campos calculados', async () => {
+    mockResposta = { data: linha(), error: null };
+    await criarDesejo({
+      titulo: 'Viagem',
+      referencia: { precisao: 'periodo', inicio: '2026-12-12', fim: '2026-12-15', horario: null },
+    });
 
     const corpo = enviado('insert') as Record<string, unknown>;
-    expect(corpo).toEqual({ titulo: 'Ver o nascer do sol', local: 'Praia', observacoes: 'Levar café' });
-    expect(corpo).not.toHaveProperty('laco_id');
-    expect(corpo).not.toHaveProperty('estado');
+    expect(corpo).toMatchObject({ referencia_precisao: 'periodo', referencia_inicio: '2026-12-12', referencia_fim: '2026-12-15' });
+    for (const proibido of ['laco_id', 'estado', 'inicio_em', 'armado_em']) expect(corpo).not.toHaveProperty(proibido);
   });
 
   it('violação de limite do banco vira "dados inválidos"', async () => {
     mockResposta = { data: null, error: { code: '23514', message: 'check' } };
-    const r = await criarDesejo({ titulo: 'x' });
-    expect(r).toMatchObject({ ok: false, codigo: 'desejo_invalido' });
+    expect(await criarDesejo({ titulo: 'x' })).toMatchObject({ ok: false, codigo: 'desejo_invalido' });
   });
 });
 
-describe('atualizarDesejo', () => {
-  it('só atualiza desejos e devolve o registro novo', async () => {
-    mockResposta = { data: [linha({ titulo: 'Novo título' })], error: null };
-    const r = await atualizarDesejo('d1', { titulo: ' Novo título ', local: '', observacoes: 'Nota' });
+describe('atualizarExperiencia', () => {
+  it('atualiza em qualquer estado e devolve o registro novo', async () => {
+    mockResposta = { data: [linha({ titulo: 'Novo título', estado: 'vivendo' })], error: null };
+    const r = await atualizarExperiencia('d1', { titulo: ' Novo título ', local: '', observacoes: 'Nota' });
 
-    expect(r).toMatchObject({ ok: true, desejo: { id: 'd1', titulo: 'Novo título' } });
-    expect(enviado('update')).toEqual({ titulo: 'Novo título', local: null, observacoes: 'Nota' });
-    expect(mockChamadas.filter((c) => c.metodo === 'eq').map((c) => c.args)).toEqual([
-      ['id', 'd1'],
-      ['estado', 'desejo'],
-    ]);
+    expect(r).toMatchObject({ ok: true, experiencia: { id: 'd1', titulo: 'Novo título', estado: 'vivendo' } });
+    expect(enviado('update')).toMatchObject({ titulo: 'Novo título', local: null, observacoes: 'Nota' });
+    expect(filtros()).toEqual([['id', 'd1']]);
   });
 
   it('nenhuma linha atualizada: a outra pessoa excluiu', async () => {
     mockResposta = { data: [], error: null };
-    const r = await atualizarDesejo('d1', { titulo: 'x' });
-    expect(r).toMatchObject({ ok: false, codigo: 'desejo_inexistente' });
+    expect(await atualizarExperiencia('d1', { titulo: 'x' })).toMatchObject({ ok: false, codigo: 'desejo_inexistente' });
   });
 });
 
-describe('excluirDesejo', () => {
-  it('exclui por id e só no estado desejo', async () => {
-    const r = await excluirDesejo('d1');
-    expect(r).toEqual({ ok: true });
+describe('excluirExperiencia', () => {
+  it('exclui por id, em qualquer estado', async () => {
+    expect(await excluirExperiencia('d1')).toEqual({ ok: true });
     expect(mockChamadas.map((c) => c.metodo)).toContain('delete');
-    expect(mockChamadas.filter((c) => c.metodo === 'eq').map((c) => c.args)).toEqual([
-      ['id', 'd1'],
-      ['estado', 'desejo'],
-    ]);
-  });
-
-  it('excluir algo que já não existe conta como feito', async () => {
-    mockResposta = { data: [], error: null };
-    expect(await excluirDesejo('inexistente')).toEqual({ ok: true });
+    expect(filtros()).toEqual([['id', 'd1']]);
   });
 
   it('falha de rede é informada', async () => {
     mockResposta = { data: null, error: { message: 'Failed to fetch' } };
-    expect(await excluirDesejo('d1')).toMatchObject({ ok: false, codigo: 'rede' });
+    expect(await excluirExperiencia('d1')).toMatchObject({ ok: false, codigo: 'rede' });
+  });
+});
+
+describe('foto de destaque', () => {
+  it('a lista traz o destaque com o caminho do arquivo', async () => {
+    mockResposta = { data: [linha({ foto_destaque_id: 'f1', foto_destaque: { caminho: 'l/e/a.jpg' } })], error: null };
+    const r = await listarExperiencias();
+    expect(r.ok && r.experiencias[0].fotoDestaque).toEqual({ id: 'f1', caminho: 'l/e/a.jpg' });
+  });
+
+  it('escolher manda só o id da foto e devolve a experiência atualizada', async () => {
+    mockResposta = { data: [linha({ foto_destaque_id: 'f1', foto_destaque: { caminho: 'a.jpg' } })], error: null };
+    const r = await definirFotoDestaque('d1', 'f1');
+    expect(enviado('update')).toEqual({ foto_destaque_id: 'f1' });
+    expect(filtros()).toEqual([['id', 'd1']]);
+    expect(r).toMatchObject({ ok: true, experiencia: { fotoDestaque: { id: 'f1', caminho: 'a.jpg' } } });
+  });
+
+  it('tirar o destaque manda nulo', async () => {
+    mockResposta = { data: [linha()], error: null };
+    await definirFotoDestaque('d1', null);
+    expect(enviado('update')).toEqual({ foto_destaque_id: null });
+  });
+
+  it('foto recusada pelo servidor tem mensagem própria', async () => {
+    mockResposta = { data: null, error: { code: '23514', message: 'foto_destaque_invalida' } };
+    expect(await definirFotoDestaque('d1', 'outra')).toMatchObject({ ok: false, codigo: 'destaque_invalido' });
+  });
+});
+
+describe('mudarEstado', () => {
+  it('chama a função do servidor com a experiência e o novo estado', async () => {
+    mockResposta = { data: { ok: true, estado: 'planejamento' }, error: null };
+    expect(await mudarEstado('d1', 'planejamento')).toEqual({ ok: true, estado: 'planejamento' });
+    expect(mockChamadas.find((c) => c.metodo === 'rpc')?.args).toEqual([
+      'mudar_estado',
+      { p_experiencia: 'd1', p_estado: 'planejamento' },
+    ]);
+  });
+
+  it('transição fora do ciclo volta como erro', async () => {
+    mockResposta = { data: { ok: false, codigo: 'transicao_invalida' }, error: null };
+    expect(await mudarEstado('d1', 'memoria')).toMatchObject({ ok: false, codigo: 'transicao_invalida' });
+  });
+
+  it('experiência que sumiu vira "não existe mais"', async () => {
+    mockResposta = { data: { ok: false, codigo: 'experiencia_inexistente' }, error: null };
+    expect(await mudarEstado('d1', 'planejamento')).toMatchObject({ ok: false, codigo: 'desejo_inexistente' });
+  });
+
+  it('sem rede', async () => {
+    mockExcecao = new Error('offline');
+    expect(await mudarEstado('d1', 'planejamento')).toMatchObject({ ok: false, codigo: 'rede' });
   });
 });

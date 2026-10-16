@@ -19,7 +19,7 @@ async function tocar(rotulo: string) {
 
 beforeEach(() => {
   reiniciarSessao();
-  jest.mocked(experiencias.listarDesejos).mockResolvedValue({ ok: true, desejos: [] });
+  jest.mocked(experiencias.listarExperiencias).mockResolvedValue({ ok: true, experiencias: [] });
 });
 
 describe('sair da conta', () => {

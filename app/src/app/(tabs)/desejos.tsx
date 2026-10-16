@@ -1,9 +1,10 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
+import { LinhaDaExperiencia } from '@/components/linha-da-experiencia';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
@@ -54,29 +55,7 @@ export default function Desejos() {
         <View style={{ gap: Spacing.four }}>
           <View style={{ borderTopWidth: 1, borderTopColor: theme.border }}>
             {desejos.map((desejo) => (
-              <Pressable
-                key={desejo.id}
-                accessibilityRole="button"
-                accessibilityLabel={desejo.local ? `${desejo.titulo}, ${desejo.local}` : desejo.titulo}
-                onPress={() => router.push({ pathname: '/desejo/[id]', params: { id: desejo.id } })}
-                style={({ pressed }) => ({
-                  minHeight: 64,
-                  justifyContent: 'center',
-                  gap: Spacing.half,
-                  paddingVertical: Spacing.three,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.border,
-                  backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
-                })}>
-                <ThemedText type="subtitle" style={{ fontSize: 22, lineHeight: 30 }}>
-                  {desejo.titulo}
-                </ThemedText>
-                {desejo.local ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {desejo.local}
-                  </ThemedText>
-                ) : null}
-              </Pressable>
+              <LinhaDaExperiencia key={desejo.id} experiencia={desejo} />
             ))}
           </View>
           <Button
