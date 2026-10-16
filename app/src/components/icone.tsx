@@ -23,6 +23,14 @@ const TRACOS: Record<NomeDoIcone, string[]> = {
   ajustes: ['M4 7 H7', 'M11 7 H20', 'M4 17 H13', 'M17 17 H20'],
 };
 
+// O contorno do corpo de cada ícone, para preencher quando ele precisa parecer sólido (na barra de
+// abas, o fio passa por trás dele e some).
+const SILHUETAS: Partial<Record<NomeDoIcone, string>> = {
+  inicio: 'M3.5 11 L12 4 L20.5 11 H18 V20 H6 V11 Z',
+  desejos: TRACOS.desejos[0],
+  historia: TRACOS.historia[0],
+};
+
 // Os botões dos controles de Ajustes são círculos, não traços.
 const CIRCULOS: Partial<Record<NomeDoIcone, { cx: number; cy: number }[]>> = {
   ajustes: [
@@ -32,9 +40,11 @@ const CIRCULOS: Partial<Record<NomeDoIcone, { cx: number; cy: number }[]>> = {
 };
 
 /** Os traços do ícone, para compor dentro de outro desenho (ex.: o laço da aba). */
-export function TracosDoIcone({ nome, cor }: { nome: NomeDoIcone; cor: ColorValue }) {
+export function TracosDoIcone({ nome, cor, preenchimento }: { nome: NomeDoIcone; cor: ColorValue; preenchimento?: ColorValue }) {
+  const silhueta = SILHUETAS[nome];
   return (
     <>
+      {preenchimento && silhueta ? <Path d={silhueta} fill={preenchimento} stroke="none" /> : null}
       {TRACOS[nome].map((d) => (
         <Path key={d} d={d} stroke={cor} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" fill="none" />
       ))}
@@ -46,10 +56,21 @@ export function TracosDoIcone({ nome, cor }: { nome: NomeDoIcone; cor: ColorValu
 }
 
 /** Ícone decorativo: o rótulo fica no botão que o contém. */
-export function Icone({ nome, cor, tamanho = 24 }: { nome: NomeDoIcone; cor: ColorValue; tamanho?: number }) {
+export function Icone({
+  nome,
+  cor,
+  tamanho = 24,
+  preenchimento,
+}: {
+  nome: NomeDoIcone;
+  cor: ColorValue;
+  tamanho?: number;
+  /** Cor do corpo do ícone; sem ela, só o traço. */
+  preenchimento?: ColorValue;
+}) {
   return (
     <Svg width={tamanho} height={tamanho} viewBox="0 0 24 24" accessible={false} importantForAccessibility="no-hide-descendants">
-      <TracosDoIcone nome={nome} cor={cor} />
+      <TracosDoIcone nome={nome} cor={cor} preenchimento={preenchimento} />
     </Svg>
   );
 }
