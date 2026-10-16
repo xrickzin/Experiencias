@@ -184,6 +184,57 @@ export async function definirFotoDestaque(
   }
 }
 
+/**
+ * Algo vivido antes do aplicativo (ADR 008): nasce em Memória e exige título e referência temporal.
+ * O servidor também recusa memória sem data.
+ */
+export async function registrarMemoria(campos: CamposDaExperiencia): Promise<Resultado<{ memoria: Experiencia }>> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { data, error } = await supabase
+      .from('experiencias')
+      .insert({ ...paraColunas(campos), estado: 'memoria' })
+      .select(COLUNAS)
+      .single();
+    if (error) {
+      if (ehErroDeRede(error)) return falha('rede');
+      return falha(error.code === '23514' ? 'memoria_invalida' : 'desconhecido');
+    }
+    return { ok: true, memoria: paraExperiencia(data as unknown as Linha) };
+  } catch {
+    return falha('rede');
+  }
+}
+
+/**
+ * Vivendo → Memória, sem volta. Sem data, a referência informada vai junto; se a outra pessoa
+ * definiu uma antes, vale a dela (o primeiro a definir fixa) e quem chama relê a experiência.
+ */
+export async function finalizarExperiencia(id: string, referencia: ReferenciaTemporal | null): Promise<Resultado> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { data, error } = await supabase.rpc('finalizar_experiencia', {
+      p_experiencia: id,
+      ...(referencia
+        ? {
+            p_precisao: referencia.precisao,
+            p_inicio: referencia.inicio,
+            p_fim: referencia.fim,
+            p_horario: referencia.horario,
+          }
+        : {}),
+    });
+    if (error) return falhaDoServico(error);
+    const resposta = data as { ok: boolean; codigo?: string };
+    if (!resposta.ok) {
+      return falha(resposta.codigo === 'experiencia_inexistente' ? 'desejo_inexistente' : (resposta.codigo ?? 'desconhecido'));
+    }
+    return { ok: true };
+  } catch {
+    return falha('rede');
+  }
+}
+
 /** Transição de estado, validada no servidor (só as do ciclo). */
 export async function mudarEstado(id: string, estado: Estado): Promise<Resultado<{ estado: Estado }>> {
   if (!supabase) return falha('sem_configuracao');

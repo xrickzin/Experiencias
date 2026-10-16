@@ -3,6 +3,8 @@ import { act, fireEvent, screen } from 'expo-router/testing-library';
 
 import * as servico from '@/services/experiencias';
 import * as fotos from '@/services/fotos';
+import * as impressoes from '@/services/impressoes';
+import * as observacoes from '@/services/observacoes';
 import type { Foto } from '@/services/fotos';
 
 import { abrir, esperar } from './apoio/abrir';
@@ -13,6 +15,8 @@ jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa')
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
 jest.mock('@/services/fotos');
+jest.mock('@/services/observacoes');
+jest.mock('@/services/impressoes');
 jest.mock('expo-image-picker');
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 
@@ -26,6 +30,7 @@ const foto = (id: string, capturadaEm: string | null = '2026-10-15T15:00:00Z'): 
   url: `https://assinada/${id}`,
   autorId: 'm1',
   capturadaEm,
+  legenda: null,
   criadoEm: '2026-10-15T20:00:00Z',
 });
 const asset = (n: number) =>
@@ -38,7 +43,7 @@ async function tocar(rotulo: string) {
   await esperar();
 }
 
-async function aba(nome: 'Fotos' | 'Detalhes') {
+async function aba(nome: 'Momentos' | 'Detalhes') {
   await act(async () => {
     await fireEvent.press(screen.getByRole('tab', { name: nome }));
   });
@@ -55,6 +60,8 @@ async function abrirEm(estado: 'desejo' | 'planejamento' | 'vivendo') {
 beforeEach(() => {
   reiniciarSessao();
   jest.resetAllMocks();
+  jest.mocked(observacoes.listarObservacoes).mockResolvedValue({ ok: true, observacoes: [] });
+  jest.mocked(impressoes.listarImpressoes).mockResolvedValue({ ok: true, impressoes: [] });
   definirSessao({
     estado: 'com-laco',
     usuarioId: 'u1',
@@ -72,7 +79,7 @@ describe('aba de fotos agrupada', () => {
     });
     await abrirEm('vivendo');
 
-    expect(screen.getByRole('tab', { name: 'Fotos' }).props.accessibilityState.selected).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Momentos' }).props.accessibilityState.selected).toBe(true);
     expect(await screen.findByText('10 de março')).toBeTruthy();
     expect(screen.getByText('9 de março')).toBeTruthy();
     expect(screen.getByText('NOITE')).toBeTruthy(); // 20h em Brasília
@@ -103,6 +110,46 @@ describe('aba de fotos agrupada', () => {
       mimeType: 'image/jpeg',
       capturadaEm: '2026-03-10T23:15:00.000Z',
     });
+  });
+});
+
+describe('legenda da foto', () => {
+  it('adicionar uma legenda na foto aberta', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    svc.legendarFoto.mockResolvedValue({ ok: true, legenda: 'Primeira noite na serra' });
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
+    });
+
+    await tocar('Adicionar legenda');
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Legenda'), 'Primeira noite na serra');
+    });
+    await tocar('Guardar legenda');
+
+    expect(svc.legendarFoto).toHaveBeenCalledWith('a', 'Primeira noite na serra');
+    expect(screen.getByText('Primeira noite na serra')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Editar legenda' })).toBeTruthy();
+    await tocar('Fechar');
+    expect(screen.getByRole('imagebutton', { name: /legenda: Primeira noite na serra/ })).toBeTruthy();
+  });
+
+  it('editar já começa com a legenda atual; falha avisa e mantém a escrita', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [{ ...foto('a'), legenda: 'Antiga' }] });
+    svc.legendarFoto.mockResolvedValue({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' });
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
+    });
+    expect(screen.getByText('Antiga')).toBeTruthy();
+
+    await tocar('Editar legenda');
+    expect(screen.getByLabelText('Legenda').props.value).toBe('Antiga');
+    await tocar('Guardar legenda');
+
+    expect(screen.getByText('Sem conexão.')).toBeTruthy();
+    expect(screen.getByLabelText('Legenda')).toBeTruthy();
   });
 });
 
@@ -165,17 +212,17 @@ describe('foto de destaque', () => {
 describe('fotos na experiência', () => {
   it('em Desejo não há fotos (registros só a partir de Planejamento)', async () => {
     await abrirEm('desejo');
-    expect(screen.queryByRole('tab', { name: 'Fotos' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Momentos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Tirar foto' })).toBeNull();
   });
 
-  it('em Planejamento as fotos ficam na aba "Fotos", depois dos detalhes', async () => {
+  it('em Planejamento os momentos ficam na aba "Momentos", depois dos detalhes', async () => {
     await abrirEm('planejamento');
     expect(screen.getByRole('tab', { name: 'Detalhes' }).props.accessibilityState.selected).toBe(true);
     expect(screen.queryByRole('button', { name: 'Tirar foto' })).toBeNull();
 
-    await aba('Fotos');
-    expect(await screen.findByText(/Nenhuma foto ainda/)).toBeTruthy();
+    await aba('Momentos');
+    expect(await screen.findByText(/Nenhum momento ainda/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tirar foto' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Escolher da galeria' })).toBeTruthy();
   });
@@ -215,7 +262,7 @@ describe('fotos na experiência', () => {
     picker.requestCameraPermissionsAsync.mockResolvedValue({ granted: true } as ImagePicker.CameraPermissionResponse);
     picker.launchCameraAsync.mockResolvedValue({ canceled: true, assets: null });
     await abrirEm('planejamento');
-    await aba('Fotos');
+    await aba('Momentos');
 
     await tocar('Tirar foto');
     expect(svc.enviarFoto).not.toHaveBeenCalled();
@@ -227,7 +274,7 @@ describe('fotos na experiência', () => {
       .mockResolvedValueOnce({ ok: true, foto: foto('a') })
       .mockResolvedValueOnce({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' });
     await abrirEm('planejamento');
-    await aba('Fotos');
+    await aba('Momentos');
 
     await tocar('Escolher da galeria');
 
@@ -251,8 +298,8 @@ describe('fotos na experiência', () => {
     expect(screen.getByText('Excluir esta foto?')).toBeTruthy();
     await tocar('Sim, excluir foto');
 
-    expect(svc.excluirFoto).toHaveBeenCalledWith(foto('a'));
-    expect(await screen.findByText(/Nenhuma foto ainda/)).toBeTruthy();
+    expect(svc.excluirFoto).toHaveBeenCalledWith(expect.objectContaining(foto('a')));
+    expect(await screen.findByText(/Nenhum momento ainda/)).toBeTruthy();
   });
 
   it('excluir a experiência apaga as fotos antes; se falhar, nada é excluído', async () => {

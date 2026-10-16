@@ -1,20 +1,30 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { AccessibilityInfo, View } from 'react-native';
+import { AccessibilityInfo, Modal, View } from 'react-native';
 
 import { Abas } from '@/components/abas';
 import { Button } from '@/components/button';
 import { CamposDaExperiencia, valoresDe, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
-import { FotosDaExperiencia } from '@/components/fotos-da-experiencia';
+import { MemoriaDaExperiencia } from '@/components/memoria-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
+import { MomentosDaExperiencia } from '@/components/momentos-da-experiencia';
+import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
+import { useImpressoes } from '@/hooks/use-impressoes';
+import { useTheme } from '@/hooks/use-theme';
 import type { Estado, Experiencia } from '@/services/experiencias';
-import { lerReferencia } from '@/services/referencia-temporal';
+import {
+  camposDaReferencia,
+  lerReferencia,
+  lerReferenciaDaMemoria,
+  SEM_DATA,
+  type CamposDaReferencia,
+} from '@/services/referencia-temporal';
 import { validarTituloDoDesejo } from '@/services/validacao';
 
 /** Texto de cada estado. A mudança de estado parece evolução da experiência, não troca de coluna. */
@@ -29,21 +39,30 @@ const POR_ESTADO: Record<Estado, { eyebrow: string; titulo: string; descricao: s
   memoria: { eyebrow: 'Memória', titulo: 'Já faz parte da história de vocês.', descricao: '' },
 };
 
-type Aba = 'fotos' | 'detalhes';
-// A aba principal vem primeiro: fotos em Vivendo, detalhes em Planejamento.
-const ABAS_VIVENDO: { valor: Aba; rotulo: string }[] = [
-  { valor: 'fotos', rotulo: 'Fotos' },
-  { valor: 'detalhes', rotulo: 'Detalhes' },
-];
-const ABAS_PLANEJANDO: { valor: Aba; rotulo: string }[] = [
-  { valor: 'detalhes', rotulo: 'Detalhes' },
-  { valor: 'fotos', rotulo: 'Fotos' },
-];
+type Aba = 'memoria' | 'momentos' | 'detalhes';
+// A aba principal vem primeiro: a memória, os momentos em Vivendo, os detalhes em Planejamento.
+const ABAS: Partial<Record<Estado, { valor: Aba; rotulo: string }[]>> = {
+  planejamento: [
+    { valor: 'detalhes', rotulo: 'Detalhes' },
+    { valor: 'momentos', rotulo: 'Momentos' },
+  ],
+  vivendo: [
+    { valor: 'momentos', rotulo: 'Momentos' },
+    { valor: 'detalhes', rotulo: 'Detalhes' },
+  ],
+  memoria: [
+    { valor: 'memoria', rotulo: 'Memória' },
+    { valor: 'momentos', rotulo: 'Momentos' },
+    { valor: 'detalhes', rotulo: 'Detalhes' },
+  ],
+};
 
 export default function ExperienciaDetalhe() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { experiencias, carregando, recarregar } = useExperiencias();
   const experiencia = experiencias.find((e) => e.id === id);
+  // Sobrevive à troca de estado (o formulário remonta ao virar memória) para mostrar o marco.
+  const [finalizando, setFinalizando] = useState(false);
 
   // Abre direto (link, app reaberto) ou volta para a tela: relê, a outra pessoa pode ter mudado algo.
   useFocusEffect(
@@ -65,12 +84,26 @@ export default function ExperienciaDetalhe() {
     );
   }
 
-  // O formulário só monta com a experiência carregada, então começa já preenchido.
-  return <Formulario key={experiencia.id} experiencia={experiencia} />;
+  // O formulário monta com a experiência carregada (já preenchido) e de novo a cada estado.
+  return (
+    <Formulario
+      key={`${experiencia.id}-${experiencia.estado}`}
+      experiencia={experiencia}
+      recemFinalizada={finalizando}
+      onFinalizando={setFinalizando}
+    />
+  );
 }
 
-function Formulario({ experiencia }: { experiencia: Experiencia }) {
-  const { atualizarExperiencia, excluirExperiencia, mudarEstado } = useExperiencias();
+type FormularioProps = {
+  experiencia: Experiencia;
+  recemFinalizada: boolean;
+  onFinalizando: (valor: boolean) => void;
+};
+
+function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioProps) {
+  const theme = useTheme();
+  const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(() => valoresDe(experiencia));
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
@@ -82,17 +115,31 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string>();
+  const [confirmandoFinal, setConfirmandoFinal] = useState(false);
+  const [pedindoData, setPedindoData] = useState(false);
+  const [quando, setQuando] = useState<CamposDaReferencia>(() => camposDaReferencia(SEM_DATA));
+  const [erroQuando, setErroQuando] = useState<string>();
+  const [erroFinal, setErroFinal] = useState<string>();
 
   const estado = experiencia.estado;
   const desejo = estado === 'desejo';
-  const temFotos = estado === 'planejamento' || estado === 'vivendo';
+  const memoria = estado === 'memoria';
+  const abas = ABAS[estado];
   const textos = POR_ESTADO[estado];
-  // O que importa em cada momento: vivendo, as fotos; planejando, os detalhes e o "começar a viver".
-  const [aba, setAba] = useState<Aba>(estado === 'vivendo' ? 'fotos' : 'detalhes');
+  const impressoes = useImpressoes(experiencia.id);
+  const carregarImpressoes = impressoes.carregar;
+  // O que importa em cada momento: a memória; vivendo, os momentos; planejando, os detalhes.
+  const [aba, setAba] = useState<Aba>(memoria ? 'memoria' : estado === 'vivendo' ? 'momentos' : 'detalhes');
+
+  useFocusEffect(
+    useCallback(() => {
+      if (memoria) void carregarImpressoes();
+    }, [memoria, carregarImpressoes])
+  );
 
   async function salvar() {
     const tituloInvalido = validarTituloDoDesejo(valores.titulo);
-    const referencia = lerReferencia(valores.referencia);
+    const referencia = (memoria ? lerReferenciaDaMemoria : lerReferencia)(valores.referencia);
     setErroTitulo(tituloInvalido);
     setErroReferencia(referencia.ok ? undefined : referencia.erro);
     if (tituloInvalido || !referencia.ok) return;
@@ -117,12 +164,51 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
     setMudando(false);
     if (r.ok) {
       AccessibilityInfo.announceForAccessibility(anuncio);
-      // Começou a viver: a tela abre nas fotos, que passam a ser o principal.
-      if (novo === 'vivendo') setAba('fotos');
     } else if (r.codigo === 'desejo_inexistente') {
       router.replace(desejo ? '/desejos' : '/');
     } else {
       setErroTransicao(r.mensagem);
+    }
+  }
+
+  /** Finalizar (lifecycle.md): sem data, primeiro pergunta quando viveram; sem volta, sempre confirmado. */
+  async function concluirFinal(comData: boolean) {
+    let referencia = null;
+    if (comData) {
+      const leitura = lerReferenciaDaMemoria(quando);
+      if (!leitura.ok) {
+        setErroQuando(leitura.erro);
+        return;
+      }
+      referencia = leitura.referencia;
+    }
+    setMudando(true);
+    setErroFinal(undefined);
+    onFinalizando(true);
+    const r = await finalizar(experiencia.id, referencia);
+    if (r.ok) {
+      AccessibilityInfo.announceForAccessibility('Essa experiência virou uma memória.');
+      return; // A tela remonta como memória.
+    }
+    onFinalizando(false);
+    setMudando(false);
+    if (r.codigo === 'referencia_obrigatoria') {
+      setConfirmandoFinal(false);
+      setPedindoData(true);
+    } else if (r.codigo === 'desejo_inexistente') {
+      router.replace('/');
+    } else {
+      setErroFinal(r.mensagem);
+    }
+  }
+
+  function confirmarFinal() {
+    if (experiencia.referencia.precisao === 'sem_data') {
+      setConfirmandoFinal(false);
+      setErroQuando(undefined);
+      setPedindoData(true);
+    } else {
+      void concluirFinal(false);
     }
   }
 
@@ -132,7 +218,7 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
     const r = await excluirExperiencia(experiencia.id);
     if (r.ok) {
       setConfirmandoExclusao(false);
-      router.replace(desejo ? '/desejos' : '/');
+      router.replace(desejo ? '/desejos' : memoria ? '/nossa-historia' : '/');
     } else {
       setExcluindo(false);
       setErroExclusao(r.mensagem);
@@ -169,12 +255,23 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
             />
           </>
         ) : null}
+        {estado === 'vivendo' ? (
+          <Button
+            label="Finalizar experiência"
+            disabled={ocupado}
+            onPress={() => {
+              setErroFinal(undefined);
+              setConfirmandoFinal(true);
+            }}
+          />
+        ) : null}
         {erroTransicao && estado !== 'vivendo' ? <MensagemErro>{erroTransicao}</MensagemErro> : null}
       </View>
 
       <View style={{ gap: Spacing.three }}>
         <CamposDaExperiencia
           valores={valores}
+          exigirData={memoria}
           erroTitulo={erroTitulo}
           erroReferencia={erroReferencia}
           onChange={(novos) => {
@@ -194,7 +291,7 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
         <Button label="Salvar" loading={enviando} disabled={excluindo || mudando} onPress={salvar} />
       </View>
 
-      {/* Ações secundárias: em Vivendo, voltar para o planejamento fica aqui, longe das fotos. */}
+      {/* Ações secundárias: em Vivendo, voltar para o planejamento fica aqui, longe dos momentos. */}
       <View style={{ gap: Spacing.two, marginTop: Spacing.five }}>
         {estado === 'vivendo' ? (
           <>
@@ -209,7 +306,7 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
           </>
         ) : null}
         <Button
-          label={desejo ? 'Excluir desejo' : 'Excluir experiência'}
+          label={desejo ? 'Excluir desejo' : memoria ? 'Excluir memória' : 'Excluir experiência'}
           variant="secondary"
           disabled={ocupado}
           onPress={() => {
@@ -225,15 +322,28 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
     <Screen edges={['top', 'bottom']}>
       <ScreenHeader eyebrow={textos.eyebrow} title={textos.titulo} description={textos.descricao || undefined} />
 
-      {/* Registros (fotos) existem a partir de Planejamento (memory.md); em Desejo não há abas. */}
-      {temFotos ? (
+      {/* Registros existem a partir de Planejamento (memory.md); em Desejo não há abas. */}
+      {abas ? (
         <>
-          <Abas<Aba>
-            abas={estado === 'vivendo' ? ABAS_VIVENDO : ABAS_PLANEJANDO}
-            atual={aba}
-            onChange={setAba}
-          />
-          {aba === 'fotos' ? <FotosDaExperiencia experiencia={experiencia} /> : detalhes}
+          <Abas<Aba> abas={abas} atual={aba} onChange={setAba} />
+          {aba === 'memoria' ? (
+            <MemoriaDaExperiencia experiencia={experiencia} impressoes={impressoes} recemFinalizada={recemFinalizada} />
+          ) : aba === 'momentos' ? (
+            <MomentosDaExperiencia
+              experiencia={experiencia}
+              favorito={
+                memoria
+                  ? {
+                      fotoId: impressoes.minha?.momentoFavorito?.id ?? null,
+                      escolher: impressoes.escolherFavorito,
+                      recarregar: () => void carregarImpressoes(),
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            detalhes
+          )}
         </>
       ) : (
         detalhes
@@ -244,14 +354,56 @@ function Formulario({ experiencia }: { experiencia: Experiencia }) {
       </View>
 
       <Confirmacao
+        visible={confirmandoFinal}
+        title="Finalizar experiência?"
+        description="Ela vira uma memória e não volta para Vivendo. Fotos e observações continuam com ela."
+        confirmLabel="Finalizar"
+        cancelLabel="Ainda não"
+        loading={mudando}
+        error={erroFinal}
+        onConfirm={confirmarFinal}
+        onCancel={() => setConfirmandoFinal(false)}
+      />
+
+      <Modal
+        testID="quando-viveram"
+        visible={pedindoData}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={mudando ? undefined : () => setPedindoData(false)}>
+        <View style={{ flex: 1, backgroundColor: theme.background, padding: Spacing.four, gap: Spacing.three, justifyContent: 'center' }}>
+          <ThemedText type="subtitle" style={{ fontSize: 26, lineHeight: 34 }} accessibilityRole="header">
+            Quando vocês viveram isso?
+          </ThemedText>
+          <ThemedText themeColor="textSecondary">
+            Uma memória precisa de quando aconteceu: é por aí que Nossa História se organiza.
+          </ThemedText>
+          <ReferenciaTemporalCampo
+            obrigatoria
+            campos={quando}
+            erro={erroQuando}
+            onChange={(c) => {
+              setQuando(c);
+              setErroQuando(undefined);
+            }}
+          />
+          {erroFinal ? <MensagemErro>{erroFinal}</MensagemErro> : null}
+          <Button label="Finalizar" loading={mudando} onPress={() => concluirFinal(true)} />
+          <Button label="Ainda não" variant="secondary" disabled={mudando} onPress={() => setPedindoData(false)} />
+        </View>
+      </Modal>
+
+      <Confirmacao
         visible={confirmandoExclusao}
-        title={desejo ? 'Excluir este desejo?' : 'Excluir esta experiência?'}
+        title={desejo ? 'Excluir este desejo?' : memoria ? 'Excluir esta memória?' : 'Excluir esta experiência?'}
         description={
           desejo
             ? 'Essa ação é definitiva e vale para os dois. O desejo deixa de existir e não dá para desfazer.'
-            : 'Essa ação é definitiva e vale para os dois. A experiência e as fotos guardadas nela deixam de existir.'
+            : memoria
+              ? 'Essa ação é definitiva e vale para os dois. A memória, as fotos, as observações e as impressões deixam de existir.'
+              : 'Essa ação é definitiva e vale para os dois. A experiência e as fotos guardadas nela deixam de existir.'
         }
-        confirmLabel={desejo ? 'Sim, excluir desejo' : 'Sim, excluir experiência'}
+        confirmLabel={desejo ? 'Sim, excluir desejo' : memoria ? 'Sim, excluir memória' : 'Sim, excluir experiência'}
         destructive
         loading={excluindo}
         error={erroExclusao}

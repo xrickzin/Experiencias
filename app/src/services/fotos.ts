@@ -12,6 +12,8 @@ export type Foto = {
   autorId: string | null;
   /** Quando a foto foi tirada (da própria foto); nulo se o aparelho não informou. */
   capturadaEm: string | null;
+  /** Texto curto opcional, dos dois (ADR 030). */
+  legenda: string | null;
   criadoEm: string;
 };
 
@@ -51,9 +53,18 @@ function falhaDoStorage(erro: NonNullable<ErroDoStorage>, codigo: string): Falha
   return falha(codigo);
 }
 
-type Linha = { id: string; caminho: string; autor_id: string | null; capturada_em: string | null; criado_em: string };
+type Linha = {
+  id: string;
+  caminho: string;
+  autor_id: string | null;
+  capturada_em: string | null;
+  legenda: string | null;
+  criado_em: string;
+};
 
-const COLUNAS = 'id, caminho, autor_id, capturada_em, criado_em';
+const COLUNAS = 'id, caminho, autor_id, capturada_em, legenda, criado_em';
+
+export const LIMITE_DA_LEGENDA = 300;
 
 const paraFoto = (l: Linha, url: string | null): Foto => ({
   id: l.id,
@@ -61,6 +72,7 @@ const paraFoto = (l: Linha, url: string | null): Foto => ({
   url,
   autorId: l.autor_id,
   capturadaEm: l.capturada_em,
+  legenda: l.legenda,
   criadoEm: l.criado_em,
 });
 
@@ -142,6 +154,21 @@ export async function excluirFoto(foto: Pick<Foto, 'id' | 'caminho'>): Promise<R
   }
 }
 
+/** Escreve, troca ou tira (vazio) a legenda de uma foto. Os dois podem. */
+export async function legendarFoto(id: string, legenda: string): Promise<Resultado<{ legenda: string | null }>> {
+  if (!supabase) return falha('sem_configuracao');
+  const limpa = legenda.trim() || null;
+  if (limpa && limpa.length > LIMITE_DA_LEGENDA) return falha('legenda_longa');
+  try {
+    const { data, error } = await supabase.from('registros').update({ legenda: limpa }).eq('id', id).select('legenda');
+    if (error) return ehErroDeRede(error) ? falha('rede') : falha('legenda_nao_salva');
+    if (data.length === 0) return falha('foto_inexistente');
+    return { ok: true, legenda: limpa };
+  } catch {
+    return falha('rede');
+  }
+}
+
 /** URLs assinadas para caminhos já conhecidos (ex.: a foto de destaque no Início). */
 export async function assinarCaminhos(caminhos: string[]): Promise<Map<string, string>> {
   if (!supabase || caminhos.length === 0) return new Map();
@@ -159,7 +186,11 @@ export async function assinarCaminhos(caminhos: string[]): Promise<Map<string, s
 export async function removerFotosDaExperiencia(experienciaId: string): Promise<Resultado> {
   if (!supabase) return falha('sem_configuracao');
   try {
-    const { data, error } = await supabase.from('registros').select('caminho').eq('experiencia_id', experienciaId);
+    const { data, error } = await supabase
+      .from('registros')
+      .select('caminho')
+      .eq('experiencia_id', experienciaId)
+      .eq('tipo', 'foto');
     if (error) return ehErroDeRede(error) ? falha('rede') : falha('fotos_nao_removidas');
     const caminhos = (data as { caminho: string }[]).map((l) => l.caminho);
     if (caminhos.length === 0) return { ok: true };

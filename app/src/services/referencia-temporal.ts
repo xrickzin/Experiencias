@@ -61,7 +61,7 @@ export function mascararHorario(texto: string): string {
 // --- leitura do que foi digitado ------------------------------------------------------------------
 const dois = (n: number) => String(n).padStart(2, '0');
 
-function lerData(texto: string): string | null {
+export function lerData(texto: string): string | null {
   const m = texto.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
   const [dia, mes, ano] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -121,6 +121,12 @@ export function lerReferencia(campos: CamposDaReferencia): LeituraDaReferencia {
       return { ok: true, referencia: { precisao: 'periodo', inicio, fim, horario: null } };
     }
   }
+}
+
+/** Memória: a referência é obrigatória (dates-and-automation.md); "sem data" não vale. */
+export function lerReferenciaDaMemoria(campos: CamposDaReferencia): LeituraDaReferencia {
+  if (campos.precisao === 'sem_data') return { ok: false, erro: 'Escolham quando vocês viveram isso.' };
+  return lerReferencia(campos);
 }
 
 // --- do banco para os campos da tela --------------------------------------------------------------

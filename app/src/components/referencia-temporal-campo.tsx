@@ -17,21 +17,23 @@ type ReferenciaTemporalCampoProps = {
   campos: CamposDaReferencia;
   onChange: (campos: CamposDaReferencia) => void;
   erro?: string;
+  /** Memória exige data: sem a opção "Sem data". */
+  obrigatoria?: boolean;
 };
 
 /**
  * "Quando": primeiro a precisão (sem data, mês, dia, dia e horário, período), depois só os campos
  * que ela pede. As datas são digitadas com máscara (DD/MM/AAAA), sem dependência de seletor nativo.
  */
-export function ReferenciaTemporalCampo({ campos, onChange, erro }: ReferenciaTemporalCampoProps) {
+export function ReferenciaTemporalCampo({ campos, onChange, erro, obrigatoria = false }: ReferenciaTemporalCampoProps) {
   const theme = useTheme();
   const mudar = (parcial: Partial<CamposDaReferencia>) => onChange({ ...campos, ...parcial });
 
   return (
     <View style={{ gap: Spacing.two }}>
-      <ThemedText type="smallBold">Quando</ThemedText>
+      <ThemedText type="smallBold">{obrigatoria ? 'Quando *' : 'Quando'}</ThemedText>
       <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}>
-        {PRECISOES.map(({ valor, rotulo }) => {
+        {PRECISOES.filter((p) => !obrigatoria || p.valor !== 'sem_data').map(({ valor, rotulo }) => {
           const escolhida = campos.precisao === valor;
           return (
             <Pressable

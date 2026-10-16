@@ -1,4 +1,11 @@
-import { agruparFotos, capturaDoExif, momentoDaFoto, periodoDaHora } from '@/services/agrupar-fotos';
+import {
+  agruparFotos,
+  capturaDoExif,
+  diaEPeriodo,
+  instanteDoMomento,
+  momentoDaFoto,
+  periodoDaHora,
+} from '@/services/agrupar-fotos';
 import type { Foto } from '@/services/fotos';
 
 const foto = (id: string, capturadaEm: string | null, criadoEm = '2026-10-15T20:00:00Z'): Foto => ({
@@ -7,6 +14,7 @@ const foto = (id: string, capturadaEm: string | null, criadoEm = '2026-10-15T20:
   url: null,
   autorId: null,
   capturadaEm,
+  legenda: null,
   criadoEm,
 });
 
@@ -91,4 +99,25 @@ describe('capturaDoExif', () => {
     ['relógio zerado', { DateTimeOriginal: '1970:01:01 00:00:00' }],
     ['no futuro', { DateTimeOriginal: '2099:01:01 00:00:00' }],
   ])('ignora: %s', (_nome, exif) => expect(capturaDoExif(exif as Record<string, unknown> | null)).toBeNull());
+});
+
+describe('momento escolhido para uma observação (Brasília)', () => {
+  const agora = new Date('2026-10-15T18:30:00Z'); // 15h30 em Brasília: tarde
+
+  it('dia e período de um instante', () => {
+    expect(diaEPeriodo('2026-10-15T02:30:00Z')).toEqual({ dia: '2026-10-14', periodo: 'noite' }); // 23h30 do dia 14
+    expect(diaEPeriodo('2026-10-15T12:00:00Z')).toEqual({ dia: '2026-10-15', periodo: 'manha' });
+  });
+
+  it('o momento atual guarda o instante de agora', () => {
+    expect(instanteDoMomento('2026-10-15', 'tarde', agora)).toBe(agora.toISOString());
+  });
+
+  it('outro momento guarda uma hora no meio do período, que volta ao mesmo dia e período', () => {
+    for (const periodo of ['madrugada', 'manha', 'tarde', 'noite'] as const) {
+      const instante = instanteDoMomento('2026-10-14', periodo, agora);
+      expect(diaEPeriodo(instante)).toEqual({ dia: '2026-10-14', periodo });
+    }
+    expect(instanteDoMomento('2026-10-14', 'manha', agora)).toBe('2026-10-14T12:00:00.000Z'); // 9h
+  });
 });

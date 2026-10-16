@@ -1,4 +1,4 @@
-// Agrupa as fotos de uma experiência por dia e por período, no horário de Brasília.
+// Agrupa os registros (fotos e observações) de uma experiência por dia e por período, no horário de Brasília.
 // Regras puras, sem dependências. Brasília não tem horário de verão desde 2019: UTC−3 fixo.
 import type { Foto } from '@/services/fotos';
 
@@ -13,11 +13,14 @@ export const ROTULO_DO_PERIODO: Record<Periodo, string> = {
   noite: 'Noite',
 };
 
-export type GrupoDoDia = {
+/** O que basta para agrupar: quando foi tirada (fotos) e quando foi guardado. */
+type ComMomento = { capturadaEm?: string | null; criadoEm: string };
+
+export type GrupoDoDia<T extends ComMomento = Foto> = {
   /** `AAAA-MM-DD` no horário de Brasília. */
   dia: string;
   rotulo: string;
-  periodos: { periodo: Periodo; fotos: Foto[] }[];
+  periodos: { periodo: Periodo; fotos: T[] }[];
 };
 
 const MESES = [
@@ -26,7 +29,7 @@ const MESES = [
 ];
 
 /** Momento que vale para a foto: quando foi tirada; sem isso, quando foi enviada. */
-export const momentoDaFoto = (f: Foto) => f.capturadaEm ?? f.criadoEm;
+export const momentoDaFoto = (f: ComMomento) => f.capturadaEm ?? f.criadoEm;
 
 /** Data e hora "de parede" em Brasília para um instante. */
 function emBrasilia(iso: string) {
@@ -42,7 +45,7 @@ export function periodoDaHora(hora: number): Periodo {
   return 'noite';
 }
 
-function rotuloDoDia(dia: string, agora: Date): string {
+export function rotuloDoDia(dia: string, agora: Date): string {
   const hoje = emBrasilia(agora.toISOString()).dia;
   const ontem = emBrasilia(new Date(agora.getTime() - 86_400_000).toISOString()).dia;
   if (dia === hoje) return 'Hoje';
@@ -52,17 +55,37 @@ function rotuloDoDia(dia: string, agora: Date): string {
   return ano === anoAtual ? `${d} de ${MESES[mes - 1]}` : `${d} de ${MESES[mes - 1]} de ${ano}`;
 }
 
+/** Dia (`AAAA-MM-DD`) e período em Brasília de um instante. */
+export function diaEPeriodo(iso: string): { dia: string; periodo: Periodo } {
+  const { dia, hora } = emBrasilia(iso);
+  return { dia, periodo: periodoDaHora(hora) };
+}
+
+// Hora de Brasília que representa cada período quando a pessoa escolhe um momento que não é o atual.
+const HORA_DO_PERIODO: Record<Periodo, number> = { madrugada: 3, manha: 9, tarde: 15, noite: 21 };
+
+/**
+ * Instante guardado para um momento escolhido (observações): se for o dia e período de agora, é agora;
+ * senão, uma hora no meio do período. Só o dia e o período importam para o agrupamento.
+ */
+export function instanteDoMomento(dia: string, periodo: Periodo, agora: Date): string {
+  const atual = diaEPeriodo(agora.toISOString());
+  if (atual.dia === dia && atual.periodo === periodo) return agora.toISOString();
+  const [ano, mes, d] = dia.split('-').map(Number);
+  return new Date(Date.UTC(ano, mes - 1, d, HORA_DO_PERIODO[periodo]) - DESLOCAMENTO_BRASILIA_MS).toISOString();
+}
+
 /** Do mais recente para o mais antigo: dias, períodos do dia e fotos. */
-export function agruparFotos(fotos: Foto[], agora: Date): GrupoDoDia[] {
+export function agruparFotos<T extends ComMomento>(fotos: T[], agora: Date): GrupoDoDia<T>[] {
   const ordenadas = [...fotos].sort((a, b) => momentoDaFoto(b).localeCompare(momentoDaFoto(a)));
-  const dias = new Map<string, Map<Periodo, Foto[]>>();
+  const dias = new Map<string, Map<Periodo, T[]>>();
   for (const foto of ordenadas) {
     const { dia, hora } = emBrasilia(momentoDaFoto(foto));
     const periodo = periodoDaHora(hora);
     if (!dias.has(dia)) dias.set(dia, new Map());
-    const doDia = dias.get(dia) as Map<Periodo, Foto[]>;
+    const doDia = dias.get(dia) as Map<Periodo, T[]>;
     if (!doDia.has(periodo)) doDia.set(periodo, []);
-    (doDia.get(periodo) as Foto[]).push(foto);
+    (doDia.get(periodo) as T[]).push(foto);
   }
   return [...dias.entries()].map(([dia, periodos]) => ({
     dia,

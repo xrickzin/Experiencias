@@ -2,6 +2,8 @@ import { act, fireEvent, screen } from 'expo-router/testing-library';
 
 import * as servico from '@/services/experiencias';
 import * as fotos from '@/services/fotos';
+import * as impressoes from '@/services/impressoes';
+import * as observacoes from '@/services/observacoes';
 import type { Experiencia } from '@/services/experiencias';
 
 import { abrir, esperar } from './apoio/abrir';
@@ -12,6 +14,8 @@ jest.mock('@/hooks/use-sessao', () => jest.requireActual('./apoio/sessao-falsa')
 jest.mock('@/services/laco');
 jest.mock('@/services/experiencias');
 jest.mock('@/services/fotos');
+jest.mock('@/services/observacoes');
+jest.mock('@/services/impressoes');
 jest.mock('expo-image-picker');
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 
@@ -48,6 +52,8 @@ async function preencher(rotulo: string, valor: string) {
 beforeEach(() => {
   reiniciarSessao();
   jest.resetAllMocks();
+  jest.mocked(observacoes.listarObservacoes).mockResolvedValue({ ok: true, observacoes: [] });
+  jest.mocked(impressoes.listarImpressoes).mockResolvedValue({ ok: true, impressoes: [] });
   jest.mocked(fotos.listarFotos).mockResolvedValue({ ok: true, fotos: [] });
   jest.mocked(fotos.removerFotosDaExperiencia).mockResolvedValue({ ok: true });
   definirSessao({
@@ -82,7 +88,7 @@ describe('transições na experiência', () => {
     expect(await screen.findByText('Está acontecendo.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Começar a viver' })).toBeNull();
     // Vivendo abre nas fotos; voltar para o planejamento fica na aba de detalhes.
-    expect(screen.getByRole('tab', { name: 'Fotos' }).props.accessibilityState.selected).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Momentos' }).props.accessibilityState.selected).toBe(true);
     expect(screen.getByRole('button', { name: 'Tirar foto' })).toBeTruthy();
     await act(async () => {
       await fireEvent.press(screen.getByRole('tab', { name: 'Detalhes' }));
@@ -96,13 +102,16 @@ describe('transições na experiência', () => {
     ]);
   });
 
-  it('Vivendo não oferece voltar direto para desejo nem finalizar (Fase 5)', async () => {
+  it('Vivendo não oferece voltar direto para desejo', async () => {
     lista(experiencia('1', 'Viagem', { estado: 'vivendo' }));
     await abrir('/experiencia/1');
     await screen.findByText('Está acontecendo.');
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('tab', { name: 'Detalhes' }));
+    });
 
     expect(screen.queryByRole('button', { name: 'Voltar para desejo' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /finalizar/i })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Finalizar experiência' })).toBeTruthy();
   });
 
   it('falha na transição: avisa e mantém o estado', async () => {

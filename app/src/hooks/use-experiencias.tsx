@@ -3,13 +3,16 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { useSessao } from '@/hooks/use-sessao';
 import { removerFotosDaExperiencia } from '@/services/fotos';
 import type { Resultado } from '@/services/laco';
+import type { ReferenciaTemporal } from '@/services/referencia-temporal';
 import {
   atualizarExperiencia as atualizarNoServidor,
   criarDesejo,
   excluirExperiencia as excluirNoServidor,
   listarExperiencias,
   definirFotoDestaque,
+  finalizarExperiencia,
   mudarEstado as mudarEstadoNoServidor,
+  registrarMemoria as registrarNoServidor,
   type CamposDaExperiencia,
   type Estado,
   type Experiencia,
@@ -30,6 +33,9 @@ type Experiencias = {
   excluirExperiencia: (id: string) => Promise<Resultado>;
   mudarEstado: (id: string, estado: Estado) => Promise<Resultado<{ estado: Estado }>>;
   definirDestaque: (id: string, fotoId: string | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
+  registrarMemoria: (campos: CamposDaExperiencia) => Promise<Resultado<{ memoria: Experiencia }>>;
+  /** Vivendo → Memória. `referencia` só quando a experiência está sem data. */
+  finalizar: (id: string, referencia: ReferenciaTemporal | null) => Promise<Resultado>;
 };
 
 const ExperienciasContext = createContext<Experiencias | null>(null);
@@ -138,6 +144,26 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
     [alterar]
   );
 
+  const registrarMemoria = useCallback(
+    async (campos: CamposDaExperiencia) => {
+      const r = await registrarNoServidor(campos);
+      if (r.ok) alterar((atuais) => [r.memoria, ...atuais]);
+      return r;
+    },
+    [alterar]
+  );
+
+  const finalizar = useCallback(
+    async (id: string, referencia: ReferenciaTemporal | null) => {
+      const r = await finalizarExperiencia(id, referencia);
+      // Relê: a data que vale pode ter sido a que a outra pessoa definiu primeiro.
+      if (r.ok) await recarregar();
+      else if (r.codigo === 'desejo_inexistente') alterar((atuais) => atuais.filter((e) => e.id !== id));
+      return r;
+    },
+    [alterar, recarregar]
+  );
+
   return (
     <ExperienciasContext.Provider
       value={{
@@ -151,6 +177,8 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
         excluirExperiencia,
         mudarEstado,
         definirDestaque,
+        registrarMemoria,
+        finalizar,
       }}>
       {children}
     </ExperienciasContext.Provider>

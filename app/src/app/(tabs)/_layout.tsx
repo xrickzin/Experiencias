@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
-import { Pressable, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // A altura padrão da barra (49 pt) é menor que o círculo; a barra recorta o que passa dela.
@@ -12,16 +14,64 @@ import { useTheme } from '@/hooks/use-theme';
 const ALTURA_CONTEUDO_BARRA = 64;
 const TAMANHO_BOTAO_CRIAR = 48;
 
-/** Ação central: abre a criação de uma experiência, não é uma aba com conteúdo. */
+/**
+ * Ação central: não é uma aba com conteúdo. Oferece as duas formas de criar (navigation.md):
+ * um desejo ou uma memória de algo vivido antes do aplicativo.
+ */
 function CriarExperienciaButton() {
   const theme = useTheme();
+  const [escolhendo, setEscolhendo] = useState(false);
+
+  function ir(destino: '/criar' | '/criar?tipo=memoria') {
+    setEscolhendo(false);
+    router.push(destino);
+  }
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Modal
+        testID="escolha-de-criacao"
+        visible={escolhendo}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setEscolhendo(false)}>
+        <View
+          accessibilityViewIsModal
+          style={{ flex: 1, justifyContent: 'flex-end', padding: Spacing.four, backgroundColor: 'rgba(43, 39, 36, 0.55)' }}>
+          <Pressable
+            accessibilityLabel="Fechar"
+            accessibilityRole="button"
+            onPress={() => setEscolhendo(false)}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+          />
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              alignSelf: 'center',
+              gap: Spacing.two,
+              padding: Spacing.four,
+              borderRadius: Radius.button,
+              backgroundColor: theme.background,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}>
+            <ThemedText type="subtitle" style={{ fontSize: 24, lineHeight: 32 }} accessibilityRole="header">
+              O que vocês querem guardar?
+            </ThemedText>
+            <View style={{ gap: Spacing.two, marginTop: Spacing.two }}>
+              <Button label="Criar um desejo" onPress={() => ir('/criar')} />
+              <Button label="Registrar uma memória" variant="secondary" onPress={() => ir('/criar?tipo=memoria')} />
+              <Button label="Cancelar" variant="text" onPress={() => setEscolhendo(false)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Criar experiência"
-        onPress={() => router.push('/criar')}
+        onPress={() => setEscolhendo(true)}
         style={({ pressed }) => ({
           width: TAMANHO_BOTAO_CRIAR,
           height: TAMANHO_BOTAO_CRIAR,

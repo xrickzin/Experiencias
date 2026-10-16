@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
 
@@ -9,11 +9,14 @@ import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
-import { lerReferencia } from '@/services/referencia-temporal';
+import { lerReferencia, lerReferenciaDaMemoria } from '@/services/referencia-temporal';
 import { validarTituloDoDesejo } from '@/services/validacao';
 
+/** Criar só existe em Desejo ou, para algo vivido antes do aplicativo, em Memória (ADR 008). */
 export default function Criar() {
-  const { adicionarDesejo } = useExperiencias();
+  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+  const memoria = tipo === 'memoria';
+  const { adicionarDesejo, registrarMemoria } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(valoresVazios);
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
@@ -23,14 +26,27 @@ export default function Criar() {
   async function enviar() {
     if (enviando) return;
     const tituloInvalido = validarTituloDoDesejo(valores.titulo);
-    const referencia = lerReferencia(valores.referencia);
+    const referencia = (memoria ? lerReferenciaDaMemoria : lerReferencia)(valores.referencia);
     setErroTitulo(tituloInvalido);
     setErroReferencia(referencia.ok ? undefined : referencia.erro);
     if (tituloInvalido || !referencia.ok) return;
 
     setEnviando(true);
     setErroGeral(undefined);
-    const r = await adicionarDesejo({ ...valores, referencia: referencia.referencia });
+    const campos = { ...valores, referencia: referencia.referencia };
+    if (memoria) {
+      const r = await registrarMemoria(campos);
+      if (r.ok) {
+        AccessibilityInfo.announceForAccessibility('Memória guardada');
+        // Abre a memória: é ali que entram fotos, impressão e momento favorito.
+        router.replace({ pathname: '/experiencia/[id]', params: { id: r.memoria.id } });
+        return;
+      }
+      setEnviando(false);
+      setErroGeral(r.mensagem);
+      return;
+    }
+    const r = await adicionarDesejo(campos);
     if (r.ok) {
       AccessibilityInfo.announceForAccessibility('Desejo adicionado');
       router.replace('/desejos');
@@ -43,15 +59,24 @@ export default function Criar() {
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScreenHeader
-        eyebrow="Nova experiência"
-        title="O que vocês querem viver?"
-        description="Contem o que já sabem sobre essa ideia."
-      />
+      {memoria ? (
+        <ScreenHeader
+          eyebrow="Uma memória"
+          title="O que vocês já viveram?"
+          description="Para algo que aconteceu antes do Laço. Só o título e quando aconteceu são necessários."
+        />
+      ) : (
+        <ScreenHeader
+          eyebrow="Nova experiência"
+          title="O que vocês querem viver?"
+          description="Contem o que já sabem sobre essa ideia."
+        />
+      )}
 
       <View style={{ gap: Spacing.four }}>
         <CamposDaExperiencia
           autoFocus
+          exigirData={memoria}
           valores={valores}
           erroTitulo={erroTitulo}
           erroReferencia={erroReferencia}
@@ -64,7 +89,7 @@ export default function Criar() {
         />
         {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
         <View style={{ gap: Spacing.two }}>
-          <Button label="Adicionar desejo" loading={enviando} onPress={enviar} />
+          <Button label={memoria ? 'Guardar memória' : 'Adicionar desejo'} loading={enviando} onPress={enviar} />
           <Button label="Cancelar" variant="secondary" disabled={enviando} onPress={() => router.back()} />
         </View>
       </View>

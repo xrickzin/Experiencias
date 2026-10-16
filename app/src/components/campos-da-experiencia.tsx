@@ -33,6 +33,8 @@ type CamposDaExperienciaProps = {
   erroReferencia?: string;
   onChange: (valores: ValoresDaExperiencia) => void;
   autoFocus?: boolean;
+  /** Memória: a referência temporal é obrigatória. */
+  exigirData?: boolean;
 };
 
 /** Título (obrigatório), quando, local e observações. Os mesmos ao criar e ao editar, em qualquer estado. */
@@ -42,6 +44,7 @@ export function CamposDaExperiencia({
   erroReferencia,
   onChange,
   autoFocus,
+  exigirData,
 }: CamposDaExperienciaProps) {
   return (
     <View style={{ gap: Spacing.three }}>
@@ -58,6 +61,7 @@ export function CamposDaExperiencia({
       <ReferenciaTemporalCampo
         campos={valores.referencia}
         erro={erroReferencia}
+        obrigatoria={exigirData}
         onChange={(referencia) => onChange({ ...valores, referencia })}
       />
       <TextField
