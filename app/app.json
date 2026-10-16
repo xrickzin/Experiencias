@@ -46,6 +46,16 @@
           "cameraPermission": "O Laço usa a câmera para registrar os momentos das experiências de vocês.",
           "microphonePermission": false
         }
+      ],
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "O Laço lê a data das suas fotos para guardá-las no dia em que foram tiradas.",
+          "savePhotosPermission": "O Laço salva no aparelho as fotos que você pedir.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": ["photo"]
+        }
       ]
     ],
     "experiments": {

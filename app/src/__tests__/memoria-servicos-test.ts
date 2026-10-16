@@ -1,7 +1,7 @@
 // Serviços da Fase 5 (finalizar, registrar memória, observações, impressões) contra um cliente do
 // Supabase simulado. A regra de privacidade em si é do banco: supabase/tests/memoria.mjs.
 import { finalizarExperiencia, registrarMemoria } from '@/services/experiencias';
-import { legendarFoto } from '@/services/fotos';
+import { datarFoto, legendarFoto } from '@/services/fotos';
 import { escolherMomentoFavorito, listarImpressoes, salvarImpressao } from '@/services/impressoes';
 import { criarObservacao, editarObservacao, listarObservacoes } from '@/services/observacoes';
 
@@ -152,6 +152,20 @@ describe('legenda da foto', () => {
   it('foto que a outra pessoa excluiu', async () => {
     mockResposta = { data: [], error: null };
     expect(await legendarFoto('f1', 'x')).toMatchObject({ ok: false, codigo: 'foto_inexistente' });
+  });
+});
+
+describe('quando a foto foi tirada', () => {
+  it('guarda o instante escolhido na própria foto', async () => {
+    mockResposta = { data: [{ id: 'f1' }], error: null };
+    expect(await datarFoto('f1', '2022-06-11T00:00:00.000Z')).toEqual({ ok: true, capturadaEm: '2022-06-11T00:00:00.000Z' });
+    expect(enviado('update')?.[0]).toEqual({ capturada_em: '2022-06-11T00:00:00.000Z' });
+    expect(filtros()).toEqual([['id', 'f1']]);
+  });
+
+  it('foto que a outra pessoa excluiu', async () => {
+    mockResposta = { data: [], error: null };
+    expect(await datarFoto('f1', '2022-06-11T00:00:00.000Z')).toMatchObject({ ok: false, codigo: 'foto_inexistente' });
   });
 });
 

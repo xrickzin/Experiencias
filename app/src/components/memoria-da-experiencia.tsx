@@ -221,7 +221,9 @@ function Favorito({ rotulo, caminho, children }: { rotulo: string; caminho: stri
             overflow: 'hidden',
             backgroundColor: theme.backgroundElement,
           }}>
-          {url ? <Image source={{ uri: url }} contentFit="cover" style={{ flex: 1 }} accessibilityLabel={rotulo} /> : null}
+          {url ? (
+            <Image source={{ uri: url, cacheKey: `capa:${caminho}` }} contentFit="cover" style={{ flex: 1 }} accessibilityLabel={rotulo} />
+          ) : null}
         </View>
       ) : (
         <ThemedText themeColor="textSecondary">{children}</ThemedText>

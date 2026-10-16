@@ -37,6 +37,7 @@ const foto = (id: string): Foto => ({
   id,
   caminho: `l1/1/${id}.jpg`,
   url: `https://assinada/${id}`,
+  miniatura: null,
   autorId: 'm1',
   capturadaEm: '2026-10-12T15:00:00Z',
   legenda: null,

@@ -346,7 +346,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando }: FormularioP
           }}>
           {destaque ? (
             <Image
-              source={{ uri: destaque }}
+              source={{ uri: destaque, cacheKey: `capa:${experiencia.fotoDestaque?.caminho}` }}
               contentFit="cover"
               style={{ flex: 1 }}
               transition={200}

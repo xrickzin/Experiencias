@@ -56,7 +56,7 @@ export function LinhaDaExperiencia({ experiencia, destaque = false, fotoDestaque
           {fotoDestaqueUrl ? (
             <Image
               testID="historia-foto"
-              source={{ uri: fotoDestaqueUrl }}
+              source={{ uri: fotoDestaqueUrl, cacheKey: `capa:${experiencia.fotoDestaque?.caminho}` }}
               contentFit="cover"
               style={{ flex: 1 }}
               transition={200}

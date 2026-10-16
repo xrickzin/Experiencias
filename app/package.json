@@ -9,11 +9,14 @@
     "expo-constants": "~57.0.20",
     "expo-font": "~57.0.4",
     "expo-image": "~57.0.5",
+    "expo-image-manipulator": "~57.0.21",
     "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.13",
+    "expo-media-library": "~57.0.5",
     "expo-navigation-bar": "~57.0.3",
     "expo-router": "~57.0.28",
     "expo-secure-store": "~57.0.4",
+    "expo-sharing": "~57.0.23",
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
@@ -53,6 +56,7 @@
       "<rootDir>/src/**/__tests__/**/*-test.[jt]s?(x)"
     ],
     "moduleNameMapper": {
+      "^expo-media-library/legacy$": "<rootDir>/src/__tests__/apoio/expo-media-library.ts",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
     }

@@ -28,6 +28,7 @@ const foto = (id: string, capturadaEm: string | null = '2026-10-15T15:00:00Z'): 
   id,
   caminho: `l1/1/${id}.jpg`,
   url: `https://assinada/${id}`,
+  miniatura: null,
   autorId: 'm1',
   capturadaEm,
   legenda: null,
@@ -109,6 +110,7 @@ describe('aba de fotos agrupada', () => {
       base64: 'QUJD1',
       mimeType: 'image/jpeg',
       capturadaEm: '2026-03-10T23:15:00.000Z',
+      miniatura: null,
     });
   });
 });
@@ -150,6 +152,96 @@ describe('legenda da foto', () => {
 
     expect(screen.getByText('Sem conexão.')).toBeTruthy();
     expect(screen.getByLabelText('Legenda')).toBeTruthy();
+  });
+});
+
+describe('quando a foto foi tirada', () => {
+  async function abrirFoto() {
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
+    });
+  }
+
+  it('mostra quando foi tirada e corrige para outro dia e período', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    svc.datarFoto.mockImplementation(async (_id, capturadaEm) => ({ ok: true, capturadaEm }));
+    await abrirFoto();
+    expect(screen.getByText(/^Tirada em: /)).toBeTruthy();
+
+    await tocar('Alterar quando foi tirada');
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Outro dia' }));
+    });
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Dia em que a foto foi tirada'), '10062022');
+    });
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Noite' }));
+    });
+    await tocar('Guardar data');
+
+    // Noite em Brasília é guardada no meio do período (21h = 00h UTC do dia seguinte).
+    expect(svc.datarFoto).toHaveBeenCalledWith('a', '2022-06-11T00:00:00.000Z');
+    expect(screen.getByText(/^Tirada em: .*2022 · Noite$/)).toBeTruthy();
+  });
+
+  it('dia no futuro não é aceito e não chama o servidor', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    await abrirFoto();
+    await tocar('Alterar quando foi tirada');
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Outro dia' }));
+    });
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Dia em que a foto foi tirada'), '01012099');
+    });
+    await tocar('Guardar data');
+
+    expect(screen.getByText('Escolham um dia que já aconteceu.')).toBeTruthy();
+    expect(svc.datarFoto).not.toHaveBeenCalled();
+  });
+});
+
+describe('salvar no celular ou compartilhar', () => {
+  async function abrirFoto() {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
+    });
+  }
+
+  it('salvar no celular confirma; falha explica o que conferir', async () => {
+    svc.salvarFoto.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({
+      ok: false,
+      codigo: 'salvar',
+      mensagem: 'Não foi possível salvar a foto no celular. Confira se o Laço pode acessar as fotos e tente de novo.',
+    });
+    await abrirFoto();
+
+    await tocar('Salvar no celular');
+    expect(svc.salvarFoto).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+    expect(screen.getByText('Foto salva no celular.')).toBeTruthy();
+
+    await tocar('Salvar no celular');
+    expect(screen.getByText(/Confira se o Laço pode acessar as fotos/)).toBeTruthy();
+  });
+
+  it('compartilhar abre as opções do aparelho; falha avisa', async () => {
+    svc.compartilharFoto.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({
+      ok: false,
+      codigo: 'compartilhar',
+      mensagem: 'Não foi possível preparar a foto para compartilhar. Tente de novo.',
+    });
+    await abrirFoto();
+
+    await tocar('Compartilhar');
+    expect(svc.compartilharFoto).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+    expect(screen.queryByText(/Não foi possível preparar/)).toBeNull();
+
+    await tocar('Compartilhar');
+    expect(screen.getByText('Não foi possível preparar a foto para compartilhar. Tente de novo.')).toBeTruthy();
   });
 });
 

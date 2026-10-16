@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { useSessao } from '@/hooks/use-sessao';
-import { enviarFoto, excluirFoto, legendarFoto, listarFotos, type ArquivoDeFoto, type Foto } from '@/services/fotos';
+import { datarFoto, enviarFoto, excluirFoto, legendarFoto, listarFotos, type ArquivoDeFoto, type Foto } from '@/services/fotos';
 import type { Resultado } from '@/services/laco';
 
 type Envio = { atual: number; total: number } | null;
@@ -63,5 +63,11 @@ export function useFotos(experienciaId: string) {
     return r;
   }, []);
 
-  return { fotos, carregando: !carregado, erro, envio, carregar, enviar, excluir, legendar };
+  const datar = useCallback(async (id: string, capturadaEm: string) => {
+    const r = await datarFoto(id, capturadaEm);
+    if (r.ok) setFotos((atuais) => atuais.map((f) => (f.id === id ? { ...f, capturadaEm: r.capturadaEm } : f)));
+    return r;
+  }, []);
+
+  return { fotos, carregando: !carregado, erro, envio, carregar, enviar, excluir, legendar, datar };
 }

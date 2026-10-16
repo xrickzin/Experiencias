@@ -12,6 +12,7 @@ const foto = (id: string, capturadaEm: string | null, criadoEm = '2026-10-15T20:
   id,
   caminho: `${id}.jpg`,
   url: null,
+  miniatura: null,
   autorId: null,
   capturadaEm,
   legenda: null,

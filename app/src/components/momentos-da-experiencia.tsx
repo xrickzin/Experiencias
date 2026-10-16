@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
@@ -20,30 +21,47 @@ import {
   capturaDoExif,
   diaEPeriodo,
   instanteDoMomento,
+  momentoDaFoto,
   ROTULO_DO_PERIODO,
   rotuloDoDia,
   type Periodo,
 } from '@/services/agrupar-fotos';
 import type { Experiencia } from '@/services/experiencias';
-import { LIMITE_DA_LEGENDA, type ArquivoDeFoto, type Foto } from '@/services/fotos';
+import { compartilharFoto, LIMITE_DA_LEGENDA, salvarFoto, type ArquivoDeFoto, type Foto } from '@/services/fotos';
+import { dataDaGaleria, pedirAcessoAsFotos } from '@/services/galeria';
+import { caminhoDaMiniatura, gerarMiniatura, reduzirFoto } from '@/services/miniatura';
 import type { Resultado } from '@/services/laco';
 import { LIMITE_DA_OBSERVACAO, type Observacao } from '@/services/observacoes';
 import { lerData, mascararData } from '@/services/referencia-temporal';
 
-// Qualidade boa para lembrar, sem pesar no envio. O arquivo vai em base64 para virar bytes no Storage.
-// O EXIF volta só para o aparelho ler quando a foto foi tirada; ele não é enviado ao servidor.
-const OPCOES = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.7, base64: true, exif: true };
+// O seletor entrega a foto em qualidade 0,85 como reserva: o que vai para o Laço é a versão reduzida
+// a 2560 px gerada no aparelho (ADR 035). O arquivo vai em base64 para virar bytes no Storage. O EXIF
+// volta só para o aparelho ler quando a foto foi tirada; ele não é enviado ao servidor.
+const OPCOES = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.85, base64: true, exif: true };
 const LIMITE_DA_GALERIA = 10;
 
-const paraArquivos = (assets: ImagePicker.ImagePickerAsset[], daCamera: boolean): ArquivoDeFoto[] =>
-  assets
-    .filter((a) => a.base64)
-    .map((a) => ({
-      base64: a.base64 as string,
-      mimeType: a.mimeType,
-      // Foto recém-tirada: se a câmera não informar a hora, é agora.
-      capturadaEm: capturaDoExif(a.exif) ?? (daCamera ? new Date().toISOString() : null),
-    }));
+/**
+ * Quando cada foto foi tirada: o EXIF quando vem; da galeria do Android, a data da própria galeria
+ * (o seletor do sistema não traz o EXIF; ADR 033); recém-tirada sem hora informada, agora. Sem
+ * nada disso, vale o envio (e dá para corrigir na foto aberta).
+ */
+const paraArquivos = async (assets: ImagePicker.ImagePickerAsset[], daCamera: boolean): Promise<ArquivoDeFoto[]> =>
+  Promise.all(
+    assets
+      .filter((a) => a.base64)
+      .map(async (a) => {
+        const reduzida = await reduzirFoto(a.uri, a.width, a.height);
+        return {
+          // Sem a versão reduzida, vai a que o seletor entregou.
+          base64: reduzida ?? (a.base64 as string),
+          mimeType: reduzida ? 'image/jpeg' : a.mimeType,
+          capturadaEm:
+            capturaDoExif(a.exif) ??
+            (daCamera ? new Date().toISOString() : await dataDaGaleria(a.fileName)),
+          miniatura: await gerarMiniatura(a.uri, a.width, a.height),
+        };
+      })
+  );
 
 type Item = (Foto & { tipo: 'foto' }) | (Observacao & { tipo: 'observacao' });
 
@@ -61,7 +79,8 @@ export type MeuFavorito = {
 export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: Experiencia; favorito?: MeuFavorito }) {
   const theme = useTheme();
   const { perfil } = useSessao();
-  const { fotos, carregando, erro, envio, carregar, enviar, excluir, legendar } = useFotos(experiencia.id);
+  const { fotos, carregando, erro, envio, carregar, enviar, excluir, legendar, datar } = useFotos(experiencia.id);
+  const insets = useSafeAreaInsets();
   const observacoes = useObservacoes(experiencia.id);
   const [erroDaAcao, setErroDaAcao] = useState<string>();
   const [aberta, setAberta] = useState<Foto | null>(null);
@@ -105,17 +124,19 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
       return;
     }
     const r = await ImagePicker.launchCameraAsync(OPCOES);
-    if (!r.canceled) await guardar(paraArquivos(r.assets, true));
+    if (!r.canceled) await guardar(await paraArquivos(r.assets, true));
   }
 
   async function escolherDaGaleria() {
     setErroDaAcao(undefined);
+    // Sem o acesso, as fotos entram do mesmo jeito; só a data fica a do envio.
+    await pedirAcessoAsFotos();
     const r = await ImagePicker.launchImageLibraryAsync({
       ...OPCOES,
       allowsMultipleSelection: true,
       selectionLimit: LIMITE_DA_GALERIA,
     });
-    if (!r.canceled) await guardar(paraArquivos(r.assets, false));
+    if (!r.canceled) await guardar(await paraArquivos(r.assets, false));
   }
 
   async function excluirAberta() {
@@ -247,8 +268,17 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
                               borderWidth: foto.id === destaqueId ? 3 : 0,
                               borderColor: theme.text,
                             }}>
-                            {foto.url ? (
-                              <Image source={{ uri: foto.url }} contentFit="cover" style={{ flex: 1 }} transition={150} />
+                            {foto.miniatura || foto.url ? (
+                              <Image
+                                source={{
+                                  uri: (foto.miniatura ?? foto.url) as string,
+                                  // O cache é pelo arquivo, não pela URL assinada (que muda a cada hora).
+                                  cacheKey: foto.miniatura ? caminhoDaMiniatura(foto.caminho) : foto.caminho,
+                                }}
+                                contentFit="cover"
+                                style={{ flex: 1 }}
+                                transition={150}
+                              />
                             ) : null}
                             {foto.id === destaqueId || ehFavorito(foto.id) ? (
                               <View
@@ -324,11 +354,20 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
         animationType="fade"
         statusBarTranslucent
         onRequestClose={() => setAberta(null)}>
-        <View style={{ flex: 1, backgroundColor: theme.background, padding: Spacing.four, gap: Spacing.three }}>
+        {/* O modal desenha por baixo das barras do sistema: o conteúdo fica entre elas. */}
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: theme.background,
+            padding: Spacing.four,
+            paddingTop: Spacing.four + insets.top,
+            paddingBottom: Spacing.four + insets.bottom,
+            gap: Spacing.three,
+          }}>
           <View style={{ flex: 1, borderRadius: Radius.photo, overflow: 'hidden' }}>
             {aberta?.url ? (
               <Image
-                source={{ uri: aberta.url }}
+                source={{ uri: aberta.url, cacheKey: aberta.caminho }}
                 contentFit="contain"
                 style={{ flex: 1 }}
                 accessibilityLabel="Foto em tela cheia"
@@ -344,6 +383,17 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
               onSalvar={async (texto) => {
                 const r = await legendar(aberta.id, texto);
                 if (r.ok) setAberta({ ...aberta, legenda: r.legenda });
+                return r;
+              }}
+            />
+          ) : null}
+          {aberta ? (
+            <DataDaFoto
+              key={`data-${aberta.id}`}
+              foto={aberta}
+              onSalvar={async (instante) => {
+                const r = await datar(aberta.id, instante);
+                if (r.ok) setAberta({ ...aberta, capturadaEm: r.capturadaEm });
                 return r;
               }}
             />
@@ -367,6 +417,7 @@ export function MomentosDaExperiencia({ experiencia, favorito }: { experiencia: 
             />
           ) : null}
           {erroDestaque ? <MensagemErro>{erroDestaque}</MensagemErro> : null}
+          {aberta ? <SalvarOuCompartilhar key={`levar-${aberta.id}`} foto={aberta} /> : null}
           <Button
             label="Excluir foto"
             variant="secondary"
@@ -403,15 +454,82 @@ type EditorProps = {
 const PERIODOS: Periodo[] = ['madrugada', 'manha', 'tarde', 'noite'];
 type QualDia = 'hoje' | 'ontem' | 'outro';
 
-/** Momento inicial do editor: o da observação (dia e período) ou agora. */
-function momentoInicial(observacao: Observacao | 'nova' | null, agora: Date) {
-  const iso = observacao && observacao !== 'nova' ? (observacao.capturadaEm ?? observacao.criadoEm) : agora.toISOString();
+/** Dia e período escolhidos, como estão nos campos (o dia digitado ainda pode estar incompleto). */
+type Momento = { qual: QualDia; outroDia: string; periodo: Periodo };
+
+/** O momento de um instante (o de uma observação, de uma foto, ou agora), pronto para os campos. */
+function momentoInicial(iso: string, agora: Date) {
   const { dia, periodo } = diaEPeriodo(iso);
   const hoje = diaEPeriodo(agora.toISOString()).dia;
   const ontem = diaEPeriodo(new Date(agora.getTime() - 86_400_000).toISOString()).dia;
   const qual: QualDia = dia === hoje ? 'hoje' : dia === ontem ? 'ontem' : 'outro';
   const [ano, mes, d] = dia.split('-');
-  return { qual, data: qual === 'outro' ? `${d}/${mes}/${ano}` : '', periodo, hoje, ontem };
+  const momento: Momento = { qual, outroDia: qual === 'outro' ? `${d}/${mes}/${ano}` : '', periodo };
+  return { momento, hoje, ontem };
+}
+
+/** O instante do momento escolhido, ou o erro a mostrar no campo do dia. */
+function lerMomento(m: Momento, hoje: string, ontem: string, agora: Date): { instante: string } | { erro: string } {
+  const dia = m.qual === 'hoje' ? hoje : m.qual === 'ontem' ? ontem : lerData(m.outroDia);
+  if (!dia) return { erro: 'Informe o dia como DD/MM/AAAA, por exemplo 12/10/2026.' };
+  if (dia > hoje) return { erro: 'Escolham um dia que já aconteceu.' };
+  return { instante: instanteDoMomento(dia, m.periodo, agora) };
+}
+
+type EscolhaProps = {
+  momento: Momento;
+  onChange: (m: Momento) => void;
+  hoje: string;
+  ontem: string;
+  agora: Date;
+  erro?: string;
+  /** Rótulo do campo do dia digitado. */
+  rotuloDoCampo: string;
+};
+
+/**
+ * Dia (hoje, ontem ou outro, nunca no futuro) e período, os mesmos que organizam os momentos
+ * (ADR 030). Mostra onde o registro vai aparecer. Usado na observação e na data da foto.
+ */
+function EscolhaDoMomento({ momento, onChange, hoje, ontem, agora, erro, rotuloDoCampo }: EscolhaProps) {
+  const dia = momento.qual === 'hoje' ? hoje : momento.qual === 'ontem' ? ontem : lerData(momento.outroDia);
+  const onde = dia && dia <= hoje ? `${rotuloDoDia(dia, agora)} · ${ROTULO_DO_PERIODO[momento.periodo]}` : null;
+  return (
+    <>
+      <Opcoes<QualDia>
+        rotulo="Dia"
+        opcoes={[
+          { valor: 'hoje', rotulo: 'Hoje' },
+          { valor: 'ontem', rotulo: 'Ontem' },
+          { valor: 'outro', rotulo: 'Outro dia' },
+        ]}
+        atual={momento.qual}
+        onChange={(qual) => onChange({ ...momento, qual })}
+      />
+      {momento.qual === 'outro' ? (
+        <TextField
+          label={rotuloDoCampo}
+          placeholder="DD/MM/AAAA"
+          value={momento.outroDia}
+          onChangeText={(t) => onChange({ ...momento, outroDia: mascararData(t) })}
+          keyboardType="number-pad"
+          maxLength={10}
+        />
+      ) : null}
+      <Opcoes<Periodo>
+        rotulo="Período"
+        opcoes={PERIODOS.map((p) => ({ valor: p, rotulo: ROTULO_DO_PERIODO[p] }))}
+        atual={momento.periodo}
+        onChange={(periodo) => onChange({ ...momento, periodo })}
+      />
+      {erro ? <MensagemErro>{erro}</MensagemErro> : null}
+      {onde ? (
+        <ThemedText type="small" themeColor="textSecondary" accessibilityLiveRegion="polite">
+          Vai aparecer em: {onde}
+        </ThemedText>
+      ) : null}
+    </>
+  );
 }
 
 /**
@@ -421,10 +539,11 @@ function momentoInicial(observacao: Observacao | 'nova' | null, agora: Date) {
 function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: EditorProps) {
   const theme = useTheme();
   const [agora] = useState(() => new Date());
-  const inicial = momentoInicial(observacao, agora);
-  const [qualDia, setQualDia] = useState<QualDia>(inicial.qual);
-  const [outroDia, setOutroDia] = useState(inicial.data);
-  const [periodo, setPeriodo] = useState<Periodo>(inicial.periodo);
+  const inicial = momentoInicial(
+    observacao && observacao !== 'nova' ? (observacao.capturadaEm ?? observacao.criadoEm) : agora.toISOString(),
+    agora
+  );
+  const [momento, setMomento] = useState<Momento>(inicial.momento);
   const [texto, setTexto] = useState(observacao && observacao !== 'nova' ? observacao.texto : '');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string>();
@@ -433,22 +552,19 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
   const [erroExclusao, setErroExclusao] = useState<string>();
   const [erroDia, setErroDia] = useState<string>();
 
-  const dia = qualDia === 'hoje' ? inicial.hoje : qualDia === 'ontem' ? inicial.ontem : lerData(outroDia);
-  const diaNoFuturo = Boolean(dia && dia > inicial.hoje);
-  const onde = dia && !diaNoFuturo ? `${rotuloDoDia(dia, agora)} · ${ROTULO_DO_PERIODO[periodo]}` : null;
-
   async function salvar() {
     if (!texto.trim()) {
       setErro('Escreva algo antes de guardar.');
       return;
     }
-    if (!dia || diaNoFuturo) {
-      setErroDia(dia ? 'Escolham um dia que já aconteceu.' : 'Informe o dia como DD/MM/AAAA, por exemplo 12/10/2026.');
+    const lido = lerMomento(momento, inicial.hoje, inicial.ontem, agora);
+    if ('erro' in lido) {
+      setErroDia(lido.erro);
       return;
     }
     setSalvando(true);
     setErro(undefined);
-    const r = await onSalvar(texto, instanteDoMomento(dia, periodo, agora));
+    const r = await onSalvar(texto, lido.instante);
     setSalvando(false);
     if (r.ok) onFechar();
     else setErro(r.mensagem);
@@ -484,44 +600,18 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
           fotos desse momento.
         </ThemedText>
         <ThemedText type="smallBold">Quando foi?</ThemedText>
-        <Opcoes<QualDia>
-          rotulo="Dia"
-          opcoes={[
-            { valor: 'hoje', rotulo: 'Hoje' },
-            { valor: 'ontem', rotulo: 'Ontem' },
-            { valor: 'outro', rotulo: 'Outro dia' },
-          ]}
-          atual={qualDia}
-          onChange={(v) => {
-            setQualDia(v);
+        <EscolhaDoMomento
+          momento={momento}
+          onChange={(m) => {
+            setMomento(m);
             setErroDia(undefined);
           }}
+          hoje={inicial.hoje}
+          ontem={inicial.ontem}
+          agora={agora}
+          erro={erroDia}
+          rotuloDoCampo="Dia do momento"
         />
-        {qualDia === 'outro' ? (
-          <TextField
-            label="Dia do momento"
-            placeholder="DD/MM/AAAA"
-            value={outroDia}
-            onChangeText={(t) => {
-              setOutroDia(mascararData(t));
-              setErroDia(undefined);
-            }}
-            keyboardType="number-pad"
-            maxLength={10}
-          />
-        ) : null}
-        <Opcoes<Periodo>
-          rotulo="Período"
-          opcoes={PERIODOS.map((p) => ({ valor: p, rotulo: ROTULO_DO_PERIODO[p] }))}
-          atual={periodo}
-          onChange={setPeriodo}
-        />
-        {erroDia ? <MensagemErro>{erroDia}</MensagemErro> : null}
-        {onde ? (
-          <ThemedText type="small" themeColor="textSecondary" accessibilityLiveRegion="polite">
-            Vai aparecer em: {onde}
-          </ThemedText>
-        ) : null}
         <TextField
           label="Observação"
           placeholder="Ex.: Café da manhã com vista para a serra"
@@ -602,6 +692,124 @@ function Opcoes<T extends string>({ rotulo, opcoes, atual, onChange }: OpcoesPro
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * Quando a foto foi tirada (ADR 032): mostra o dia e o período em que ela aparece e deixa escolher
+ * outros, para corrigir uma data que a galeria não informou ou informou errado. Os dois podem.
+ */
+function DataDaFoto({ foto, onSalvar }: { foto: Foto; onSalvar: (instante: string) => Promise<Resultado> }) {
+  const [agora] = useState(() => new Date());
+  const inicial = momentoInicial(momentoDaFoto(foto), agora);
+  const [editando, setEditando] = useState(false);
+  const [momento, setMomento] = useState<Momento>(inicial.momento);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string>();
+  const { dia, periodo } = diaEPeriodo(momentoDaFoto(foto));
+
+  async function guardar() {
+    const lido = lerMomento(momento, inicial.hoje, inicial.ontem, agora);
+    if ('erro' in lido) {
+      setErro(lido.erro);
+      return;
+    }
+    setSalvando(true);
+    setErro(undefined);
+    const r = await onSalvar(lido.instante);
+    setSalvando(false);
+    if (r.ok) setEditando(false);
+    else setErro(r.mensagem);
+  }
+
+  if (editando) {
+    return (
+      <View style={{ gap: Spacing.two }}>
+        <ThemedText type="smallBold">Quando a foto foi tirada?</ThemedText>
+        <EscolhaDoMomento
+          momento={momento}
+          onChange={(m) => {
+            setMomento(m);
+            setErro(undefined);
+          }}
+          hoje={inicial.hoje}
+          ontem={inicial.ontem}
+          agora={agora}
+          erro={erro}
+          rotuloDoCampo="Dia em que a foto foi tirada"
+        />
+        <Button label="Guardar data" loading={salvando} onPress={guardar} />
+        <Button label="Cancelar" variant="text" disabled={salvando} onPress={() => setEditando(false)} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: Spacing.one, alignItems: 'center' }}>
+      <ThemedText type="small" themeColor="textSecondary">
+        Tirada em: {rotuloDoDia(dia, agora)} · {ROTULO_DO_PERIODO[periodo]}
+      </ThemedText>
+      <Button
+        label="Alterar quando foi tirada"
+        variant="text"
+        onPress={() => {
+          setMomento(inicial.momento);
+          setErro(undefined);
+          setEditando(true);
+        }}
+      />
+    </View>
+  );
+}
+
+/**
+ * Levar a foto para fora do Laço (ADR 033): salvar na galeria do aparelho ou compartilhar com
+ * alguém. São duas ações porque a tela de compartilhar do Android não costuma oferecer salvar.
+ */
+function SalvarOuCompartilhar({ foto }: { foto: Foto }) {
+  const [fazendo, setFazendo] = useState<'salvar' | 'compartilhar' | null>(null);
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string }>();
+
+  async function fazer(acao: 'salvar' | 'compartilhar') {
+    setFazendo(acao);
+    setAviso(undefined);
+    const r = await (acao === 'salvar' ? salvarFoto(foto) : compartilharFoto(foto));
+    setFazendo(null);
+    if (!r.ok) setAviso({ ok: false, texto: r.mensagem });
+    else if (acao === 'salvar') setAviso({ ok: true, texto: 'Foto salva no celular.' });
+  }
+
+  return (
+    <View style={{ gap: Spacing.one }}>
+      <View style={{ flexDirection: 'row', gap: Spacing.two }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="Salvar no celular"
+            variant="secondary"
+            loading={fazendo === 'salvar'}
+            disabled={fazendo !== null}
+            onPress={() => fazer('salvar')}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="Compartilhar"
+            variant="secondary"
+            loading={fazendo === 'compartilhar'}
+            disabled={fazendo !== null}
+            accessibilityHint="Abre as opções do celular para enviar a foto a alguém."
+            onPress={() => fazer('compartilhar')}
+          />
+        </View>
+      </View>
+      {aviso?.ok ? (
+        <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
+          {aviso.texto}
+        </ThemedText>
+      ) : aviso ? (
+        <MensagemErro>{aviso.texto}</MensagemErro>
+      ) : null}
     </View>
   );
 }

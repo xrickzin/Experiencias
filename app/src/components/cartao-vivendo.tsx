@@ -37,7 +37,7 @@ export function CartaoVivendo({ experiencia }: { experiencia: Experiencia }) {
         {url ? (
           <Image
             testID="cartao-vivendo-foto"
-            source={{ uri: url }}
+            source={{ uri: url, cacheKey: `capa:${experiencia.fotoDestaque?.caminho}` }}
             contentFit="cover"
             style={{ flex: 1 }}
             transition={200}
