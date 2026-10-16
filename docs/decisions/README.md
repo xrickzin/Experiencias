@@ -39,5 +39,6 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [025](./025-wish-optional-fields.md) | Informações opcionais de um Desejo | [lifecycle.md](../product/lifecycle.md) |
 | [026](./026-visual-direction-and-platforms.md) | Direção visual, plataformas e elementos gráficos | [ux/proposal/](../ux/proposal/visual-direction.md) |
 | [027](./027-home-limits-and-past-planning.md) | Limites do Início e Planejamento com data passada | [navigation.md](../product/navigation.md#início) |
+| [028](./028-cover-photo-before-memory.md) | Foto de destaque antes da Memória e no Início (amplia 012) | [memory.md](../product/memory.md#foto-de-destaque) |
 
 Pendências ainda sem decisão: [../product/open-questions.md](../product/open-questions.md).

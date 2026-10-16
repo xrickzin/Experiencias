@@ -59,7 +59,7 @@ Domínio em português, `snake_case` ([ADR 021](../decisions/021-naming-and-iden
 
 ## Estado da implementação (Fase 1)
 
-Existem `lacos`, `membros`, `tentativas_vinculo`, `bloqueios_vinculo` e `configuracao_servidor`, mais as funções de vínculo e a RLS, na migração `supabase/migrations/20261010120000_fase1_laco_membros_vinculo.sql` ([phase-1-log.md](../development/phase-1-log.md)). `lacos` ganhou `nome_companheiro_provisorio` (nome informado por quem criou, limpo no vínculo). Na Fase 2 entrou `experiencias` (título, estado, local, observações; só Desejo é usado), ver [phase-2-log.md](../development/phase-2-log.md). As demais entidades ainda não existem.
+Existem `lacos`, `membros`, `tentativas_vinculo`, `bloqueios_vinculo` e `configuracao_servidor`, mais as funções de vínculo e a RLS, na migração `supabase/migrations/20261010120000_fase1_laco_membros_vinculo.sql` ([phase-1-log.md](../development/phase-1-log.md)). `lacos` ganhou `nome_companheiro_provisorio` (nome informado por quem criou, limpo no vínculo). Na Fase 2 entrou `experiencias` (título, estado, local, observações), ver [phase-2-log.md](../development/phase-2-log.md); na Fase 3, a referência temporal (`referencia_precisao`, `referencia_inicio`, `referencia_fim`, `referencia_horario`), `inicio_em`, `armado_em` e a função `mudar_estado` ([phase-3-log.md](../development/phase-3-log.md)); na Fase 4, `registros` (tipo `foto`, com o caminho no bucket privado `experiencias`; a mídia é o próprio arquivo do Storage, sem tabela `midias` separada) ([phase-4-log.md](../development/phase-4-log.md)), e `experiencias.foto_destaque_id`, que aponta para uma foto da própria experiência ([ADR 028](../decisions/028-cover-photo-before-memory.md)). As demais entidades ainda não existem.
 
 ## Em aberto
 

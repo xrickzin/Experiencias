@@ -49,6 +49,7 @@ A memória é a experiência que terminou, no estado final **Memória**. **Não 
 - É **escolhida manualmente**, entre as fotos da própria memória, por **qualquer um dos dois**, e pode ser trocada depois.
 - **Não há escolha automática**: nem a primeira, nem a última, nem o momento favorito.
 - Sem foto escolhida (ou sem fotos), a memória aparece normalmente, sem destaque.
+- Pode ser escolhida **já em Planejamento e em Vivendo**, entre as fotos da experiência, e segue para a memória. No Início, a experiência em destaque de Vivendo aparece como cartão com essa foto; sem ela, com um substituto ([ADR 028](../decisions/028-cover-photo-before-memory.md)).
 
 ## Nossa História
 
