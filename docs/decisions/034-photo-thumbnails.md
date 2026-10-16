@@ -12,6 +12,7 @@ As listas (a grade de Momentos, Nossa História, o cartão do Início, a capa da
 - **A miniatura é um extra:** se não for gerada ou não subir, a foto entra do mesmo jeito.
 - **Cache pelo arquivo, não pela URL** (`cacheKey`): o aparelho não baixa de novo uma foto que já mostrou só porque a URL assinada mudou.
 - Excluir uma foto ou uma experiência apaga também as miniaturas.
+- **Tela cheia:** tocar na foto aberta a mostra na tela inteira, com pinça (até 4×), arrastar e dois toques (2×), feitos com os gestos do próprio React Native. Usa a mesma foto guardada, sem novo download.
 
 ## Consequências
 - Nenhuma mudança no banco nem nas regras do Storage (elas valem por pasta).

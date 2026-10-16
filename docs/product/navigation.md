@@ -41,7 +41,7 @@ Três áreas:
 | Área | Conteúdo |
 |---|---|
 | **Início** | O que está acontecendo e o que vem pela frente. Ver abaixo. |
-| **Desejos** | Experiências em **Desejo**. |
+| **Desejos** | Experiências em **Desejo**, com filtro por categoria e por tamanho (só as opções em uso; [ADR 038](../decisions/038-proportional-planning.md)). |
 | **Nossa História** | Experiências em **Memória** ([memory.md](./memory.md#nossa-história)). |
 
 - **Não** existem abas separadas para Planejamento nem para Vivendo: são contextos da própria experiência.

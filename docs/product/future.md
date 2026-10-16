@@ -2,11 +2,8 @@
 
 > **Nada neste documento é requisito.** São ideias já discutidas, preservadas para não se perderem. Só viram requisito se forem movidas para [mvp.md](./mvp.md) por decisão explícita.
 
-## Categorias
-Organização opcional criada pelo casal (Viagens, Restaurantes, Filmes, Passeios, Dates, Shows, Coisas nerds…). Uma experiência pode ter mais de uma ("Jantar temático de Star Wars" em Restaurantes e Coisas nerds). Não definem quais campos, estado ou importância uma experiência tem. **A criação de uma experiência nunca depende de categoria.** O conceito faz parte do produto; a implementação está fora do MVP e a estrutura não deve impedi-la.
-
 ## Informações de planejamento
-Hospedagem, transporte, orçamento, roteiro, checklist, reservas, arquivos. Entram um tipo por vez, como estrutura explícita e tipada ([ADR 010](../decisions/010-explicit-typed-records.md)).
+Categorias, tamanho, links, reservas, roteiro por dia e orçamento estimado entraram no MVP ([ADR 038](../decisions/038-proportional-planning.md)). Seguem futuras: lista para preparar ou levar (checklist), arquivos (PDF), registro de gastos, e a "vontade" de cada um com o sorteio de um desejo. Entram um tipo por vez, como estrutura explícita e tipada ([ADR 010](../decisions/010-explicit-typed-records.md)).
 
 ## Em Vivendo
 - Vivendo com roteiro: momento atual e próximos momentos.
@@ -17,7 +14,7 @@ Hospedagem, transporte, orçamento, roteiro, checklist, reservas, arquivos. Entr
 No MVP o momento favorito é sempre uma foto. Outros formatos (por exemplo, um trecho de texto) podem ser avaliados depois.
 
 ## Localização geográfica
-Mapa, coordenadas, geocoding, Places API e distância. No MVP o local é só texto livre.
+Mapa dentro do app, coordenadas, geocoding, Places API (sugerir lugares ao digitar) e distância. No MVP o local é texto livre, com "Abrir no mapa" (pesquisa no Google Maps) e links de lugares do Google Maps ([ADR 039](../decisions/039-links-and-map.md)).
 
 ## Gestão do Laço
 Sair ou desfazer o Laço, múltiplos Laços, troca de parceiro, transferência de experiências e troca segura da palavra-chave. Cada uma tem consequências sobre experiências, memórias, fotos e identidade, e precisa ser definida antes.

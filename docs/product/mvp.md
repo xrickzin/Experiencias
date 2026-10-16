@@ -18,7 +18,8 @@ Escopo atual. **Decisão:** [009](../decisions/009-mvp-scope-and-offline.md).
 **Experiências**
 - Desejos: criar, visualizar, editar. Só o título é obrigatório; **local**, **referência temporal pretendida** e **observações** são opcionais ([ADR 025](../decisions/025-wish-optional-fields.md)).
 - Registrar uma memória (experiência anterior ao aplicativo).
-- Planejamento na mesma experiência, com informações opcionais: referência temporal, **local em texto livre**, observações simples.
+- Planejamento na mesma experiência, com informações opcionais: referência temporal, **local em texto livre** (com "Abrir no mapa", que pesquisa no Google Maps), observações simples.
+- **Planejamento proporcional** ([ADR 038](../decisions/038-proportional-planning.md)), tudo opcional: **categorias** (lista pronta e criadas pelo casal, com filtro em Desejos), **tamanho** da experiência, **links** (com os do Google Maps; [ADR 039](../decisions/039-links-and-map.md)), **reservas**, **roteiro por dia** e **orçamento estimado** (total do casal).
 - Transições de estado permitidas ([lifecycle.md](./lifecycle.md#transições-permitidas)), incluindo voltar a Desejo.
 - Automação de início quando houver data clara, no servidor ([dates-and-automation.md](./dates-and-automation.md)).
 - Finalizar e cancelar com confirmação explícita; cancelamento é exclusão definitiva.
@@ -36,7 +37,7 @@ Escopo atual. **Decisão:** [009](../decisions/009-mvp-scope-and-offline.md).
 
 ## Fora do MVP
 
-Tema escuro · Categorias · gastos/finanças · checklist avançado · reservas · mapas, coordenadas, geocoding, Places, distância · navegação · vídeos · notificações · retrospectivas · IA para escrever memórias · compartilhamento externo · offline-first · sincronização complexa · recursos sociais · sair ou desfazer o Laço, múltiplos Laços, trocar de parceiro, transferir experiências, trocar a palavra-chave · momento favorito que não seja foto · suporte web.
+gastos/finanças · checklist · mapa no app, coordenadas, geocoding, Places, distância · navegação · vídeos · notificações · retrospectivas · IA para escrever memórias · compartilhamento externo · offline-first · sincronização complexa · recursos sociais · sair ou desfazer o Laço, múltiplos Laços, trocar de parceiro, transferir experiências, trocar a palavra-chave · momento favorito que não seja foto · suporte web.
 
 Detalhes preservados em [future.md](./future.md).
 
@@ -56,7 +57,7 @@ Laço é um aplicativo mobile. **iOS e Android** são priorizados; o suporte web
 
 ## Tema
 
-O MVP tem **apenas o tema claro** e **não acompanha o tema escuro do sistema**. Um tema escuro é futuro; a estrutura de tokens pode prepará-lo ([ADR 026](../decisions/026-visual-direction-and-platforms.md)).
+Claro e escuro ("noite quente"). Por padrão o app segue o tema do celular; em Ajustes, cada pessoa pode fixar claro ou escuro no próprio aparelho ([ADR 037](../decisions/037-dark-mode.md), que revê o "só claro" do [ADR 026](../decisions/026-visual-direction-and-platforms.md)).
 
 ## Em aberto que afetam o MVP
 

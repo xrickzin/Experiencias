@@ -47,5 +47,9 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [033](./033-gallery-access-save-share-quality.md) | Acesso às fotos, salvar e compartilhar, qualidade das fotos | [memory.md](../product/memory.md#registros) |
 | [034](./034-photo-thumbnails.md) | Miniaturas das fotos (listas leves, foto inteira ao abrir) e estimativa de capacidade | [memory.md](../product/memory.md#registros) |
 | [035](./035-photo-size.md) | Tamanho da foto guardada (2560 px) | [memory.md](../product/memory.md#registros) |
+| [036](./036-destructive-buttons-and-phase-milestones.md) | Botões destrutivos e marcos de fase com o laço | [visual-direction.md](../ux/proposal/visual-direction.md) |
+| [037](./037-dark-mode.md) | Modo escuro: segue o tema do sistema, paleta "noite quente" | [visual-direction.md](../ux/proposal/visual-direction.md) |
+| [038](./038-proportional-planning.md) | Planejamento proporcional: categorias, tamanho, links, reservas, roteiro e orçamento | [mvp.md](../product/mvp.md) |
+| [039](./039-links-and-map.md) | Links da experiência e "Abrir no mapa" | [mvp.md](../product/mvp.md) |
 
 Pendências ainda sem decisão: [../product/open-questions.md](../product/open-questions.md).
