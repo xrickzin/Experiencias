@@ -1,29 +1,48 @@
 import { useFonts } from 'expo-font';
-import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { useColorScheme } from 'react-native';
 
 import { TelaAviso } from '@/components/tela-aviso';
-import { Colors, FontFamily } from '@/constants/theme';
+import { FontFamily } from '@/constants/theme';
 import { ExperienciasProvider } from '@/hooks/use-experiencias';
 import { SessaoProvider, useSessao } from '@/hooks/use-sessao';
+import { useTheme } from '@/hooks/use-theme';
+import { aplicarTema, lerPreferenciaDeTema } from '@/services/tema';
 
 SplashScreen.preventAutoHideAsync();
 
-// O tema de navegação padrão tem fundo cinza; aqui ele usa os tokens do Laço.
-const navigationTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: Colors.light.text,
-    background: Colors.light.background,
-    card: Colors.light.background,
-    text: Colors.light.text,
-    border: Colors.light.border,
-  },
-};
+// O tema de navegação padrão tem fundo cinza; aqui ele usa os tokens do Laço, no tema do sistema.
+function useTemaDeNavegacao() {
+  const escuro = useColorScheme() === 'dark';
+  const theme = useTheme();
+  const base = escuro ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: theme.text,
+      background: theme.background,
+      card: theme.background,
+      text: theme.text,
+      border: theme.border,
+    },
+  };
+}
 
 export default function RootLayout() {
+  const navigationTheme = useTemaDeNavegacao();
+  // O tema escolhido em Ajustes vale desde a abertura, sem piscar no outro tema.
+  const [temaPronto, setTemaPronto] = useState(false);
+  useEffect(() => {
+    void lerPreferenciaDeTema().then((preferencia) => {
+      aplicarTema(preferencia);
+      setTemaPronto(true);
+    });
+  }, []);
   const [fontsLoaded, fontError] = useFonts({
     [FontFamily.display]: require('@/assets/fonts/Fraunces-SemiBold.ttf'),
     [FontFamily.body]: require('@/assets/fonts/Figtree-Medium.ttf'),
@@ -31,12 +50,15 @@ export default function RootLayout() {
   });
 
   // Se as fontes falharem, o app abre mesmo assim e o sistema usa a fonte padrão no lugar.
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !temaPronto) {
     return null;
   }
 
   return (
     <ThemeProvider value={navigationTheme}>
+      {/* Ícones das barras do sistema acompanham o tema (claros no escuro, escuros no claro). */}
+      <StatusBar style="auto" />
+      <NavigationBar style="auto" />
       <SessaoProvider>
         <ExperienciasProvider>
           <Navegacao />

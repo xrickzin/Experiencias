@@ -3,6 +3,23 @@ import { AccessibilityInfo, Animated, Easing, Pressable, View } from 'react-nati
 import Svg, { Path } from 'react-native-svg';
 import type { Tabs } from 'expo-router/js-tabs';
 
+import {
+  atras,
+  comprimento,
+  CORTE,
+  FIO,
+  frente,
+  inverter,
+  medir,
+  mover,
+  parado,
+  partesDaFrente,
+  tracoDeTras,
+  type Fio,
+  type Ponto,
+  type Segmento,
+  type Trecho,
+} from '@/components/fio';
 import { Icone, type NomeDoIcone } from '@/components/icone';
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily } from '@/constants/theme';
@@ -15,20 +32,8 @@ type Props = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0] &
   altura: number;
 };
 
-type Ponto = [number, number];
-/** Curva de Bézier cúbica: início, dois controles, fim. */
-type Segmento = [Ponto, Ponto, Ponto, Ponto];
-/** Um trecho do fio e de que lado do ícone ele passa. */
-type Trecho = { s: Segmento; frente: boolean };
-
 const ICONE_Y = 24; // centro do ícone na barra
 const ENTRADA: Ponto = [-22, 16]; // onde o fio chega e sai de cada ícone (relativo ao centro)
-const FIO = 2.5; // espessura do fio
-const CORTE = FIO + 2; // a borda cor de papel que faz o fio de cima passar sobre o de baixo
-
-const atras = (s: Segmento): Trecho => ({ s, frente: false });
-const frente = (s: Segmento): Trecho => ({ s, frente: true });
-
 /**
  * Um anel em volta do ícone, como o de Saturno: a metade de cima passa por trás do ícone (sólido,
  * some), a de baixo pela frente. O fio chega da entrada, dá a volta inteira e sai cruzando a
@@ -96,32 +101,6 @@ const duracao = (abas: number) => 800 + 230 * abas;
 const SUAVE = Easing.bezier(0.65, 0, 0.35, 1);
 const ONDA = 8; // altura das curvas da travessia
 
-const mover = (t: Trecho[], dx: number, dy: number): Trecho[] =>
-  t.map(({ s, frente: f }) => ({ s: s.map(([x, y]) => [x + dx, y + dy]) as Segmento, frente: f }));
-const inverter = (t: Trecho[]): Trecho[] =>
-  [...t].reverse().map(({ s: [a, b, c, d], frente: f }) => ({ s: [d, c, b, a], frente: f }));
-const desenhar = (t: Trecho[]) =>
-  t.length
-    ? `M${t[0].s[0].join(' ')} ` + t.map(({ s: [, b, c, d] }) => `C${b.join(' ')} ${c.join(' ')} ${d.join(' ')}`).join(' ')
-    : '';
-
-/** Comprimento aproximado (amostrando a curva), para o traço que se desenha. */
-function comprimento([a, b, c, d]: Segmento) {
-  let total = 0;
-  let antes = a;
-  for (let i = 1; i <= 24; i++) {
-    const t = i / 24;
-    const u = 1 - t;
-    const p: Ponto = [
-      u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0],
-      u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1],
-    ];
-    total += Math.hypot(p[0] - antes[0], p[1] - antes[1]);
-    antes = p;
-  }
-  return total;
-}
-
 /** A travessia entre duas abas: uma onda, com uma crista para cada aba atravessada. */
 function travessia(a: Ponto, b: Ponto, abas: number): Trecho[] {
   const meias = Math.max(2, abas * 2);
@@ -148,18 +127,7 @@ export function BarraDeAbas({ state, descriptors, navigation, insets, centro, al
   const atual = state.routes[state.index].name;
   const fio = useFio(atual, largura, state.routes.map((r) => r.name));
 
-  // Os trechos da frente, cada um com a parte que está visível agora.
-  const daFrente = fio
-    ? fio.trechos.flatMap(({ s, frente: f }, i) => {
-        if (!f) return [];
-        const inicio = fio.acumulado[i];
-        const fim = inicio + fio.comprimentos[i];
-        const de = Math.max(fio.cauda, inicio);
-        const ate = Math.min(fio.ponta, fim);
-        if (ate <= de) return [];
-        return [{ i, d: desenhar([{ s, frente: f }]), traco: [ate - de, fim - inicio + 1], deslocamento: -(de - inicio) }];
-      })
-    : [];
+  const daFrente = fio ? partesDaFrente(fio) : [];
 
   const camada = (conteudo: ReactNode) => (
     <Svg
@@ -186,14 +154,12 @@ export function BarraDeAbas({ state, descriptors, navigation, insets, centro, al
         {largura > 0 && fio
           ? camada(
               <Path
-                d={desenhar(fio.trechos)}
+                {...tracoDeTras(fio)}
                 stroke={theme.accent}
                 strokeWidth={FIO}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={[fio.ponta - fio.cauda, fio.total + 1]}
-                strokeDashoffset={-fio.cauda}
               />
             )
           : null}
@@ -242,29 +208,18 @@ export function BarraDeAbas({ state, descriptors, navigation, insets, centro, al
         {largura > 0 && daFrente.length
           ? camada(
               <>
-                {daFrente.map(({ i, d, traco, deslocamento }) => (
+                {daFrente.map(({ i, ...traco }) => (
                   <Path
                     key={`corte-${i}`}
-                    d={d}
+                    {...traco}
                     stroke={theme.background}
                     strokeWidth={CORTE}
-                    strokeLinecap="round"
+                    strokeLinecap="butt"
                     fill="none"
-                    strokeDasharray={traco}
-                    strokeDashoffset={deslocamento}
                   />
                 ))}
-                {daFrente.map(({ i, d, traco, deslocamento }) => (
-                  <Path
-                    key={`fio-${i}`}
-                    d={d}
-                    stroke={theme.accent}
-                    strokeWidth={FIO}
-                    strokeLinecap="round"
-                    fill="none"
-                    strokeDasharray={traco}
-                    strokeDashoffset={deslocamento}
-                  />
+                {daFrente.map(({ i, ...traco }) => (
+                  <Path key={`fio-${i}`} {...traco} stroke={theme.accent} strokeWidth={FIO} strokeLinecap="round" fill="none" />
                 ))}
               </>
             )
@@ -273,29 +228,6 @@ export function BarraDeAbas({ state, descriptors, navigation, insets, centro, al
     </View>
   );
 }
-
-type Fio = {
-  trechos: Trecho[];
-  comprimentos: number[];
-  /** Onde cada trecho começa, medido ao longo do caminho. */
-  acumulado: number[];
-  total: number;
-  /** A parte visível do caminho, entre a cauda e a ponta. */
-  cauda: number;
-  ponta: number;
-};
-
-function medir(trechos: Trecho[]) {
-  const comprimentos = trechos.map((t) => comprimento(t.s));
-  const acumulado = comprimentos.map((_, i) => comprimentos.slice(0, i).reduce((a, b) => a + b, 0));
-  const total = comprimentos.reduce((a, b) => a + b, 0);
-  return { trechos, comprimentos, acumulado, total };
-}
-
-const parado = (trechos: Trecho[]): Fio => {
-  const m = medir(trechos);
-  return { ...m, cauda: 0, ponta: m.total };
-};
 
 /** O caminho do fio e a parte visível dele, quadro a quadro, ao trocar de aba. */
 function useFio(atual: string, largura: number, rotas: string[]): Fio | null {

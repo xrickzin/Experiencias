@@ -1,9 +1,8 @@
+import { useColorScheme } from 'react-native';
+
 import { Colors } from '@/constants/theme';
 
-/**
- * O MVP tem apenas o tema claro e não acompanha o tema escuro do sistema.
- * Os tokens do escuro permanecem em `Colors.dark` para uma versão futura.
- */
+/** As cores do tema do sistema: claro ou escuro (ADR 037). */
 export function useTheme() {
-  return Colors.light;
+  return useColorScheme() === 'dark' ? Colors.dark : Colors.light;
 }

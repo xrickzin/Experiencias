@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "laco",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.xrickzin.laco"
@@ -26,8 +26,7 @@
       [
         "expo-navigation-bar",
         {
-          "enforceContrast": false,
-          "style": "dark"
+          "enforceContrast": false
         }
       ],
       [

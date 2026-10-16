@@ -46,6 +46,7 @@ export function Confirmacao({
       transparent
       animationType="fade"
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={loading ? undefined : onCancel}>
       <View
         accessibilityViewIsModal
@@ -53,7 +54,7 @@ export function Confirmacao({
           flex: 1,
           justifyContent: 'center',
           padding: Spacing.four,
-          backgroundColor: 'rgba(43, 39, 36, 0.55)',
+          backgroundColor: theme.scrim,
         }}>
         <Pressable
           accessibilityLabel="Fechar"
@@ -83,7 +84,7 @@ export function Confirmacao({
           <View style={{ gap: Spacing.two, marginTop: Spacing.two }}>
             <Button
               label={confirmLabel}
-              variant={destructive ? 'destructive' : 'primary'}
+              variant={destructive ? 'destructiveConfirm' : 'primary'}
               loading={loading}
               onPress={onConfirm}
             />

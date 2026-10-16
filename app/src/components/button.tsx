@@ -6,7 +6,11 @@ import { useTheme } from '@/hooks/use-theme';
 
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
-  variant?: 'primary' | 'secondary' | 'text' | 'destructive';
+  /**
+   * `destructive`: botão pastel que inicia uma ação irreversível (excluir, apagar, sair).
+   * `destructiveConfirm`: o "Sim, excluir" cheio, só dentro da confirmação (ADR 036).
+   */
+  variant?: 'primary' | 'secondary' | 'text' | 'destructive' | 'destructiveConfirm';
   /** Impede novos toques e avisa que há uma operação em andamento. */
   loading?: boolean;
 };
@@ -16,8 +20,9 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
   const theme = useTheme();
   const primary = variant === 'primary';
   const text = variant === 'text';
-  // Vermelho de ação irreversível: só dentro de uma confirmação, sempre com texto explícito.
+  // Ação irreversível: pastel para começar, cheio para confirmar (padrão de mercado; ADR 036).
   const destructive = variant === 'destructive';
+  const confirmar = variant === 'destructiveConfirm';
   const inativo = loading || Boolean(disabled);
 
   return (
@@ -33,15 +38,21 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
         borderRadius: Radius.button,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: primary ? theme.text : 'transparent',
-        borderWidth: primary || text ? 0 : 1,
-        borderColor: destructive ? theme.destructive : theme.outline,
+        backgroundColor: primary
+          ? theme.text
+          : confirmar
+            ? theme.destructive
+            : destructive
+              ? theme.destructiveSoft
+              : 'transparent',
+        borderWidth: primary || text || destructive || confirmar ? 0 : 1,
+        borderColor: theme.outline,
         opacity: inativo ? 0.4 : pressed ? 0.7 : 1,
       })}
       {...rest}>
       <ThemedText
         type="smallBold"
-        themeColor={primary ? 'background' : destructive ? 'destructive' : 'text'}
+        themeColor={primary || confirmar ? 'background' : destructive ? 'destructive' : 'text'}
         style={{
           fontSize: 16,
           lineHeight: 22,

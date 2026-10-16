@@ -5,7 +5,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
  * Ícones próprios do Laço (visual-direction.md): grade de 24, traço fino de 1,75, pontas e cantos
  * arredondados, no mesmo gesto do fio. Sem preenchimento; a cor vem de quem usa.
  */
-export type NomeDoIcone = 'inicio' | 'desejos' | 'historia' | 'voltar' | 'ajustes';
+export type NomeDoIcone = 'inicio' | 'desejos' | 'historia' | 'voltar' | 'ajustes' | 'fechar';
 
 const TRACOS: Record<NomeDoIcone, string[]> = {
   // Casa: telhado, paredes e porta.
@@ -19,6 +19,7 @@ const TRACOS: Record<NomeDoIcone, string[]> = {
     'M14.5 9 H18 V12.5 H14.5 Z',
   ],
   voltar: ['M19 12 H5', 'M11 6 L5 12 L11 18'],
+  fechar: ['M6 6 L18 18', 'M18 6 L6 18'],
   // Ajustes: dois controles deslizantes.
   ajustes: ['M4 7 H7', 'M11 7 H20', 'M4 17 H13', 'M17 17 H20'],
 };

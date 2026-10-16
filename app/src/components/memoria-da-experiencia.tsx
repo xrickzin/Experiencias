@@ -139,7 +139,7 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
               <Button label="Editar minha impressão" variant="secondary" onPress={abrirEscrita} />
               <Button
                 label="Apagar minha impressão"
-                variant="text"
+                variant="destructive"
                 onPress={() => {
                   setErroApagar(undefined);
                   setConfirmandoApagar(true);

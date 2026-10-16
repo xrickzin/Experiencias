@@ -38,6 +38,7 @@ function CriarExperienciaButton() {
         transparent
         animationType="fade"
         statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setEscolhendo(false)}>
         <View
           accessibilityViewIsModal
@@ -46,7 +47,7 @@ function CriarExperienciaButton() {
             justifyContent: 'flex-end',
             padding: Spacing.four,
             paddingBottom: Spacing.four + bottom,
-            backgroundColor: 'rgba(43, 39, 36, 0.55)',
+            backgroundColor: theme.scrim,
           }}>
           <Pressable
             accessibilityLabel="Fechar"
