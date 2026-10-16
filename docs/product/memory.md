@@ -27,6 +27,9 @@ A memória é a experiência que terminou, no estado final **Memória**. **Não 
 - Têm **autor**. Ambos podem adicionar, editar e excluir ([permissions.md](./permissions.md)).
 - Fotos entram pela câmera ou pela galeria do aparelho, inclusive depois.
 - Cada tipo é uma estrutura **explícita e tipada**, sem "bloco genérico" nem editor livre estilo Notion.
+- A observação é um registro próprio, só texto, e não uma legenda de foto. Fotos e observações aparecem juntas na aba **Momentos** da experiência ([ADR 029](../decisions/029-moments-tab-and-create-choice.md)).
+- A observação é **do momento**: pertence a um dia e a um período (madrugada, manhã, tarde, noite), por padrão o atual, que a pessoa pode escolher e alterar (nunca no futuro).
+- Cada foto pode ter uma **legenda** opcional (até 300 caracteres), escrita ou alterada por qualquer um dos dois ([ADR 030](../decisions/030-photo-caption-and-observation-moment.md)).
 - Outros tipos (vídeos, gastos, roteiro…) são futuro: [future.md](./future.md).
 
 ## Impressão pessoal
