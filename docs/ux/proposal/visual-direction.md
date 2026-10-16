@@ -20,7 +20,7 @@ Referências de sensação (inspiração, não cópia): o bordado e a linha de c
 |---|---|
 | Creme + serifa de alto contraste + terracota | Marfim **mais frio e claro**, vermelho **carmim** (não argila), serifa **suave e só nos títulos**, interface em sans |
 | Cartões idênticos, mesma sombra e mesmo raio | Listas editoriais separadas por espaço e fio fino; **sem sombra** no conteúdo; raios por função |
-| Rótulo em caixa-alta acima de cada título | Nenhum rótulo em caixa-alta; frases em minúsculas e sentença |
+| Rótulo em caixa-alta acima de cada título | **Mantido por decisão do usuário (2026-10-16):** o rótulo curto em caixa-alta e espaçado (ex.: LAÇO, MEMÓRIA, NOITE) acima do título fica como parte da identidade. O resto do texto segue em minúsculas e sentença ([design-review-1.md](../../development/design-review-1.md)) |
 | Vermelho em todos os botões | Botão primário em grafite; vermelho só no fio, no laço e em estados ativos |
 | Coração como símbolo | Nenhum coração; o símbolo é o fio e o nó |
 | Gradientes e vidro por tendência | Nenhum gradiente decorativo nem `expo-glass-effect` |
@@ -130,7 +130,7 @@ Duas famílias, com papéis claros, ambas livres (licença OFL 1.1 no Google Fon
 | botão | Figtree 600 | 16 / 20 | botões |
 | voz | Fraunces 400 itálico | 18 / 28 | impressões, favoritos, legendas |
 
-Regras: linhas com menos de ~70 caracteres; sem caixa-alta decorativa; escala do sistema respeitada (corpo cresce até 200 %, títulos limitados a 130 % para não quebrar o layout).
+Regras: linhas com menos de ~70 caracteres; sem caixa-alta decorativa além dos rótulos curtos acima dos títulos (ver a tabela acima); escala do sistema respeitada (corpo cresce até 200 %, títulos limitados a 130 % para não quebrar o layout).
 
 **Estado (E10):** implementado com 3 dos 5 arquivos previstos (Fraunces SemiBold, Figtree Medium e SemiBold); Figtree Regular e Fraunces Itálico ficam para quando houver uso ([phase-0-log.md](../../development/phase-0-log.md)).
 
@@ -146,9 +146,9 @@ Linguagem contínua, **sutil e abstrata**. Traço de 1,5 pt (2 pt no topo), pont
 | Nossa História | linha vertical `fio suave` à esquerda, ligando os meses; sem pontos em todo item |
 | Mudança de estado | o fio se desenha durante a transição (ver [motion-and-accessibility.md](./motion-and-accessibility.md)) |
 | Carregamento longo | filete que se traça no topo; só depois de 400 ms |
-| Navegação | apenas um traço sob o item ativo |
+| Navegação | **exceção aprovada pelo usuário (2026-10-16):** na aba ativa, o fio forma um laço próprio de cada ícone; ao trocar de aba, o mesmo fio se desfaz, atravessa a barra e se enrola no ícone novo (650 ms; com menos movimento pedido pelo sistema, só muda de lugar). Substitui o traço sob o item ativo |
 
-Nunca em: botões, campos, cartões, ícones, cada item de lista.
+Nunca em: botões, campos, cartões, ícones (salvo a exceção da navegação acima), cada item de lista.
 
 ## 5. O laço
 
@@ -157,7 +157,8 @@ O próprio fio forma um nó pequeno; **sem ícone literal de presente nem coraç
 1. conclusão da criação do Laço;
 2. início do Planejamento (laçada curta);
 3. finalização, quando a experiência vira Memória;
-4. quando a segunda pessoa entra no Laço.
+4. quando a segunda pessoa entra no Laço;
+5. **exceção (2026-10-16):** na aba ativa da navegação, como assinatura constante. Com isso o laço deixa de ser só marco; a escolha é do usuário ([design-review-1.md](../../development/design-review-1.md)).
 
 Opcional a aprovar: um nó estático discreto marcando a virada de cada ano em Nossa História.
 
@@ -165,7 +166,7 @@ Opcional a aprovar: um nó estático discreto marcando a virada de cada ano em N
 
 Traço fino de 1,75 pt, pontas e cantos arredondados, grade de 24 pt, no mesmo gesto do fio. Conjunto mínimo (~14): início, desejos, história, mais, câmera, galeria, nota, compartilhar, copiar, configurações, confirmar, fechar, seta, voltar. Sem SF Symbols (só iOS) e sem emoji 📍 nas telas finais: o local usa ícone próprio.
 
-Implementação possível: `react-native-svg` (incluída no Expo Go, exige `npx expo install`, **depende de aprovação**) ou, sem dependência, PNGs em 1x/2x/3x tingidos pelo sistema (como o template faz) com perda de cor por token.
+**Implementado (2026-10-16), com aprovação do usuário:** `react-native-svg` 15.15.4 e o componente `Icone` (`app/src/components/icone.tsx`), com início (casa), desejos (estrela), história (álbum aberto), voltar (seta) e configurações (dois controles deslizantes). Os demais entram quando forem usados.
 
 ## 7. Ilustração
 
