@@ -212,6 +212,28 @@ Decisão do usuário, com base na avaliação da E12.3: o `expo-router` traz pac
   - `expo-doctor` 20/21. A única falha é o `ios.icon` em `./assets/expo.icon`, que fica para a E9 (ver E7).
 - **No aparelho:** validado pelo usuário no Expo Go (Android), com cache limpo.
 
+## E9 — ícone, ícone adaptativo e abertura (2026-10-16)
+
+- **Arte:** entregue pelo usuário em `app/assets/images/icone-laco-original.png`: PNG de 2000×2000, fundo vinho sólido `#670C19` (medido), com casa, casal e laço em infinito. O desenho ocupa só o centro-alto da imagem.
+- **Escolhas do usuário, vendo as prévias:**
+  - ícone: o recorte mais fechado, com o casal e o laço grandes e a casa inteira;
+  - abertura: o desenho inteiro sobre o vinho;
+  - monocromático: uma silhueta do laço com a casa.
+- **Gerador:** `app/scripts/gerar-icones.py`, que usa o Pillow da máquina e não é dependência do app. Ele recentraliza e recorta a arte, sem redesenhá-la:
+  - `icon.png` (1024): o recorte do ícone, de borda a borda;
+  - `android-icon-foreground.png` (1024): a arte estendida em volta, para o miolo que o aparelho mostra (72 de 108 dp) ser exatamente o recorte do ícone;
+  - `android-icon-background.png`: o vinho sólido;
+  - `android-icon-monochrome.png`: a silhueta autoral (telhado, paredes, janela 2×2 e o infinito por cima das paredes), branca sobre transparente, dentro da zona segura;
+  - `splash-icon.png`: o desenho inteiro, com a borda do recorte esfumada. Ocupa 60% da imagem, o máximo que cabe sem corte no círculo de 160 dp em que o Android 12+ mostra a abertura.
+- **`app.json`:**
+  - `#208AEF` (abertura) e `#E6F4FE` (fundo do adaptativo) viraram `#670C19`;
+  - `imageWidth` da abertura passou de 76 para 240;
+  - `ios.icon` passou a ser `./assets/images/icon.png`, e a pasta `assets/expo.icon` do template foi removida.
+- **Validação:**
+  - `expo-doctor` 21/21 (antes 20/21: a falha era o `ios.icon` em pasta);
+  - prévias com as máscaras reais (círculo, gota, quadrado arredondado), nos tamanhos de 96, 72 e 48 px.
+  - **No aparelho:** o Expo Go mostra o ícone e a abertura dele, então a conferência fica para o primeiro APK.
+
 ## Resumo
 
 E0 a E6 executadas sem condição de parada. Nada foi instalado, removido ou atualizado em dependências; ícone, abertura e bloco `web` intactos (`name`, `slug` e `scheme` mudaram depois, na E11); nenhum ADR alterado; nenhum commit. **E7 em diante (exceto a E8, a E10, a E11 e a E13, executadas à parte) aguarda nova autorização.**
