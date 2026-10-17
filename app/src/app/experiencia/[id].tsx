@@ -5,7 +5,7 @@ import { AccessibilityInfo, Modal, View } from 'react-native';
 
 import { Abas } from '@/components/abas';
 import { Button } from '@/components/button';
-import { CartaoDoRoteiro } from '@/components/cartao-do-roteiro';
+import { CartaoDoOrcamento, CartaoDoRoteiro } from '@/components/cartoes-de-recurso';
 import { CamposDaExperiencia, duracaoDe, valoresDe, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
 import { FolhaDeEdicao } from '@/components/folha-de-edicao';
@@ -13,6 +13,7 @@ import { MarcoDoLaco, type Marco } from '@/components/marco-do-laco';
 import { MemoriaDaExperiencia } from '@/components/memoria-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { MomentosDaExperiencia } from '@/components/momentos-da-experiencia';
+import { OrcamentoDaExperiencia } from '@/components/orcamento-da-experiencia';
 import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { RoteiroDaExperiencia } from '@/components/roteiro-da-experiencia';
 import { Screen } from '@/components/screen';
@@ -26,6 +27,7 @@ import { useRoteiro } from '@/hooks/use-roteiro';
 import { useTheme } from '@/hooks/use-theme';
 import { useUrlAssinada } from '@/hooks/use-url-assinada';
 import type { Estado, Experiencia } from '@/services/experiencias';
+import { formatarReais } from '@/services/orcamento';
 import {
   camposDaReferencia,
   descreverReferencia,
@@ -48,9 +50,11 @@ const POR_ESTADO: Record<Estado, { eyebrow: string; frase: string }> = {
 };
 
 
-type Aba = 'memoria' | 'momentos' | 'detalhes' | 'roteiro';
+type Aba = 'memoria' | 'momentos' | 'detalhes' | 'roteiro' | 'orcamento';
+type Recurso = 'roteiro' | 'orcamento';
 // A aba principal vem primeiro: a memória, os momentos em Vivendo, os detalhes em Planejamento.
-// Com o roteiro ligado, a guia Roteiro entra logo depois da principal (na memória, depois dos momentos).
+// Com o roteiro ou o orçamento ligados, as guias deles entram logo depois da principal (na memória,
+// depois dos momentos), nesta ordem.
 const ABAS: Record<Estado, { valor: Aba; rotulo: string }[]> = {
   desejo: [{ valor: 'detalhes', rotulo: 'Detalhes' }],
   planejamento: [
@@ -122,7 +126,7 @@ type FormularioProps = {
 
 function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: FormularioProps) {
   const theme = useTheme();
-  const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar, definirRoteiro } = useExperiencias();
+  const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar, definirRoteiro, definirOrcamentoAtivo } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(() => valoresDe(experiencia));
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
@@ -145,16 +149,15 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   const memoria = estado === 'memoria';
   const roteiro = useRoteiro(experiencia.id);
   const carregarRoteiro = roteiro.carregar;
-  // Na memória, a guia só aparece com algo no roteiro (ADR 040).
+  // Na memória, as guias só aparecem com conteúdo (ADR 040 e 041).
   const comRoteiro = experiencia.roteiroAtivo && (!memoria || roteiro.itens.length > 0);
-  const posicaoDoRoteiro = memoria ? 2 : 1;
-  const abas = comRoteiro
-    ? [
-        ...ABAS[estado].slice(0, posicaoDoRoteiro),
-        { valor: 'roteiro' as const, rotulo: 'Roteiro' },
-        ...ABAS[estado].slice(posicaoDoRoteiro),
-      ]
-    : ABAS[estado];
+  const comOrcamento = experiencia.orcamentoAtivo && (!memoria || experiencia.orcamentoCentavos !== null);
+  const recursos: { valor: Aba; rotulo: string }[] = [
+    ...(comRoteiro ? [{ valor: 'roteiro' as const, rotulo: 'Roteiro' }] : []),
+    ...(comOrcamento ? [{ valor: 'orcamento' as const, rotulo: 'Orçamento' }] : []),
+  ];
+  const posicaoDosRecursos = memoria ? 2 : 1;
+  const abas = [...ABAS[estado].slice(0, posicaoDosRecursos), ...recursos, ...ABAS[estado].slice(posicaoDosRecursos)];
   const textos = POR_ESTADO[estado];
   const destaque = useUrlAssinada(memoria ? (experiencia.fotoDestaque?.caminho ?? null) : null);
   const ondeEQuando = [descreverReferencia(experiencia.referencia), experiencia.local].filter(Boolean).join(' · ');
@@ -164,9 +167,10 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   const [abaEscolhida, setAba] = useState<Aba>(memoria ? 'memoria' : estado === 'vivendo' ? 'momentos' : 'detalhes');
   // O roteiro foi desligado (aqui ou pela outra pessoa) com a guia aberta: volta para a principal.
   const aba = abas.some((a) => a.valor === abaEscolhida) ? abaEscolhida : abas[0].valor;
-  const [confirmandoDesligar, setConfirmandoDesligar] = useState(false);
-  const [mudandoRoteiro, setMudandoRoteiro] = useState(false);
-  const [erroRoteiro, setErroRoteiro] = useState<string>();
+  // Os cards do roteiro e do orçamento: qual está mudando, o erro de cada um e qual pede confirmação.
+  const [confirmandoDesligar, setConfirmandoDesligar] = useState<Recurso | null>(null);
+  const [mudandoRecurso, setMudandoRecurso] = useState<Recurso | null>(null);
+  const [erroRecurso, setErroRecurso] = useState<{ recurso: Recurso; mensagem: string }>();
 
   useFocusEffect(
     useCallback(() => {
@@ -202,26 +206,38 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
     }
   }
 
-  /** O card do roteiro liga e desliga na hora, à parte do "Salvar" (ADR 040). */
-  async function mudarRoteiro(ativo: boolean) {
-    setMudandoRoteiro(true);
-    setErroRoteiro(undefined);
-    const r = await definirRoteiro(experiencia.id, ativo);
-    setMudandoRoteiro(false);
-    setConfirmandoDesligar(false);
+  /** Os cards ligam e desligam na hora, à parte do "Salvar" (ADR 040 e 041). */
+  async function mudarRecurso(recurso: Recurso, ativo: boolean) {
+    setMudandoRecurso(recurso);
+    setErroRecurso(undefined);
+    const r = await (recurso === 'roteiro' ? definirRoteiro : definirOrcamentoAtivo)(experiencia.id, ativo);
+    setMudandoRecurso(null);
+    setConfirmandoDesligar(null);
     if (r.ok) {
-      AccessibilityInfo.announceForAccessibility(ativo ? 'Roteiro ligado. A guia Roteiro está aberta.' : 'Roteiro desligado.');
-      // Desligou: o servidor excluiu o roteiro.
-      if (!ativo) void carregarRoteiro();
+      const guia = recurso === 'roteiro' ? 'Roteiro' : 'Orçamento';
+      AccessibilityInfo.announceForAccessibility(ativo ? `${guia} ligado. A guia ${guia} está aberta.` : `${guia} desligado.`);
+      // Desligou o roteiro: o servidor excluiu os itens.
+      if (recurso === 'roteiro' && !ativo) void carregarRoteiro();
     } else if (r.codigo === 'desejo_inexistente') {
       router.replace(desejo ? '/desejos' : '/');
     } else {
-      setErroRoteiro(r.mensagem);
+      setErroRecurso({ recurso, mensagem: r.mensagem });
     }
   }
 
-  // Desligar exclui os itens: com algum, antes a confirmação.
-  const desligarRoteiro = () => (roteiro.itens.length > 0 ? setConfirmandoDesligar(true) : void mudarRoteiro(false));
+  // Desligar apaga o que já foi guardado: com algo, antes a confirmação.
+  const temConteudo = (recurso: Recurso) =>
+    recurso === 'roteiro' ? roteiro.itens.length > 0 : experiencia.orcamentoCentavos !== null;
+  const desligar = (recurso: Recurso) =>
+    temConteudo(recurso) ? setConfirmandoDesligar(recurso) : void mudarRecurso(recurso, false);
+  const propsDoCard = (recurso: Recurso) => ({
+    tamanho: duracaoDe(valores),
+    ocupado: mudandoRecurso === recurso,
+    erro: erroRecurso?.recurso === recurso ? erroRecurso.mensagem : undefined,
+    onUsar: () => void mudarRecurso(recurso, true),
+    onDesligar: () => desligar(recurso),
+    onAbrir: () => setAba(recurso),
+  });
 
   const diasComItens = new Set(roteiro.itens.map((i) => i.dia)).size;
   const resumoDoRoteiro = roteiro.itens.length
@@ -360,18 +376,14 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
         <SecoesDePlanejamento experiencia={experiencia} />
       </View>
 
-      {/* Na memória, o roteiro não começa: a guia só aparece se já houver itens. */}
+      {/* Na memória, roteiro e orçamento não começam: as guias só aparecem se já houver conteúdo. */}
       {memoria ? null : (
-        <View style={{ marginTop: Spacing.five }}>
-          <CartaoDoRoteiro
-            ativo={experiencia.roteiroAtivo}
-            tamanho={duracaoDe(valores)}
-            resumo={resumoDoRoteiro}
-            ocupado={mudandoRoteiro}
-            erro={erroRoteiro}
-            onUsar={() => void mudarRoteiro(true)}
-            onDesligar={desligarRoteiro}
-            onAbrir={() => setAba('roteiro')}
+        <View style={{ marginTop: Spacing.five, gap: Spacing.four }}>
+          <CartaoDoRoteiro ativo={experiencia.roteiroAtivo} resumo={resumoDoRoteiro} {...propsDoCard('roteiro')} />
+          <CartaoDoOrcamento
+            ativo={experiencia.orcamentoAtivo}
+            resumo={experiencia.orcamentoCentavos === null ? null : `R$ ${formatarReais(experiencia.orcamentoCentavos)}`}
+            {...propsDoCard('orcamento')}
           />
         </View>
       )}
@@ -444,6 +456,8 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
             <MemoriaDaExperiencia experiencia={experiencia} impressoes={impressoes} recemFinalizada={recemFinalizada} />
           ) : aba === 'roteiro' ? (
             <RoteiroDaExperiencia experiencia={experiencia} roteiro={roteiro} />
+          ) : aba === 'orcamento' ? (
+            <OrcamentoDaExperiencia experiencia={experiencia} />
           ) : aba === 'momentos' ? (
             <MomentosDaExperiencia
               experiencia={experiencia}
@@ -518,15 +532,27 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
       </Modal>
 
       <Confirmacao
-        visible={confirmandoDesligar}
+        visible={confirmandoDesligar === 'roteiro'}
         title="Desligar o roteiro?"
         description={`${roteiro.itens.length === 1 ? 'O item do roteiro será excluído' : `Os ${roteiro.itens.length} itens do roteiro serão excluídos`}, para os dois. Não dá para desfazer.`}
         confirmLabel="Sim, desligar e excluir"
         destructive
-        loading={mudandoRoteiro}
-        error={erroRoteiro}
-        onConfirm={() => void mudarRoteiro(false)}
-        onCancel={() => setConfirmandoDesligar(false)}
+        loading={mudandoRecurso === 'roteiro'}
+        error={erroRecurso?.recurso === 'roteiro' ? erroRecurso.mensagem : undefined}
+        onConfirm={() => void mudarRecurso('roteiro', false)}
+        onCancel={() => setConfirmandoDesligar(null)}
+      />
+
+      <Confirmacao
+        visible={confirmandoDesligar === 'orcamento'}
+        title="Desligar o orçamento?"
+        description={`O orçamento de R$ ${formatarReais(experiencia.orcamentoCentavos ?? 0)} será apagado, para os dois.`}
+        confirmLabel="Sim, desligar e apagar"
+        destructive
+        loading={mudandoRecurso === 'orcamento'}
+        error={erroRecurso?.recurso === 'orcamento' ? erroRecurso.mensagem : undefined}
+        onConfirm={() => void mudarRecurso('orcamento', false)}
+        onCancel={() => setConfirmandoDesligar(null)}
       />
 
       <Confirmacao

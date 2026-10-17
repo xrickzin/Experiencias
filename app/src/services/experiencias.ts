@@ -24,6 +24,10 @@ export type Experiencia = {
   categorias: string[];
   /** "Organizar por roteiro" ligado: a experiência ganha a guia Roteiro (ADR 040). */
   roteiroAtivo: boolean;
+  /** Orçamento ligado: a experiência ganha a guia Orçamento (ADR 041). */
+  orcamentoAtivo: boolean;
+  /** Total estimado do casal, em centavos; nulo sem valor. */
+  orcamentoCentavos: number | null;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -41,6 +45,8 @@ export type CamposDaExperiencia = {
   categorias?: string[];
   /** Ao criar: já com "Organizar por roteiro" ligado (ADR 040). Na edição, usa-se `definirRoteiro`. */
   roteiroAtivo?: boolean;
+  /** Ao criar: já com o orçamento ligado (ADR 041). Na edição, usa-se `definirOrcamento`. */
+  orcamentoAtivo?: boolean;
 };
 
 type Linha = {
@@ -59,13 +65,15 @@ type Linha = {
   tamanho: Tamanho | null;
   categorias: { categoria_id: string }[] | null;
   roteiro_ativo: boolean | null;
+  orcamento_ativo: boolean | null;
+  orcamento_centavos: number | null;
   criado_em: string;
   atualizado_em: string;
 };
 
 const COLUNAS =
   'id, titulo, estado, local, observacoes, referencia_precisao, referencia_inicio, referencia_fim, ' +
-  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, roteiro_ativo, ' +
+  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, roteiro_ativo, orcamento_ativo, orcamento_centavos, ' +
   'categorias:experiencia_categorias(categoria_id), ' +
   // Há duas ligações entre as tabelas; o nome da chave diz qual é a do destaque.
   'foto_destaque:registros!experiencias_foto_destaque_id_fkey(caminho)';
@@ -88,6 +96,8 @@ export const paraExperiencia = (l: Linha): Experiencia => ({
   tamanho: l.tamanho ?? null,
   categorias: (l.categorias ?? []).map((c) => c.categoria_id),
   roteiroAtivo: l.roteiro_ativo ?? false,
+  orcamentoAtivo: l.orcamento_ativo ?? false,
+  orcamentoCentavos: l.orcamento_centavos ?? null,
   criadoEm: l.criado_em,
   atualizadoEm: l.atualizado_em ?? l.criado_em,
 });
@@ -110,6 +120,7 @@ const paraColunas = (campos: CamposDaExperiencia) => {
     referencia_horario: r.horario,
     tamanho: campos.tamanho ?? null,
     ...(campos.roteiroAtivo === undefined ? {} : { roteiro_ativo: campos.roteiroAtivo }),
+    ...(campos.orcamentoAtivo === undefined ? {} : { orcamento_ativo: campos.orcamentoAtivo }),
   };
 };
 
@@ -248,18 +259,34 @@ export async function definirFotoDestaque(
   }
 }
 
-/** Liga ou desliga "Organizar por roteiro" na hora (ADR 040). Desligar exclui o roteiro, no servidor. */
-export async function definirRoteiro(id: string, ativo: boolean): Promise<Resultado<{ experiencia: Experiencia }>> {
+/** Muda só as colunas indicadas e devolve a experiência como ficou. */
+async function atualizarParte(
+  id: string,
+  valores: Record<string, unknown>,
+  falhou: (erro: NonNullable<ErroServico>) => Falha = falhaDoServico
+): Promise<Resultado<{ experiencia: Experiencia }>> {
   if (!supabase) return falha('sem_configuracao');
   try {
-    const { data, error } = await supabase.from('experiencias').update({ roteiro_ativo: ativo }).eq('id', id).select(COLUNAS);
-    if (error) return falhaDoServico(error);
+    const { data, error } = await supabase.from('experiencias').update(valores).eq('id', id).select(COLUNAS);
+    if (error) return falhou(error);
     if (data.length === 0) return falha('desejo_inexistente');
     return { ok: true, experiencia: paraExperiencia(data[0] as unknown as Linha) };
   } catch {
     return falha('rede');
   }
 }
+
+/** Liga ou desliga "Organizar por roteiro" na hora (ADR 040). Desligar exclui o roteiro, no servidor. */
+export const definirRoteiro = (id: string, ativo: boolean) => atualizarParte(id, { roteiro_ativo: ativo });
+
+/** Liga ou desliga o orçamento na hora (ADR 041). Desligar apaga o valor, no servidor. */
+export const definirOrcamentoAtivo = (id: string, ativo: boolean) => atualizarParte(id, { orcamento_ativo: ativo });
+
+/** O total estimado, em centavos (nulo tira o valor). Acima do limite, ou com o orçamento desligado, o servidor recusa. */
+export const definirOrcamento = (id: string, centavos: number | null) =>
+  atualizarParte(id, { orcamento_centavos: centavos }, (erro) =>
+    ehErroDeRede(erro) ? falha('rede') : falha(erro.code === '23514' ? 'orcamento_invalido' : 'orcamento_nao_salvo')
+  )
 
 /**
  * Algo vivido antes do aplicativo (ADR 008): nasce em Memória e exige título e referência temporal.

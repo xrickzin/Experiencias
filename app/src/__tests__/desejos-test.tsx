@@ -112,6 +112,7 @@ describe('criar desejo', () => {
       tamanho: null,
       categorias: [],
       roteiroAtivo: false,
+      orcamentoAtivo: false,
     });
     expect(tela.getPathname()).toBe('/desejos');
     expect(await screen.findByText('Ver o nascer do sol')).toBeTruthy();

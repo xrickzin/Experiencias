@@ -11,6 +11,9 @@ export const TAMANHOS: { valor: Tamanho; rotulo: string }[] = [
 /** Reservas ficam à vista a partir de um dia; numa noite ou sem tamanho, em "Mais para planejar" (ADR 038). */
 export const sugereReservas = (t: Tamanho | null) => t === 'dia' || t === 'fim_de_semana' || t === 'viagem';
 
+/** O orçamento é sugerido a partir de um dia, como as reservas (ADR 038 e 041). */
+export const sugereOrcamento = sugereReservas;
+
 /** Fim de semana e vários dias ligam "Organizar por roteiro" ao escolher o tamanho; dá para desligar (ADR 040). */
 export const sugereRoteiro = (t: Tamanho | null) => t === 'fim_de_semana' || t === 'viagem';
 

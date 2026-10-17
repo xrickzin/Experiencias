@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { CartaoDoRoteiro } from '@/components/cartao-do-roteiro';
+import { CartaoDoOrcamento, CartaoDoRoteiro } from '@/components/cartoes-de-recurso';
 import { CamposDaExperiencia, duracaoDe, valoresVazios, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Screen } from '@/components/screen';
@@ -23,8 +23,9 @@ export default function Criar() {
   const [erroReferencia, setErroReferencia] = useState<string>();
   const [erroGeral, setErroGeral] = useState<string>();
   const [enviando, setEnviando] = useState(false);
-  // "Organizar por roteiro" (ADR 040): vale junto com "Adicionar desejo".
+  // Roteiro e orçamento (ADR 040 e 041): valem junto com "Adicionar desejo".
   const [roteiroAtivo, setRoteiroAtivo] = useState(false);
+  const [orcamentoAtivo, setOrcamentoAtivo] = useState(false);
 
   async function enviar() {
     if (enviando) return;
@@ -36,7 +37,7 @@ export default function Criar() {
 
     setEnviando(true);
     setErroGeral(undefined);
-    const campos = { ...valores, tamanho: duracaoDe(valores), referencia: referencia.referencia, roteiroAtivo: !memoria && roteiroAtivo };
+    const campos = { ...valores, tamanho: duracaoDe(valores), referencia: referencia.referencia, roteiroAtivo: !memoria && roteiroAtivo, orcamentoAtivo: !memoria && orcamentoAtivo };
     if (memoria) {
       const r = await registrarMemoria(campos);
       if (r.ok) {
@@ -93,12 +94,20 @@ export default function Criar() {
           }}
         />
         {memoria ? null : (
-          <CartaoDoRoteiro
-            ativo={roteiroAtivo}
-            tamanho={duracaoDe(valores)}
-            onUsar={() => setRoteiroAtivo(true)}
-            onDesligar={() => setRoteiroAtivo(false)}
-          />
+          <>
+            <CartaoDoRoteiro
+              ativo={roteiroAtivo}
+              tamanho={duracaoDe(valores)}
+              onUsar={() => setRoteiroAtivo(true)}
+              onDesligar={() => setRoteiroAtivo(false)}
+            />
+            <CartaoDoOrcamento
+              ativo={orcamentoAtivo}
+              tamanho={duracaoDe(valores)}
+              onUsar={() => setOrcamentoAtivo(true)}
+              onDesligar={() => setOrcamentoAtivo(false)}
+            />
+          </>
         )}
         {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
         <View style={{ gap: Spacing.two }}>

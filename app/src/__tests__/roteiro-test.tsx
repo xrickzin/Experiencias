@@ -192,7 +192,8 @@ describe('roteiro na tela', () => {
     exp.definirRoteiro.mockResolvedValue({ ok: true, experiencia: { ...e, roteiroAtivo: true } });
     expect(nomesDasAbas()).toEqual(['Detalhes', 'Momentos']);
     expect(screen.getByRole('header', { name: 'Roteiro por dia' })).toBeTruthy();
-    expect(screen.getByText('Combina com um fim de semana.')).toBeTruthy();
+    // Os dois cards (roteiro e orçamento) combinam com um fim de semana.
+    expect(screen.getAllByText('Combina com um fim de semana.')).toHaveLength(2);
     expect(screen.getByText('Por exemplo, um sábado')).toBeTruthy();
 
     await tocar('Usar roteiro');
@@ -212,7 +213,8 @@ describe('roteiro na tela', () => {
     expect(screen.getByLabelText('Duração: Fim de semana, calculada pelas datas.')).toBeTruthy();
     expect(screen.getByText('Calculada pelas datas')).toBeTruthy();
     expect(screen.queryByRole('radio', { name: 'Não sei ainda' })).toBeNull();
-    expect(screen.getByText('Combina com um fim de semana.')).toBeTruthy();
+    // Os dois cards (roteiro e orçamento) combinam com um fim de semana.
+    expect(screen.getAllByText('Combina com um fim de semana.')).toHaveLength(2);
     await tocar('Salvar');
     expect(exp.atualizarExperiencia).toHaveBeenCalledWith('1', expect.objectContaining({ tamanho: 'fim_de_semana' }));
   });

@@ -104,6 +104,8 @@ describe('listarExperiencias', () => {
           tamanho: null,
           categorias: [],
           roteiroAtivo: false,
+          orcamentoAtivo: false,
+          orcamentoCentavos: null,
           criadoEm: '2026-10-15T12:00:00Z',
           atualizadoEm: '2026-10-15T12:00:00Z',
         },

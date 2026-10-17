@@ -11,6 +11,8 @@ import {
   listarExperiencias,
   definirFotoDestaque,
   definirRoteiro as definirRoteiroNoServidor,
+  definirOrcamento as definirOrcamentoNoServidor,
+  definirOrcamentoAtivo as definirOrcamentoAtivoNoServidor,
   finalizarExperiencia,
   mudarEstado as mudarEstadoNoServidor,
   registrarMemoria as registrarNoServidor,
@@ -35,6 +37,8 @@ type Experiencias = {
   mudarEstado: (id: string, estado: Estado) => Promise<Resultado<{ estado: Estado }>>;
   definirDestaque: (id: string, fotoId: string | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
   definirRoteiro: (id: string, ativo: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
+  definirOrcamentoAtivo: (id: string, ativo: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
+  definirOrcamento: (id: string, centavos: number | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
   registrarMemoria: (campos: CamposDaExperiencia) => Promise<Resultado<{ memoria: Experiencia }>>;
   /** Vivendo → Memória. `referencia` só quando a experiência está sem data. */
   finalizar: (id: string, referencia: ReferenciaTemporal | null) => Promise<Resultado>;
@@ -146,14 +150,26 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
     [alterar]
   );
 
-  const definirRoteiro = useCallback(
-    async (id: string, ativo: boolean) => {
-      const r = await definirRoteiroNoServidor(id, ativo);
+  // Uma mudança parcial já confirmada pelo servidor entra na lista; a experiência que sumiu sai.
+  const aplicar = useCallback(
+    (id: string, r: Resultado<{ experiencia: Experiencia }>) => {
       if (r.ok) alterar((atuais) => atuais.map((e) => (e.id === id ? r.experiencia : e)));
       else if (r.codigo === 'desejo_inexistente') alterar((atuais) => atuais.filter((e) => e.id !== id));
       return r;
     },
     [alterar]
+  );
+  const definirRoteiro = useCallback(
+    async (id: string, ativo: boolean) => aplicar(id, await definirRoteiroNoServidor(id, ativo)),
+    [aplicar]
+  );
+  const definirOrcamentoAtivo = useCallback(
+    async (id: string, ativo: boolean) => aplicar(id, await definirOrcamentoAtivoNoServidor(id, ativo)),
+    [aplicar]
+  );
+  const definirOrcamento = useCallback(
+    async (id: string, centavos: number | null) => aplicar(id, await definirOrcamentoNoServidor(id, centavos)),
+    [aplicar]
   );
 
   const registrarMemoria = useCallback(
@@ -190,6 +206,8 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
         mudarEstado,
         definirDestaque,
         definirRoteiro,
+        definirOrcamentoAtivo,
+        definirOrcamento,
         registrarMemoria,
         finalizar,
       }}>
