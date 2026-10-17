@@ -19,7 +19,7 @@ Escopo atual. **Decisão:** [009](../decisions/009-mvp-scope-and-offline.md).
 - Desejos: criar, visualizar, editar. Só o título é obrigatório; **local**, **referência temporal pretendida** e **observações** são opcionais ([ADR 025](../decisions/025-wish-optional-fields.md)).
 - Registrar uma memória (experiência anterior ao aplicativo).
 - Planejamento na mesma experiência, com informações opcionais: referência temporal, **local em texto livre** (com "Abrir no mapa", que pesquisa no Google Maps), observações simples.
-- **Planejamento proporcional** ([ADR 038](../decisions/038-proportional-planning.md)), tudo opcional: **categorias** (lista pronta e criadas pelo casal, com filtro em Desejos), **tamanho** da experiência, **links** (com os do Google Maps; [ADR 039](../decisions/039-links-and-map.md)), **reservas**, **roteiro por dia** e **orçamento estimado** (total do casal).
+- **Planejamento proporcional** ([ADR 038](../decisions/038-proportional-planning.md)), tudo opcional: **categorias** (lista pronta e criadas pelo casal, com filtro em Desejos), **tamanho** da experiência, **links** (com os do Google Maps; [ADR 039](../decisions/039-links-and-map.md)), **reservas**, **roteiro por dia** (card "Roteiro por dia" e guia própria, com ordem por arrastar e links nos itens; [ADR 040](../decisions/040-itinerary-tab.md)) e **orçamento estimado** (total do casal).
 - Transições de estado permitidas ([lifecycle.md](./lifecycle.md#transições-permitidas)), incluindo voltar a Desejo.
 - Automação de início quando houver data clara, no servidor ([dates-and-automation.md](./dates-and-automation.md)).
 - Finalizar e cancelar com confirmação explícita; cancelamento é exclusão definitiva.

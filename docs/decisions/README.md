@@ -51,5 +51,6 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [037](./037-dark-mode.md) | Modo escuro: segue o tema do sistema, paleta "noite quente" | [visual-direction.md](../ux/proposal/visual-direction.md) |
 | [038](./038-proportional-planning.md) | Planejamento proporcional: categorias, tamanho, links, reservas, roteiro e orçamento | [mvp.md](../product/mvp.md) |
 | [039](./039-links-and-map.md) | Links da experiência e "Abrir no mapa" | [mvp.md](../product/mvp.md) |
+| [040](./040-itinerary-tab.md) | Roteiro por dia: card próprio, guia, ordem por arrastar e links nos itens | [mvp.md](../product/mvp.md) |
 
 Pendências ainda sem decisão: [../product/open-questions.md](../product/open-questions.md).
