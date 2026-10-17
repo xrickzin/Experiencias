@@ -25,6 +25,7 @@ import {
   diaEPeriodo,
   instanteDoMomento,
   momentoDaFoto,
+  PERIODOS,
   ROTULO_DO_PERIODO,
   rotuloDoDia,
   type Periodo,
@@ -490,7 +491,6 @@ type EditorProps = {
   onFechar: () => void;
 };
 
-const PERIODOS: Periodo[] = ['madrugada', 'manha', 'tarde', 'noite'];
 type QualDia = 'hoje' | 'ontem' | 'outro';
 
 /** Dia e período escolhidos, como estão nos campos (o dia digitado ainda pode estar incompleto). */

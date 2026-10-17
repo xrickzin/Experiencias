@@ -78,8 +78,8 @@ export default function Desejos() {
           ) : null}
           {tamanhosUsados.length > 0 ? (
             <Opcoes
-              rotulo="Filtrar por tamanho"
-              opcoes={[{ valor: TODAS, rotulo: 'Qualquer tamanho' }, ...tamanhosUsados]}
+              rotulo="Filtrar por duração"
+              opcoes={[{ valor: TODAS, rotulo: 'Qualquer duração' }, ...tamanhosUsados]}
               atual={tamanhosUsados.some((t) => t.valor === tamanho) ? tamanho : TODAS}
               onChange={setTamanho}
             />

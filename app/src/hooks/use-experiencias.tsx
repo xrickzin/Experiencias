@@ -10,6 +10,7 @@ import {
   excluirExperiencia as excluirNoServidor,
   listarExperiencias,
   definirFotoDestaque,
+  definirRoteiro as definirRoteiroNoServidor,
   finalizarExperiencia,
   mudarEstado as mudarEstadoNoServidor,
   registrarMemoria as registrarNoServidor,
@@ -33,6 +34,7 @@ type Experiencias = {
   excluirExperiencia: (id: string) => Promise<Resultado>;
   mudarEstado: (id: string, estado: Estado) => Promise<Resultado<{ estado: Estado }>>;
   definirDestaque: (id: string, fotoId: string | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
+  definirRoteiro: (id: string, ativo: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
   registrarMemoria: (campos: CamposDaExperiencia) => Promise<Resultado<{ memoria: Experiencia }>>;
   /** Vivendo → Memória. `referencia` só quando a experiência está sem data. */
   finalizar: (id: string, referencia: ReferenciaTemporal | null) => Promise<Resultado>;
@@ -144,6 +146,16 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
     [alterar]
   );
 
+  const definirRoteiro = useCallback(
+    async (id: string, ativo: boolean) => {
+      const r = await definirRoteiroNoServidor(id, ativo);
+      if (r.ok) alterar((atuais) => atuais.map((e) => (e.id === id ? r.experiencia : e)));
+      else if (r.codigo === 'desejo_inexistente') alterar((atuais) => atuais.filter((e) => e.id !== id));
+      return r;
+    },
+    [alterar]
+  );
+
   const registrarMemoria = useCallback(
     async (campos: CamposDaExperiencia) => {
       const r = await registrarNoServidor(campos);
@@ -177,6 +189,7 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
         excluirExperiencia,
         mudarEstado,
         definirDestaque,
+        definirRoteiro,
         registrarMemoria,
         finalizar,
       }}>

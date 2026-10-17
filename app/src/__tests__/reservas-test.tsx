@@ -25,6 +25,7 @@ jest.mock('@/services/reservas', () => ({
   editarReserva: jest.fn(),
   excluirReserva: jest.fn(),
 }));
+jest.mock('@/services/roteiro', () => ({ ...jest.requireActual('@/services/roteiro'), listarRoteiro: async () => ({ ok: true, itens: [] }) }));
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 
 const servico = jest.mocked(reservas);

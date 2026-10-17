@@ -42,7 +42,7 @@ export function SecoesDePlanejamento({ experiencia }: { experiencia: Experiencia
             Mais para planejar
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Pelo tamanho da experiência, ficou à vista só o essencial. Abram o que precisarem.
+            Pela duração da experiência, ficou à vista só o essencial. Abram o que precisarem.
           </ThemedText>
           <Button label="Reservas" variant="secondary" onPress={() => setReservasAbertas(true)} />
         </View>

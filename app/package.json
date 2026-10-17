@@ -59,6 +59,9 @@
       "^expo-media-library/legacy$": "<rootDir>/src/__tests__/apoio/expo-media-library.ts",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
-    }
+    },
+    "setupFiles": [
+      "react-native-gesture-handler/jestSetup.js"
+    ]
   }
 }

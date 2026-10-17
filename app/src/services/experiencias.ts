@@ -22,6 +22,8 @@ export type Experiencia = {
   tamanho: Tamanho | null;
   /** Ids das categorias do Laço marcadas nesta experiência. */
   categorias: string[];
+  /** "Organizar por roteiro" ligado: a experiência ganha a guia Roteiro (ADR 040). */
+  roteiroAtivo: boolean;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -37,6 +39,8 @@ export type CamposDaExperiencia = {
   tamanho?: Tamanho | null;
   /** Ids das categorias; ausente mantém as que já estão. */
   categorias?: string[];
+  /** Ao criar: já com "Organizar por roteiro" ligado (ADR 040). Na edição, usa-se `definirRoteiro`. */
+  roteiroAtivo?: boolean;
 };
 
 type Linha = {
@@ -54,13 +58,14 @@ type Linha = {
   foto_destaque: { caminho: string } | null;
   tamanho: Tamanho | null;
   categorias: { categoria_id: string }[] | null;
+  roteiro_ativo: boolean | null;
   criado_em: string;
   atualizado_em: string;
 };
 
 const COLUNAS =
   'id, titulo, estado, local, observacoes, referencia_precisao, referencia_inicio, referencia_fim, ' +
-  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, ' +
+  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, roteiro_ativo, ' +
   'categorias:experiencia_categorias(categoria_id), ' +
   // Há duas ligações entre as tabelas; o nome da chave diz qual é a do destaque.
   'foto_destaque:registros!experiencias_foto_destaque_id_fkey(caminho)';
@@ -82,6 +87,7 @@ export const paraExperiencia = (l: Linha): Experiencia => ({
     l.foto_destaque_id && l.foto_destaque ? { id: l.foto_destaque_id, caminho: l.foto_destaque.caminho } : null,
   tamanho: l.tamanho ?? null,
   categorias: (l.categorias ?? []).map((c) => c.categoria_id),
+  roteiroAtivo: l.roteiro_ativo ?? false,
   criadoEm: l.criado_em,
   atualizadoEm: l.atualizado_em ?? l.criado_em,
 });
@@ -103,6 +109,7 @@ const paraColunas = (campos: CamposDaExperiencia) => {
     referencia_fim: r.fim,
     referencia_horario: r.horario,
     tamanho: campos.tamanho ?? null,
+    ...(campos.roteiroAtivo === undefined ? {} : { roteiro_ativo: campos.roteiroAtivo }),
   };
 };
 
@@ -234,6 +241,19 @@ export async function definirFotoDestaque(
       .eq('id', id)
       .select(COLUNAS);
     if (error) return ehErroDeRede(error) ? falha('rede') : falha('destaque_invalido');
+    if (data.length === 0) return falha('desejo_inexistente');
+    return { ok: true, experiencia: paraExperiencia(data[0] as unknown as Linha) };
+  } catch {
+    return falha('rede');
+  }
+}
+
+/** Liga ou desliga "Organizar por roteiro" na hora (ADR 040). Desligar exclui o roteiro, no servidor. */
+export async function definirRoteiro(id: string, ativo: boolean): Promise<Resultado<{ experiencia: Experiencia }>> {
+  if (!supabase) return falha('sem_configuracao');
+  try {
+    const { data, error } = await supabase.from('experiencias').update({ roteiro_ativo: ativo }).eq('id', id).select(COLUNAS);
+    if (error) return falhaDoServico(error);
     if (data.length === 0) return falha('desejo_inexistente');
     return { ok: true, experiencia: paraExperiencia(data[0] as unknown as Linha) };
   } catch {

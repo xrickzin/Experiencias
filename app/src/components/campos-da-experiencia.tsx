@@ -12,8 +12,8 @@ import { useCategorias } from '@/hooks/use-categorias';
 import { LIMITE_DO_NOME_DA_CATEGORIA } from '@/services/categorias';
 import type { Experiencia } from '@/services/experiencias';
 import { enderecoNoMapa } from '@/services/links';
-import { TAMANHOS, type Tamanho } from '@/services/tamanho';
-import { camposDaReferencia, SEM_DATA, type CamposDaReferencia } from '@/services/referencia-temporal';
+import { TAMANHOS, tamanhoPelasDatas, type Tamanho } from '@/services/tamanho';
+import { camposDaReferencia, lerReferencia, SEM_DATA, type CamposDaReferencia } from '@/services/referencia-temporal';
 
 export type ValoresDaExperiencia = {
   titulo: string;
@@ -43,6 +43,12 @@ export const valoresDe = (e: Experiencia): ValoresDaExperiencia => ({
   categorias: e.categorias,
 });
 
+/** A duração que vale: a das datas, num período; senão, a escolhida (ADR 038). */
+export function duracaoDe(v: ValoresDaExperiencia): Tamanho | null {
+  const r = lerReferencia(v.referencia);
+  return (r.ok ? tamanhoPelasDatas(r.referencia) : null) ?? v.tamanho;
+}
+
 type CamposDaExperienciaProps = {
   valores: ValoresDaExperiencia;
   erroTitulo?: string;
@@ -53,13 +59,15 @@ type CamposDaExperienciaProps = {
   exigirData?: boolean;
 };
 
-// "Sem tamanho" é uma opção visível: tamanho é opcional e dá para tirar.
+// "Não sei ainda" é uma opção visível: a duração é opcional e dá para tirar.
 const SEM_TAMANHO = 'sem';
-const OPCOES_DE_TAMANHO = [{ valor: SEM_TAMANHO, rotulo: 'Sem tamanho' }, ...TAMANHOS];
+const OPCOES_DE_TAMANHO = [{ valor: SEM_TAMANHO, rotulo: 'Não sei ainda' }, ...TAMANHOS];
+const ROTULO_DO_TAMANHO = Object.fromEntries(TAMANHOS.map((t) => [t.valor, t.rotulo])) as Record<Tamanho, string>;
 
 /**
- * Título (obrigatório), quando, tamanho, categorias, local e observações. Os mesmos ao criar e ao
- * editar, em qualquer estado. Tudo além do título é opcional (ADR 025 e 038).
+ * Título (obrigatório), quando, duração, categorias, local e observações. Os mesmos ao criar e ao
+ * editar, em qualquer estado. Tudo além do título é opcional (ADR 025 e 038). Num período, a duração
+ * vem das datas e só aparece; nos outros casos, o casal escolhe.
  */
 export function CamposDaExperiencia({
   valores,
@@ -87,15 +95,7 @@ export function CamposDaExperiencia({
         obrigatoria={exigirData}
         onChange={(referencia) => onChange({ ...valores, referencia })}
       />
-      <View style={{ gap: Spacing.two }}>
-        <ThemedText type="smallBold">Tamanho</ThemedText>
-        <Opcoes<string>
-          rotulo="Tamanho"
-          opcoes={OPCOES_DE_TAMANHO}
-          atual={valores.tamanho ?? SEM_TAMANHO}
-          onChange={(v) => onChange({ ...valores, tamanho: v === SEM_TAMANHO ? null : (v as Tamanho) })}
-        />
-      </View>
+      <Duracao valores={valores} onChange={(tamanho) => onChange({ ...valores, tamanho })} />
       <Categorias
         marcadas={valores.categorias}
         onChange={(categorias) => onChange({ ...valores, categorias })}
@@ -121,6 +121,32 @@ export function CamposDaExperiencia({
         maxLength={2000}
         multiline
       />
+    </View>
+  );
+}
+
+/** Duração: escolhida, ou só mostrada quando as datas de um período já dizem qual é. */
+function Duracao({ valores, onChange }: { valores: ValoresDaExperiencia; onChange: (t: Tamanho | null) => void }) {
+  const r = lerReferencia(valores.referencia);
+  const pelasDatas = r.ok ? tamanhoPelasDatas(r.referencia) : null;
+  return (
+    <View style={{ gap: Spacing.two }}>
+      <ThemedText type="smallBold">Duração</ThemedText>
+      {pelasDatas ? (
+        <View style={{ gap: Spacing.half }} accessible accessibilityLabel={`Duração: ${ROTULO_DO_TAMANHO[pelasDatas]}, calculada pelas datas.`}>
+          <ThemedText>{ROTULO_DO_TAMANHO[pelasDatas]}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={{ fontStyle: 'italic' }}>
+            Calculada pelas datas
+          </ThemedText>
+        </View>
+      ) : (
+        <Opcoes<string>
+          rotulo="Duração"
+          opcoes={OPCOES_DE_TAMANHO}
+          atual={valores.tamanho ?? SEM_TAMANHO}
+          onChange={(v) => onChange(v === SEM_TAMANHO ? null : (v as Tamanho))}
+        />
+      )}
     </View>
   );
 }

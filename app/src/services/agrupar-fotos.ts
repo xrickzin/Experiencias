@@ -6,6 +6,9 @@ const DESLOCAMENTO_BRASILIA_MS = -3 * 60 * 60 * 1000;
 
 export type Periodo = 'madrugada' | 'manha' | 'tarde' | 'noite';
 
+/** Na ordem do dia. */
+export const PERIODOS: Periodo[] = ['madrugada', 'manha', 'tarde', 'noite'];
+
 export const ROTULO_DO_PERIODO: Record<Periodo, string> = {
   madrugada: 'Madrugada',
   manha: 'Manhã',
@@ -23,7 +26,7 @@ export type GrupoDoDia<T extends ComMomento = Foto> = {
   periodos: { periodo: Periodo; fotos: T[] }[];
 };
 
-const MESES = [
+export const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ];

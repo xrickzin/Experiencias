@@ -1,4 +1,5 @@
 import { interpretarLinkDeRecuperacao } from '@/services/link-recuperacao';
+import { tamanhoPelasDatas } from '@/services/tamanho';
 import {
   validarCodigo,
   validarConfirmacao,
@@ -90,5 +91,35 @@ describe('validações de formulário', () => {
     expect(validarCodigo('abc')).toMatch(/pelo menos 4/);
     expect(validarCodigo('a'.repeat(61))).toMatch(/até 60/);
     expect(validarCodigo('nosso código')).toBeUndefined();
+  });
+});
+
+describe('duração pelas datas (ADR 038)', () => {
+  const periodo = (inicio: string, fim: string) => tamanhoPelasDatas({ precisao: 'periodo', inicio, fim });
+
+  it('um dia só é "Um dia"', () => {
+    expect(periodo('2026-12-15', '2026-12-15')).toBe('dia');
+  });
+
+  it('2 ou 3 dias entre sexta e segunda, com sábado ou domingo, é fim de semana', () => {
+    expect(periodo('2026-12-11', '2026-12-13')).toBe('fim_de_semana'); // sexta a domingo
+    expect(periodo('2026-12-12', '2026-12-13')).toBe('fim_de_semana'); // sábado e domingo
+    expect(periodo('2026-12-12', '2026-12-14')).toBe('fim_de_semana'); // sábado a segunda
+    expect(periodo('2026-12-11', '2026-12-12')).toBe('fim_de_semana'); // sexta e sábado
+  });
+
+  it('2 ou 3 dias fora disso são vários dias', () => {
+    expect(periodo('2026-12-15', '2026-12-16')).toBe('viagem'); // terça e quarta
+    expect(periodo('2026-12-10', '2026-12-12')).toBe('viagem'); // quinta a sábado
+    expect(periodo('2026-12-13', '2026-12-15')).toBe('viagem'); // domingo a terça
+  });
+
+  it('4 dias ou mais são vários dias, mesmo cruzando o ano', () => {
+    expect(periodo('2026-12-30', '2027-01-02')).toBe('viagem');
+  });
+
+  it('sem período, as datas não dizem a duração', () => {
+    expect(tamanhoPelasDatas({ precisao: 'data', inicio: '2026-12-12', fim: null })).toBeNull();
+    expect(tamanhoPelasDatas({ precisao: 'sem_data', inicio: null, fim: null })).toBeNull();
   });
 });

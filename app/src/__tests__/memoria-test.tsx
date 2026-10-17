@@ -21,6 +21,7 @@ jest.mock('@/services/experiencias');
 // Links e reservas abrem vazios; têm testes próprios (links-test.tsx, reservas-test.tsx).
 jest.mock('@/services/links', () => ({ ...jest.requireActual('@/services/links'), listarLinks: async () => ({ ok: true, links: [] }) }));
 jest.mock('@/services/reservas', () => ({ ...jest.requireActual('@/services/reservas'), listarReservas: async () => ({ ok: true, reservas: [] }) }));
+jest.mock('@/services/roteiro', () => ({ ...jest.requireActual('@/services/roteiro'), listarRoteiro: async () => ({ ok: true, itens: [] }) }));
 jest.mock('@/services/fotos');
 jest.mock('@/services/observacoes');
 jest.mock('@/services/impressoes');

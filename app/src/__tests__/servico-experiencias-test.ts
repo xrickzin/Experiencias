@@ -103,6 +103,7 @@ describe('listarExperiencias', () => {
           fotoDestaque: null,
           tamanho: null,
           categorias: [],
+          roteiroAtivo: false,
           criadoEm: '2026-10-15T12:00:00Z',
           atualizadoEm: '2026-10-15T12:00:00Z',
         },

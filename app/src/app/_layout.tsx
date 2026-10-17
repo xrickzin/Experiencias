@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { TelaAviso } from '@/components/tela-aviso';
 import { FontFamily } from '@/constants/theme';
@@ -55,16 +56,19 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      {/* Ícones das barras do sistema acompanham o tema (claros no escuro, escuros no claro). */}
-      <StatusBar style="auto" />
-      <NavigationBar style="auto" />
-      <SessaoProvider>
-        <ExperienciasProvider>
-          <Navegacao />
-        </ExperienciasProvider>
-      </SessaoProvider>
-    </ThemeProvider>
+    // Gestos (arrastar o roteiro) precisam da raiz do gesture-handler.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        {/* Ícones das barras do sistema acompanham o tema (claros no escuro, escuros no claro). */}
+        <StatusBar style="auto" />
+        <NavigationBar style="auto" />
+        <SessaoProvider>
+          <ExperienciasProvider>
+            <Navegacao />
+          </ExperienciasProvider>
+        </SessaoProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

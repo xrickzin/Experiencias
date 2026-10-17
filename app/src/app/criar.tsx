@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { CamposDaExperiencia, valoresVazios, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
+import { CartaoDoRoteiro } from '@/components/cartao-do-roteiro';
+import { CamposDaExperiencia, duracaoDe, valoresVazios, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Screen } from '@/components/screen';
 import { ScreenHeader, voltar } from '@/components/screen-header';
@@ -22,6 +23,8 @@ export default function Criar() {
   const [erroReferencia, setErroReferencia] = useState<string>();
   const [erroGeral, setErroGeral] = useState<string>();
   const [enviando, setEnviando] = useState(false);
+  // "Organizar por roteiro" (ADR 040): vale junto com "Adicionar desejo".
+  const [roteiroAtivo, setRoteiroAtivo] = useState(false);
 
   async function enviar() {
     if (enviando) return;
@@ -33,7 +36,7 @@ export default function Criar() {
 
     setEnviando(true);
     setErroGeral(undefined);
-    const campos = { ...valores, referencia: referencia.referencia };
+    const campos = { ...valores, tamanho: duracaoDe(valores), referencia: referencia.referencia, roteiroAtivo: !memoria && roteiroAtivo };
     if (memoria) {
       const r = await registrarMemoria(campos);
       if (r.ok) {
@@ -89,6 +92,14 @@ export default function Criar() {
             setErroGeral(undefined);
           }}
         />
+        {memoria ? null : (
+          <CartaoDoRoteiro
+            ativo={roteiroAtivo}
+            tamanho={duracaoDe(valores)}
+            onUsar={() => setRoteiroAtivo(true)}
+            onDesligar={() => setRoteiroAtivo(false)}
+          />
+        )}
         {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
         <View style={{ gap: Spacing.two }}>
           <Button label={memoria ? 'Guardar memória' : 'Adicionar desejo'} loading={enviando} onPress={enviar} />
