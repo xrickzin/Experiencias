@@ -97,17 +97,12 @@ const paraFoto = (l: Linha, url: string | null, miniatura: string | null): Foto 
 export async function listarFotos(experienciaId: string): Promise<Resultado<{ fotos: Foto[] }>> {
   if (!supabase) return falha('sem_configuracao');
   try {
-    const consultar = (colunas: string) =>
-      supabase!
-        .from('registros')
-        .select(colunas)
-        .eq('experiencia_id', experienciaId)
-        .eq('tipo', 'foto')
-        .order('criado_em', { ascending: true });
-    let { data, error } = await consultar(`${COLUNAS}, legenda_autor_id`);
-    // ponytail: sem a migração 20261031140000 no banco, a coluna não existe e a lista segue sem o
-    // autor da legenda. Tirar esta segunda consulta quando a migração estiver aplicada no projeto real.
-    if (error && /legenda_autor_id/.test(error.message ?? '')) ({ data, error } = await consultar(COLUNAS));
+    const { data, error } = await supabase
+      .from('registros')
+      .select(`${COLUNAS}, legenda_autor_id`)
+      .eq('experiencia_id', experienciaId)
+      .eq('tipo', 'foto')
+      .order('criado_em', { ascending: true });
     if (error) return ehErroDeRede(error) ? falha('rede') : falha('desconhecido');
     const linhas = data as unknown as Linha[];
     if (linhas.length === 0) return { ok: true, fotos: [] };

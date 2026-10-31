@@ -13,7 +13,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
-import { FontFamily, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Experiencia } from '@/services/experiencias';
 import { descreverReferencia } from '@/services/referencia-temporal';
@@ -35,6 +35,12 @@ export function horizonteDe(desejo: Experiencia, hoje: Date): Horizonte {
 const LINHA = 76; // altura de cada par de estrelas
 const DEGRAU = 30; // a estrela da direita fica um pouco abaixo da da esquerda
 const TOPO_DA_FAIXA = 30; // espaço do nome da faixa
+const ALTURA_MINIMA = 240;
+// Estrelinhas apagadas de fundo (x em %, y em fração da altura): sempre nos mesmos lugares.
+const POEIRA = [
+  [12, 0.08], [38, 0.04], [71, 0.11], [90, 0.06], [24, 0.3], [83, 0.27], [56, 0.42],
+  [8, 0.55], [66, 0.62], [93, 0.5], [31, 0.74], [78, 0.83], [16, 0.92], [50, 0.95],
+];
 
 /** Um número estável de 0 a 1 a partir do id, para cada estrela ter o seu lugar sempre. */
 function sorte(id: string) {
@@ -59,7 +65,7 @@ type Props = {
  */
 export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
   const theme = useTheme();
-  const estrelas: { desejo: Experiencia; x: number; y: number; direita: boolean }[] = [];
+  const estrelas: { desejo: Experiencia; x: number; y: number; largura: number }[] = [];
   const faixas: { nome: Horizonte; y: number }[] = [];
   let y = 0;
   for (const nome of HORIZONTES) {
@@ -68,13 +74,17 @@ export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
     faixas.push({ nome, y });
     lista.forEach((desejo, i) => {
       const direita = i % 2 === 1;
-      // Duas colunas, cada estrela com um pequeno desvio próprio, para não parecer grade.
-      const x = (direita ? 52 : 4) + sorte(desejo.id) * 8;
-      estrelas.push({ desejo, x, y: y + TOPO_DA_FAIXA + Math.floor(i / 2) * LINHA + (direita ? DEGRAU : 0), direita });
+      // Duas colunas, cada estrela com um pequeno desvio próprio, para não parecer grade. Sozinha na
+      // faixa, a estrela ganha a largura toda, para o título não ser cortado.
+      const sozinha = lista.length === 1;
+      const x = sozinha ? 6 + sorte(desejo.id) * 10 : (direita ? 52 : 4) + sorte(desejo.id) * 8;
+      const largura = sozinha ? 80 : 44;
+      estrelas.push({ desejo, x, y: y + TOPO_DA_FAIXA + Math.floor(i / 2) * LINHA + (direita ? DEGRAU : 0), largura });
     });
     y += TOPO_DA_FAIXA + Math.ceil(lista.length / 2) * LINHA + (lista.length % 2 === 0 ? DEGRAU : 0) + Spacing.three;
   }
-  const altura = y;
+  // Mesmo com poucos desejos, o céu tem altura de céu.
+  const altura = Math.max(y, ALTURA_MINIMA);
 
   // O fio: por categoria, liga as estrelas de cima para baixo com curvas suaves.
   const porCategoria = new Map<string, typeof estrelas>();
@@ -99,7 +109,15 @@ export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
   const quemCintila = estrelas.find((e) => acesos.has(e.desejo.id))?.desejo.id;
 
   return (
-    <View style={{ height: altura, marginHorizontal: -Spacing.two }}>
+    <View
+      style={{
+        height: altura,
+        marginHorizontal: -Spacing.two,
+        borderRadius: Radius.photo,
+        overflow: 'hidden',
+        // Um brilho de céu no alto, que some no fundo da tela.
+        experimental_backgroundImage: `radial-gradient(130% 70% at 50% 0%, ${theme.backgroundSelected} 0%, ${theme.background} 75%)`,
+      }}>
       <Svg
         width="100%"
         height={altura}
@@ -108,6 +126,17 @@ export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
         style={{ position: 'absolute' }}
         accessible={false}
         importantForAccessibility="no-hide-descendants">
+        {POEIRA.map(([px, py], i) => (
+          <Path
+            key={`p${i}`}
+            d={`M${px} ${py * altura} h0.01`}
+            stroke={theme.textSecondary}
+            strokeWidth={2}
+            strokeLinecap="round"
+            opacity={0.35}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
         {fios.map((f, i) => (
           <Path
             key={i}
@@ -127,17 +156,19 @@ export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
           key={f.nome}
           accessibilityRole="header"
           themeColor="textSecondary"
-          style={{ position: 'absolute', top: f.y, left: '4%', fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14 }}>
+          // Largura explícita: o Android media o itálico como texto reto e cortava o nome.
+          style={{ position: 'absolute', top: f.y + Spacing.one, left: '4%', width: '90%', fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14 }}>
           {f.nome}
         </ThemedText>
       ))}
 
-      {estrelas.map(({ desejo, x, y: topo }) => (
+      {estrelas.map(({ desejo, x, y: topo, largura }) => (
         <Estrela
           key={desejo.id}
           desejo={desejo}
           x={x}
           y={topo}
+          largura={largura}
           aceso={acesos.has(desejo.id)}
           achado={procurando && acesos.has(desejo.id)}
           cintila={desejo.id === quemCintila}
@@ -149,9 +180,9 @@ export function CeuDeDesejos({ porHorizonte, acesos, procurando }: Props) {
 
 const DESENHO_DA_ESTRELA = 'M6 0.6 L7.3 4.6 L11.4 4.7 L8.1 7.2 L9.3 11.2 L6 8.8 L2.7 11.2 L3.9 7.2 L0.6 4.7 L4.7 4.6 Z';
 
-type EstrelaProps = { desejo: Experiencia; x: number; y: number; aceso: boolean; achado: boolean; cintila: boolean };
+type EstrelaProps = { desejo: Experiencia; x: number; y: number; largura: number; aceso: boolean; achado: boolean; cintila: boolean };
 
-function Estrela({ desejo, x, y, aceso, achado, cintila }: EstrelaProps) {
+function Estrela({ desejo, x, y, largura, aceso, achado, cintila }: EstrelaProps) {
   const theme = useTheme();
   const semData = desejo.referencia.precisao === 'sem_data';
   const quando = descreverReferencia(desejo.referencia);
@@ -180,7 +211,7 @@ function Estrela({ desejo, x, y, aceso, achado, cintila }: EstrelaProps) {
         position: 'absolute',
         left: `${x}%`,
         top: y,
-        width: '44%',
+        width: `${largura}%`,
         flexDirection: 'row',
         gap: Spacing.two,
         opacity: aceso ? (pressed ? 0.6 : 1) : 0.2,
