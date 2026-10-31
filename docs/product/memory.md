@@ -2,7 +2,7 @@
 
 Fonte de verdade de registros, memória, impressão pessoal, momento favorito, foto de destaque e Nossa História.
 Estado Memória: [lifecycle.md](./lifecycle.md). Visibilidade: [permissions.md](./permissions.md#privacidade-da-impressão-e-do-momento-favorito).
-**Decisão:** [005](../decisions/005-memory-and-impressions.md), [010](../decisions/010-explicit-typed-records.md), [012](../decisions/012-favorite-moment-and-cover-photo.md), [013](../decisions/013-records-in-planning.md).
+**Decisão:** [005](../decisions/005-memory-and-impressions.md), [010](../decisions/010-explicit-typed-records.md), [012](../decisions/012-favorite-moment-and-cover-photo.md), [013](../decisions/013-records-in-planning.md), [042](../decisions/042-memory-details-locked.md).
 
 ## Memória
 
@@ -11,7 +11,8 @@ A memória é a experiência que terminou, no estado final **Memória**. **Não 
 > **A experiência termina. A memória continua.**
 
 - Os **registros** feitos antes (Planejamento e Vivendo) passam a compor o conteúdo da memória.
-- O conteúdo da memória **continua editável** depois de criada: adicionar fotos, complementar registros, alterar foto de destaque e momento favorito, escrever ou editar a impressão.
+- Os **registros** da memória continuam editáveis depois de criada: adicionar fotos, complementar registros, alterar foto de destaque e momento favorito, escrever ou editar a impressão.
+- Os **detalhes** ficam travados: título, referência temporal, local, observações gerais, categorias, duração, links, reservas, roteiro e orçamento só podem ser vistos ([ADR 042](../decisions/042-memory-details-locked.md)). Para corrigir um detalhe errado, a saída é excluir a memória.
 - A memória pode reunir (conforme os recursos implementados): fotos, registros, momento favorito e impressão de cada pessoa, referência temporal, local, e o contexto de planejamento.
 - Não existe quantidade mínima de nada. Uma memória com uma foto, ou sem foto, é válida.
 - A memória nunca é escrita por IA no MVP.

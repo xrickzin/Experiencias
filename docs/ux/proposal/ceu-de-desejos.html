@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Céu de desejos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Figtree:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Os tokens do tema escuro do Laço ("noite quente"): esta página mostra o app como ele é. */
+  --fundo: #1B1815;
+  --ceu-alto: #2A2230;
+  --texto: #F3EDE2;
+  --secundario: #B5ACA0;
+  --fio: #E5636A;
+  --fio-suave: #944548;
+  --papel: #463B31;
+  --borda: #3D3731;
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --corpo: 'Figtree', system-ui, sans-serif;
+  /* Layout: quatro celulares lado a lado, cada um com a legenda do que mostra embaixo. */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--fundo); color: var(--texto); font-family: var(--corpo); }
+body { padding: 32px 20px 64px; }
+main { max-width: 1240px; margin: 0 auto; display: grid; gap: 40px; }
+header.pagina { max-width: 68ch; display: grid; gap: 10px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; text-wrap: balance; }
+p { margin: 0; line-height: 1.55; color: var(--secundario); }
+p strong { color: var(--texto); font-weight: 600; }
+
+.telas { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 28px; align-items: start; }
+figure { margin: 0; display: grid; gap: 14px; }
+figcaption { display: grid; gap: 6px; }
+figcaption h3 { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 19px; margin: 0; }
+figcaption p { font-size: 14px; }
+
+/* O celular */
+.celular { width: 100%; max-width: 300px; aspect-ratio: 9 / 18.5; border-radius: 34px; border: 8px solid #0d0b0a;
+  background: var(--fundo); overflow: hidden; position: relative; display: flex; flex-direction: column;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+.tela { flex: 1; display: flex; flex-direction: column; padding: 18px 16px 0; gap: 10px; overflow: hidden; }
+.titulo-tela { font-family: var(--display); font-weight: 600; font-size: 24px; line-height: 1.15; margin: 4px 0 0; }
+.sub { font-size: 12.5px; color: var(--secundario); }
+.barra { display: flex; gap: 8px; align-items: center; }
+.busca { flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px; border: 1px solid #7F766B; color: var(--secundario); font-size: 13px; background: transparent; }
+.busca input { all: unset; flex: 1; color: var(--texto); font-size: 13px; min-width: 0; }
+.busca input::placeholder { color: var(--secundario); }
+.busca:focus-within { outline: 2px solid var(--texto); outline-offset: 1px; }
+.alternar { display: flex; border: 1px solid #7F766B; border-radius: 10px; overflow: hidden; font-size: 12px; }
+.alternar span { padding: 7px 9px; color: var(--secundario); }
+.alternar span.ativo { background: var(--papel); color: var(--texto); font-weight: 600; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: 600 11.5px var(--corpo); padding: 5px 9px; border-radius: 999px; border: 1px solid #7F766B; color: var(--secundario); background: transparent; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--texto); color: var(--fundo); border-color: var(--texto); }
+.chip:focus-visible { outline: 2px solid var(--fio); outline-offset: 2px; }
+
+/* O céu */
+.ceu { position: relative; flex: 1; margin: 0 -16px; background: radial-gradient(120% 70% at 50% 0%, var(--ceu-alto) 0%, var(--fundo) 70%); }
+.ceu svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.faixa { position: absolute; left: 14px; font: italic 500 11.5px var(--display); color: var(--secundario); opacity: .8; }
+.estrela { position: absolute; transform: translate(-6px, -6px); display: flex; align-items: center; gap: 6px; transition: opacity .25s; }
+.estrela i { width: 12px; height: 12px; display: block; flex: none; }
+.estrela i svg { position: static; width: 12px; height: 12px; }
+.estrela b { font: 600 11.5px/1.25 var(--display); color: var(--texto); max-width: 120px; text-shadow: 0 1px 6px var(--fundo); }
+.estrela.sem-data b { font-weight: 500; font-style: italic; color: var(--secundario); }
+.estrela.apagada { opacity: .18; }
+.estrela.achada b { color: var(--fio); }
+.nova { font: 600 9.5px var(--corpo); color: var(--fundo); background: var(--fio); padding: 1px 5px; border-radius: 4px; margin-left: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cintila { animation: cintilar 5.5s ease-in-out infinite; }
+  @keyframes cintilar { 0%, 86%, 100% { opacity: 1; } 92% { opacity: .35; } }
+}
+
+/* Lista e sementes */
+.lista { display: grid; gap: 12px; overflow: hidden; }
+.grupo { display: grid; gap: 4px; }
+.grupo h4 { margin: 0; font: italic 500 13px var(--display); color: var(--secundario); }
+.item { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--borda); }
+.item i svg { width: 12px; height: 12px; margin-top: 3px; }
+.item b { font: 600 14px/1.3 var(--display); display: block; }
+.item span { font-size: 11.5px; color: var(--secundario); }
+.resultados { display: grid; gap: 0; background: var(--papel); border-radius: 10px; padding: 4px 12px; }
+.resultados .item:last-child { border-bottom: 0; }
+.vazio { font: italic 500 13px var(--display); color: var(--secundario); padding: 8px 0; }
+.sementes { display: grid; gap: 8px; }
+.semente { font: italic 500 14px var(--display); color: var(--texto); background: var(--papel); border: 1px solid #5C4F43; border-radius: 12px; padding: 10px 12px; }
+.semente small { display: block; font: 500 11px var(--corpo); color: var(--secundario); font-style: normal; margin-top: 2px; }
+
+/* A barra de abas do app, no pé de cada celular */
+.abas { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; border-top: 1px solid var(--borda); padding: 8px 0 12px; font-size: 10.5px; color: var(--secundario); text-align: center; }
+.abas .mais { width: 32px; height: 32px; border-radius: 50%; background: var(--texto); color: var(--fundo); display: grid; place-items: center; margin: 0 auto; font: 600 18px var(--display); }
+.abas .aqui { color: var(--texto); font-weight: 600; }
+
+.achar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.achar div { display: grid; gap: 6px; border-top: 2px solid var(--fio-suave); padding-top: 12px; }
+.achar h3 { font: 600 17px var(--display); margin: 0; }
+.nota { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="pagina">
+    <h1>Céu de desejos</h1>
+    <p>Uma proposta para a aba Desejos do Laço: cada desejo vira uma estrela, e o fio liga os desejos da mesma categoria como constelações. <strong>Achar um desejo continua fácil:</strong> a busca fica sempre no topo, os filtros acendem uma constelação e a lista organizada está a um toque. Os desejos marcados como exemplo são inventados; o do cinema é o de vocês.</p>
+  </header>
+
+  <section class="telas" aria-label="As quatro telas da proposta">
+    <!-- 1. O céu -->
+    <figure>
+      <div class="celular">
+        <div class="tela">
+          <div class="titulo-tela">O que sonhamos viver</div>
+          <div class="barra">
+            <div class="busca">⌕ <span>Procurar</span></div>
+            <div class="alternar" aria-label="Ver como"><span class="ativo">Céu</span><span>Lista</span></div>
+          </div>
+          <div class="chips" role="group" aria-label="Filtrar por categoria" id="chips">
+            <button class="chip" aria-pressed="true" data-cat="todas">Todas</button>
+            <button class="chip" aria-pressed="false" data-cat="filme">Filme</button>
+            <button class="chip" aria-pressed="false" data-cat="viagem">Viagem</button>
+            <button class="chip" aria-pressed="false" data-cat="aprender">Aprender</button>
+          </div>
+          <div class="ceu" id="ceu1"></div>
+        </div>
+        <nav class="abas" aria-hidden="true"><span>Início</span><span class="aqui">Desejos</span><span class="mais">+</span><span>Nossa História</span></nav>
+      </div>
+      <figcaption>
+        <h3>O céu, a tela de sempre</h3>
+        <p>Desejos com data ficam no alto, em "Em breve", e brilham mais. Sem data, ficam embaixo, em "Sem pressa", em itálico. O último desejo criado ganha "novo". Toque num filtro para acender só aquela constelação.</p>
+      </figcaption>
+    </figure>
+
+    <!-- 2. Procurar -->
+    <figure>
+      <div class="celular">
+        <div class="tela">
+          <div class="titulo-tela">O que sonhamos viver</div>
+          <div class="barra">
+            <label class="busca" for="procura">⌕ <input id="procura" type="search" value="cine" placeholder="Procurar um desejo" autocomplete="off"></label>
+          </div>
+          <div class="resultados" id="resultados" aria-live="polite"></div>
+          <div class="ceu" id="ceu2"></div>
+        </div>
+        <nav class="abas" aria-hidden="true"><span>Início</span><span class="aqui">Desejos</span><span class="mais">+</span><span>Nossa História</span></nav>
+      </div>
+      <figcaption>
+        <h3>Procurar: digitou, achou</h3>
+        <p>Ao digitar, as estrelas que combinam acendem e as outras se apagam; logo abaixo da busca aparece a lista do que bateu, para abrir com um toque. Procura no título, no local e nas observações. Experimente digitar aqui.</p>
+      </figcaption>
+    </figure>
+
+    <!-- 3. Lista -->
+    <figure>
+      <div class="celular">
+        <div class="tela">
+          <div class="titulo-tela">O que sonhamos viver</div>
+          <div class="barra">
+            <div class="busca">⌕ <span>Procurar</span></div>
+            <div class="alternar" aria-label="Ver como"><span>Céu</span><span class="ativo">Lista</span></div>
+          </div>
+          <div class="lista" id="lista"></div>
+        </div>
+        <nav class="abas" aria-hidden="true"><span>Início</span><span class="aqui">Desejos</span><span class="mais">+</span><span>Nossa História</span></nav>
+      </div>
+      <figcaption>
+        <h3>Lista, para quando a pressa é maior</h3>
+        <p>Os mesmos desejos, em linhas, pela mesma ordem do céu: Em breve, Um dia, Sem pressa. É o jeito de varrer tudo rápido. O Laço lembra qual dos dois modos vocês usaram por último.</p>
+      </figcaption>
+    </figure>
+
+    <!-- 4. Primeira vez -->
+    <figure>
+      <div class="celular">
+        <div class="tela">
+          <div class="titulo-tela">O que sonhamos viver</div>
+          <div class="sub">O céu de vocês ainda está limpo. Uma estrela começa com uma frase.</div>
+          <div class="ceu" style="flex: 0 0 120px;" id="ceu4"></div>
+          <div class="sementes">
+            <div class="semente">Um lugar que nunca fomos…<small>Toque para começar um desejo com essa frase</small></div>
+            <div class="semente">Algo que queremos aprender juntos…</div>
+            <div class="semente">Uma noite sem celular, só nós dois…</div>
+          </div>
+        </div>
+        <nav class="abas" aria-hidden="true"><span>Início</span><span class="aqui">Desejos</span><span class="mais">+</span><span>Nossa História</span></nav>
+      </div>
+      <figcaption>
+        <h3>A primeira vez, sem tela em branco</h3>
+        <p>Sem desejos, o céu mostra só o fio e oferece sementes: começos de frase que abrem a criação com o texto já escrito. As sementes também aparecem no fim do céu cheio, discretas.</p>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="achar" aria-label="Como achar um desejo">
+    <div><h3>Procurar</h3><p class="nota">A busca fica sempre no topo e acende as estrelas que combinam enquanto vocês digitam. É o caminho mais curto quando vocês lembram uma palavra.</p></div>
+    <div><h3>Filtrar</h3><p class="nota">Os filtros por categoria e duração que já existem viram constelações: tocar em "Viagem" acende só as viagens e apaga o resto.</p></div>
+    <div><h3>Ver em lista</h3><p class="nota">Um toque troca o céu pela lista em linhas, organizada por horizonte. Nada some ao trocar de modo; é o mesmo conjunto visto de outro jeito.</p></div>
+    <div><h3>O que não muda</h3><p class="nota">Nenhuma regra de produto. Desejos, categorias, datas e o "+" continuam iguais; muda só como a tela os apresenta. O cintilar é raro e para quando o celular pede menos movimento.</p></div>
+  </section>
+</main>
+
+<script>
+const ESTRELA = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.6 L7.3 4.6 L11.4 4.7 L8.1 7.2 L9.3 11.2 L6 8.8 L2.7 11.2 L3.9 7.2 L0.6 4.7 L4.7 4.6 Z" fill="currentColor"/></svg>';
+// x e y em % do céu. Desejos com data no alto ("Em breve"), sem data embaixo ("Sem pressa").
+const DESEJOS = [
+  { t: 'Cineminha: Jogos Vorazes Amanhecer na Colheita?', cat: 'filme', quando: 'novembro de 2026', onde: 'Cinemark Mogi', faixa: 'Em breve', x: 18, y: 14, novo: true },
+  { t: 'Maratona de Studio Ghibli', cat: 'filme', quando: 'sem data', onde: 'em casa', faixa: 'Sem pressa', x: 58, y: 78, exemplo: true },
+  { t: 'Fim de semana em Gramado', cat: 'viagem', quando: 'julho de 2027', onde: 'Gramado', faixa: 'Um dia', x: 60, y: 30, exemplo: true },
+  { t: 'Ver a aurora boreal', cat: 'viagem', quando: 'sem data', onde: 'Noruega', faixa: 'Sem pressa', x: 74, y: 62, exemplo: true },
+  { t: 'Pôr do sol em Ilhabela', cat: 'viagem', quando: 'janeiro de 2027', onde: 'Ilhabela', faixa: 'Um dia', x: 34, y: 44, exemplo: true },
+  { t: 'Aula de cerâmica juntos', cat: 'aprender', quando: 'dezembro de 2026', onde: 'Vila Madalena', faixa: 'Em breve', x: 66, y: 10, exemplo: true },
+  { t: 'Aprender a dançar forró', cat: 'aprender', quando: 'sem data', onde: '', faixa: 'Sem pressa', x: 22, y: 70, exemplo: true },
+];
+const COR = { filme: '#E5636A', viagem: '#E5636A', aprender: '#E5636A' };
+
+function ceu(id, { filtro = null, procura = '' } = {}) {
+  const el = document.getElementById(id);
+  const termo = procura.trim().toLowerCase();
+  const combina = (d) => (!filtro || filtro === 'todas' || d.cat === filtro) && (!termo || (d.t + ' ' + d.onde).toLowerCase().includes(termo));
+  // O fio: liga, por categoria, as estrelas na ordem do alto para baixo, com curvas suaves.
+  const fios = id === 'ceu4' ? '' : ['filme', 'viagem', 'aprender'].map((cat) => {
+    const pts = DESEJOS.filter((d) => d.cat === cat).sort((a, b) => a.y - b.y);
+    if (pts.length < 2) return '';
+    const acesa = pts.some(combina) && (!termo || pts.every(combina) || filtro === cat);
+    let d = `M${pts[0].x} ${pts[0].y + 6}`;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      d += ` Q${(a.x + b.x) / 2 + (i % 2 ? 6 : -6)} ${(a.y + b.y) / 2 + 6} ${b.x} ${b.y + 6}`;
+    }
+    return `<path d="${d}" fill="none" stroke="${acesa ? '#E5636A' : '#944548'}" stroke-width="${acesa ? 0.7 : 0.45}" stroke-linecap="round" opacity="${acesa ? 0.85 : 0.5}" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  const faixas = id === 'ceu4' ? '' : '<span class="faixa" style="top:2%">Em breve</span><span class="faixa" style="top:38%">Um dia</span><span class="faixa" style="top:66%">Sem pressa</span>';
+  const estrelas = id === 'ceu4' ? '' : DESEJOS.map((d, i) => {
+    const ok = combina(d);
+    const cls = ['estrela', d.quando === 'sem data' ? 'sem-data' : '', ok ? (termo ? 'achada' : '') : 'apagada'].join(' ');
+    const brilho = d.quando === 'sem data' ? '#B5ACA0' : '#F3EDE2';
+    const cor = termo && ok ? '#E5636A' : brilho;
+    const cint = i === 4 ? ' cintila' : '';
+    return `<span class="${cls}" style="left:${d.x}%;top:${d.y + 6}%"><i class="${cint}" style="color:${cor}">${ESTRELA}</i><b>${d.t}${d.novo ? ' <span class="nova">novo</span>' : ''}</b></span>`;
+  }).join('');
+  const vazio = id === 'ceu4' ? '<path d="M0 60 Q25 52 50 60 T100 60" fill="none" stroke="#944548" stroke-width="0.6" vector-effect="non-scaling-stroke"/>' : '';
+  el.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${fios}${vazio}</svg>${faixas}${estrelas}`;
+}
+
+function linha(d) {
+  const detalhe = [d.quando === 'sem data' ? null : d.quando, d.onde].filter(Boolean).join(' · ');
+  return `<div class="item"><i style="color:${d.quando === 'sem data' ? '#B5ACA0' : '#F3EDE2'}">${ESTRELA}</i><div><b>${d.t}</b><span>${detalhe || 'sem data'}${d.exemplo ? ' · exemplo' : ''}</span></div></div>`;
+}
+
+function lista() {
+  const grupos = ['Em breve', 'Um dia', 'Sem pressa'].map((f) => {
+    const itens = DESEJOS.filter((d) => d.faixa === f);
+    return `<div class="grupo"><h4>${f}</h4>${itens.map(linha).join('')}</div>`;
+  });
+  document.getElementById('lista').innerHTML = grupos.join('');
+}
+
+function procurar() {
+  const termo = document.getElementById('procura').value;
+  const achados = DESEJOS.filter((d) => termo.trim() && (d.t + ' ' + d.onde).toLowerCase().includes(termo.trim().toLowerCase()));
+  document.getElementById('resultados').innerHTML = !termo.trim()
+    ? '<div class="vazio">Digite uma palavra do título ou do lugar.</div>'
+    : achados.length ? achados.map(linha).join('') : '<div class="vazio">Nenhum desejo com essa palavra. Que tal criar?</div>';
+  ceu('ceu2', { procura: termo });
+}
+
+document.getElementById('chips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  for (const c of document.querySelectorAll('#chips .chip')) c.setAttribute('aria-pressed', String(c === b));
+  ceu('ceu1', { filtro: b.dataset.cat });
+});
+document.getElementById('procura').addEventListener('input', procurar);
+
+ceu('ceu1');
+lista();
+procurar();
+ceu('ceu4');
+</script>
+</body>
+</html>

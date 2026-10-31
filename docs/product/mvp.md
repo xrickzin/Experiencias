@@ -11,7 +11,7 @@ Escopo atual. **Decisão:** [009](../decisions/009-mvp-scope-and-offline.md).
 - Sessão persistente: reabrir vai direto ao Laço; recuperação de acesso em novo aparelho com e-mail + senha, pelo próprio Auth, e "esqueci a senha" pelo fluxo nativo do Auth ([ADR 017](../decisions/017-account-and-session-details.md)).
 - Um Laço por identidade.
 - Bloqueio temporário contra tentativas abusivas da palavra-chave, aplicado no servidor.
-- Cada pessoa edita o próprio nome, em configurações simples (também **sair da conta**).
+- Cada pessoa edita o próprio nome e a própria **foto de perfil**, em configurações simples (também **sair da conta**). A foto aparece pequena ao lado do nome, onde a autoria importa ([ADR 043](../decisions/043-profile-photo.md)).
 - O Laço pode ser usado por quem criou **antes** de a segunda pessoa vincular.
 - Código do casal mostrado ao criador, com copiar/compartilhar; sem recuperação posterior.
 

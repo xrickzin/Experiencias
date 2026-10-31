@@ -31,7 +31,7 @@ Quando a pessoa ainda não tem um Laço, a primeira tela oferece duas opções:
 - **Palavra-chave já em uso** ao criar um Laço: verificada **na etapa do código**; o aplicativo informa que ela já está em uso e a pessoa escolhe outra e continua (ex.: "Essa palavra-chave já está em uso. Escolha outra."; [ADR 023](../decisions/023-keyword-check-before-account.md)). É uma decisão intencional e difere da vinculação, que não revela nada ([ADR 016](../decisions/016-keyword-abuse-protection.md)).
 - A palavra-chave serve **só para o vínculo inicial**. Não é senha, autenticação nem recuperação de conta. Não pode ser trocada no MVP e não é substituída por código aleatório por enquanto.
 - **Termo de interface:** "Código do casal" = palavra-chave.
-- **Configurações:** área secundária, sem nova área principal, com editar o próprio nome e sair da conta (logout).
+- **Configurações:** área secundária, sem nova área principal, com editar o próprio nome, escolher a própria foto de perfil ([ADR 043](../decisions/043-profile-photo.md)) e sair da conta (logout).
 - **Fora do MVP:** sair do Laço, desfazer o Laço, múltiplos Laços, trocar de parceiro, transferir experiências. Não existe ação de "sair do Laço" (logout não é sair do Laço).
 
 ## Áreas principais

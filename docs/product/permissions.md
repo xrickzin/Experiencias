@@ -11,8 +11,8 @@ O princípio de partida é a **confiança no casal**: nenhum dos dois é tratado
 
 | Item | Ver | Criar / editar | Excluir |
 |---|---|---|---|
-| Dados gerais da experiência | ambos | ambos | ambos (cancelar) |
-| Planejamento | ambos | ambos | ambos |
+| Dados gerais da experiência | ambos | ambos; na Memória, ninguém ([ADR 042](../decisions/042-memory-details-locked.md)) | ambos (cancelar) |
+| Planejamento | ambos | ambos; na Memória, ninguém | ambos; na Memória, ninguém |
 | Transições de estado | — | ambos | — |
 | Registros (foto, observação) | ambos | ambos | ambos |
 | Foto de destaque da memória | ambos | ambos | — |
@@ -20,6 +20,7 @@ O princípio de partida é a **confiança no casal**: nenhum dos dois é tratado
 | **Impressão pessoal** | regra abaixo | **só o próprio** | só o próprio |
 | **Momento favorito** | regra abaixo | **só o próprio** | só o próprio |
 | Nome exibido no Laço | ambos | **só o próprio** | — |
+| Foto de perfil ([ADR 043](../decisions/043-profile-photo.md)) | ambos | **só o próprio** | só o próprio |
 
 - Todo registro **preserva o autor**, mesmo que o outro o edite ou exclua.
 - Cancelar (excluir a experiência, inclusive Memória) pode ser feito por qualquer um dos dois, com confirmação explícita ([lifecycle.md](./lifecycle.md#cancelamento)).
@@ -32,7 +33,7 @@ O princípio de partida é a **confiança no casal**: nenhum dos dois é tratado
 - "Registrada" = texto **não vazio** (vazio ou ausente = não registrada).
 - Cada pessoa vê sempre os seus.
 - Escolher **"Escrever depois"** não bloqueia a memória: ela é criada normalmente e a pessoa pode voltar depois.
-- A regra é **individual**: não bloqueia a memória inteira. Fotos, observações, data, local e demais registros compartilhados continuam visíveis e editáveis conforme as permissões acima.
+- A regra é **individual**: não bloqueia a memória inteira. Fotos, observações, data, local e demais registros compartilhados continuam visíveis e, conforme as permissões acima, editáveis.
 - Exemplo: A registra a impressão e ainda não vê a de B; quando B registra a sua, ambos passam a ver os conteúdos individuais um do outro.
 - A pessoa pode **criar, editar, apagar e reescrever** a própria impressão. Apagar não apaga nem oculta a impressão nem o favorito do outro.
 - A visibilidade é decidida **no momento da leitura**: se a pessoa apagar a própria impressão, volta a não ver os do outro. O que já viu não é desfeito (confiança no casal).

@@ -1,6 +1,6 @@
 # UX — Direção do produto Laço
 
-> **Status:** direção de UX definida e divergências com o produto resolvidas; **nenhuma tela ou componente implementado**. **Proposta de Visual Direction e Design System pronta para avaliação**, ainda não aprovada: [proposal/](./proposal/visual-direction.md). Sequência: [design-direction.md](./design-direction.md#13-próxima-entrega). Este conjunto de documentos orienta a evolução da experiência sem transformar decisões de UX em implementação prematura.
+> **Status:** direção de UX definida e divergências com o produto resolvidas. As telas das Fases 1 a 7 estão implementadas; o que já foi construído para Nossa História e a memória está em [album.md](./album.md). **Proposta de Visual Direction e Design System pronta para avaliação**, ainda não aprovada: [proposal/](./proposal/visual-direction.md). Sequência: [design-direction.md](./design-direction.md#13-próxima-entrega). Este conjunto de documentos orienta a evolução da experiência sem transformar decisões de UX em implementação prematura.
 
 ## Precedência
 
@@ -27,6 +27,7 @@ A implementação deve privilegiar simplicidade, clareza e coerência com o conc
 | Identidade visual: fotografia, fio vermelho e laço, escopo visual | [visual-identity.md](./visual-identity.md) |
 | Primeira tela, criar Laço, autenticação, entrar, sessão | [onboarding.md](./onboarding.md) |
 | Navegação, botão `+`, Início | [home-and-navigation.md](./home-and-navigation.md) |
+| O álbum: material (papel, moldura, fio) e telas da memória já implementadas | [album.md](./album.md) |
 | Desejos, transição para Planejamento, Planejamento | [wishes-and-planning.md](./wishes-and-planning.md) |
 | Vivendo, finalizar, memória, fotos, favorito, impressões, registros | [living-and-memory.md](./living-and-memory.md) |
 | Nossa História | [our-story.md](./our-story.md) |

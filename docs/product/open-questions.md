@@ -3,7 +3,8 @@
 Lista única do que ainda **não está decidido**. Até serem decididas, **não implementar** o comportamento envolvido e, se ele for necessário, parar e apresentar alternativas.
 Quando uma questão for decidida: registrar em `docs/decisions/`, atualizar o documento de produto correspondente e remover daqui.
 
-**Produto:** nenhuma questão de produto em aberto.
+**Produto:**
+- **Levar uma memória para o Instagram** (ideia futura, [future.md](./future.md)): a publicação direta pela API do Instagram só funciona em contas profissionais (comercial ou criador de conteúdo), exige login pelo Facebook, revisão do app pela Meta e um servidor, e aceita até 10 itens por carrossel. O caminho viável para um casal é o app preparar as fotos escolhidas, na ordem, e entregá-las ao Instagram pelo compartilhar do celular, com a legenda copiada; o Instagram decide a publicação. Exige build próprio (não roda no Expo Go) e teste no aparelho para confirmar que o Instagram aceita várias fotos de uma vez.
 **Técnicas:** nenhuma em aberto; foram decididas nos ADRs [017](../decisions/017-account-and-session-details.md) a [021](../decisions/021-naming-and-identifiers.md). As premissas a conferir na implementação estão em [technical-decisions.md](../architecture/technical-decisions.md#a-validar-na-implementação).
 
 ## UX

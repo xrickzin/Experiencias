@@ -37,4 +37,4 @@ Trazer de volta experiências antigas: lembrar uma experiência vivida há algum
 Possível no futuro para retrospectivas, organização ou descoberta de padrões. **Nunca para substituir a expressão pessoal na escrita das memórias.**
 
 ## Outros
-Compartilhamento externo · sincronização complexa · metáfora visual do fio/laço ([vision.md](./vision.md#identidade-direção-conceitual)).
+**Levar uma memória para o Instagram:** escolher as fotos e a ordem de um carrossel dentro da memória e entregar ao Instagram já prontos, com a legenda copiada. Viabilidade estudada em [open-questions.md](./open-questions.md). · Compartilhamento externo · sincronização complexa · metáfora visual do fio/laço ([vision.md](./vision.md#identidade-direção-conceitual)).

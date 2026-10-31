@@ -1,5 +1,7 @@
 # Navegação e Início
 
+Apresentação atual do Início (retratos do casal, seções na voz do álbum, última página da história): [ADR 044](../decisions/044-wish-sky-and-home.md).
+
 Regras de produto: [../product/navigation.md](../product/navigation.md), [ADR 007](../decisions/007-navigation.md), [014](../decisions/014-home-and-location.md), [022](../decisions/022-entry-flow-and-solo-use.md). Pendências: [open-questions-ux.md](./open-questions-ux.md).
 
 ## Navegação principal

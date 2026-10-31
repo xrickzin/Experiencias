@@ -10,6 +10,12 @@ Nenhuma. UX-F17 (entrada pelo e-mail) e UX-F18 (informações de um Desejo) fora
 
 ## B. Questões visuais (delegadas às skills de design)
 
+Pendências de 2026-10-31 ([album.md](./album.md)):
+- **Tom do papel no escuro:** conferido no aparelho; pode puxar para "papelão". Validar com o casal.
+- **Fio da barra de abas:** migrar a animação para o thread da interface (hoje redesenha a tela a cada quadro).
+- **Perfis de uso da crítica** (uso com uma mão, leitor de tela, primeira vez): adiados pelo usuário.
+
+
 **Direção aprovada ([ADR 026](../decisions/026-visual-direction-and-platforms.md)); valores finais pendentes.** Resolvidas e removidas daqui: UX-V3 (MVP só com tema claro), UX-V10 (limites do Início) e UX-V14 (destino de "Ver todos" e "Ver planejamentos"), pelo [ADR 027](../decisions/027-home-limits-and-past-planning.md). Dentro das restrições de [design-direction.md](./design-direction.md#12-questões-visuais-delegadas-às-skills); não decidem produto.
 
 | ID | Questão |
@@ -69,4 +75,4 @@ Nada abaixo foi resolvido em silêncio; cada item diz o impacto.
 | UX-F1, F2 | "Já em uso" na etapa do código; código mostrado ao criador, sem recuperação | [onboarding.md](./onboarding.md), [ADR 023](../decisions/023-keyword-check-before-account.md) |
 | UX-F5 | Precisão temporal escolhida e preservada | [wishes-and-planning.md](./wishes-and-planning.md#referência-temporal) |
 | UX-F9, F10, F11 | "Escrever depois"; criar "Uma memória"; fotos, destaque e favorito | [living-and-memory.md](./living-and-memory.md) |
-| UX-F14 | Nossa História: ano → mês → cronológico crescente | [our-story.md](./our-story.md) |
+| UX-F14 | Nossa História: ano → mês → do mais recente ao mais antigo, inclusive dentro do mês | [our-story.md](./our-story.md) |
