@@ -48,7 +48,10 @@ const caio = await pessoa('caio');
 await ana.rpc('criar_laco', { p_nome: 'Ana', p_nome_companheiro: 'Bia', p_palavra: `legenda ${sufixo}`, p_fuso: null });
 await bia.rpc('vincular_laco', { p_palavra: `legenda ${sufixo}` });
 await caio.rpc('criar_laco', { p_nome: 'Caio', p_nome_companheiro: 'Dani', p_palavra: `outraleg ${sufixo}`, p_fuso: null });
-const lacoId = (await ana.rpc('meu_perfil')).data.laco_id;
+const perfilAna = (await ana.rpc('meu_perfil')).data;
+const lacoId = perfilAna.laco_id;
+const anaId = perfilAna.membro_id;
+const biaId = (await bia.rpc('meu_perfil')).data.membro_id;
 
 const exp = (await ana.from('experiencias').insert({ titulo: 'Serra' }).select('id')).data[0];
 await ana.rpc('mudar_estado', { p_experiencia: exp.id, p_estado: 'planejamento' });
@@ -56,14 +59,17 @@ const caminho = `${lacoId}/${exp.id}/a.jpg`;
 await ana.storage.from('experiencias').upload(caminho, JPEG, { contentType: 'image/jpeg' });
 const foto = (await ana.from('registros').insert({ experiencia_id: exp.id, caminho }).select('id')).data[0];
 const legendar = (cliente, legenda) =>
-  cliente.from('registros').update({ legenda }).eq('id', foto.id).select('legenda, autor_id');
+  cliente.from('registros').update({ legenda }).eq('id', foto.id).select('legenda, autor_id, legenda_autor_id');
 
 // --- Legenda ---------------------------------------------------------------------------------------
 let r = await legendar(bia, 'Primeira noite na serra');
-confere('Bia legenda a foto de Ana', r.data?.[0]?.legenda === 'Primeira noite na serra', j(r));
+confere('Bia legenda a foto de Ana, e fica como autora da legenda', r.data?.[0]?.legenda === 'Primeira noite na serra' && r.data[0].legenda_autor_id === biaId && r.data[0].autor_id === anaId, j(r));
 
 r = await legendar(ana, 'Primeira noite, com chuva');
-confere('Ana troca a legenda; a foto continua dela', r.data?.[0]?.legenda === 'Primeira noite, com chuva', j(r));
+confere('Ana troca a legenda; a foto continua dela e a legenda passa a ser dela', r.data?.[0]?.legenda === 'Primeira noite, com chuva' && r.data[0].legenda_autor_id === anaId, j(r));
+
+r = await bia.from('registros').update({ legenda_autor_id: biaId }).eq('id', foto.id).select('id');
+confere('ninguém escolhe o autor da legenda pela tabela', Boolean(r.error), j(r));
 
 r = await legendar(ana, '   ');
 confere('legenda em branco é recusada', Boolean(r.error), j(r));
@@ -75,7 +81,7 @@ r = await legendar(caio, 'invasão');
 confere('outro Laço não legenda', !r.error && r.data?.length === 0, j(r));
 
 r = await legendar(ana, null);
-confere('tirar a legenda', !r.error && r.data?.[0]?.legenda === null, j(r));
+confere('tirar a legenda limpa o autor', !r.error && r.data?.[0]?.legenda === null && r.data[0].legenda_autor_id === null, j(r));
 
 // --- Observação: sem legenda, com momento -----------------------------------------------------------
 r = await ana

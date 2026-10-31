@@ -120,7 +120,7 @@ r = await ana.from('experiencias').update({ referencia_precisao: 'sem_data', ref
 confere('Memória não fica sem data', Boolean(r.error), j(r));
 
 r = await ana.from('experiencias').update({ titulo: 'Serra, outubro' }).eq('id', exp.id).select('titulo');
-confere('dados gerais da memória continuam editáveis', r.data?.[0]?.titulo === 'Serra, outubro', j(r));
+confere('dados gerais da memória não mudam mais (ADR 042)', r.error?.message === 'memoria_travada', j(r));
 
 const f3 = await foto(exp, 'c.jpg');
 confere('fotos continuam entrando na memória', Boolean(f3?.id));
@@ -207,6 +207,46 @@ confere('excluir a foto limpa o favorito de Bia, sem substituta', vistas.find((v
 
 r = await aparelho().from('impressoes').select('texto');
 confere('sem sessão, nada', (r.data ?? []).length === 0, j(r));
+
+// --- Detalhes travados na memória (ADR 042) -------------------------------------------------------
+const travada = await vivendo('Show no parque');
+const linkAntes = (await ana.from('links').insert({ experiencia_id: travada.id, titulo: 'Ingressos', url: 'https://exemplo.test' }).select('id')).data[0];
+await ana.from('experiencias').update({ roteiro_ativo: true }).eq('id', travada.id);
+const itemAntes = (await ana.from('roteiro').insert({ experiencia_id: travada.id, dia: '2026-10-20', periodo: 'noite', texto: 'Show', ordem: 0 }).select('id')).data[0];
+const fTravada = await foto(travada, 't.jpg');
+r = await ana.rpc('finalizar_experiencia', { p_experiencia: travada.id, p_precisao: 'data', p_inicio: '2026-10-20' });
+confere('finalizar com data continua funcionando', r.data?.ok === true, j(r));
+
+r = await bia.from('experiencias').update({ titulo: 'Outro título' }).eq('id', travada.id).select('id');
+confere('na memória, o título não muda', r.error?.message === 'memoria_travada', j(r));
+r = await bia.from('experiencias').update({ referencia_inicio: '2026-10-21' }).eq('id', travada.id).select('id');
+confere('nem a data', r.error?.message === 'memoria_travada', j(r));
+r = await bia.from('experiencias').update({ roteiro_ativo: false }).eq('id', travada.id).select('id');
+confere('nem o roteiro desliga', r.error?.message === 'memoria_travada', j(r));
+r = await bia.from('experiencias').update({ foto_destaque_id: fTravada.id }).eq('id', travada.id).select('foto_destaque_id');
+confere('a foto de destaque continua livre', r.data?.[0]?.foto_destaque_id === fTravada.id, j(r));
+r = await bia.from('registros').update({ legenda: 'Que noite' }).eq('id', fTravada.id).select('legenda');
+confere('a legenda também', r.data?.[0]?.legenda === 'Que noite', j(r));
+
+r = await bia.from('links').insert({ experiencia_id: travada.id, titulo: 'Novo', url: 'https://exemplo.test/2' }).select('id');
+confere('nenhum link novo na memória', Boolean(r.error), j(r));
+r = await bia.from('links').update({ titulo: 'Mudou' }).eq('id', linkAntes.id).select('id');
+confere('nem edição de link', Boolean(r.error) || r.data?.length === 0, j(r));
+r = await bia.from('links').delete().eq('id', linkAntes.id).select('id');
+confere('nem exclusão de link', Boolean(r.error) || r.data?.length === 0, j(r));
+r = await bia.from('reservas').insert({ experiencia_id: travada.id, tipo: 'outro', nome: 'Mesa' }).select('id');
+confere('nenhuma reserva nova', Boolean(r.error), j(r));
+r = await bia.from('roteiro').update({ texto: 'Mudou' }).eq('id', itemAntes.id).select('id');
+confere('nem edição do roteiro', Boolean(r.error) || r.data?.length === 0, j(r));
+r = await bia.from('roteiro').delete().eq('id', itemAntes.id).select('id');
+confere('nem exclusão do roteiro', Boolean(r.error) || r.data?.length === 0, j(r));
+
+await ana.storage.from('experiencias').remove([fTravada.caminho]);
+r = await ana.from('experiencias').delete().eq('id', travada.id).select('id');
+confere('excluir a memória continua possível', r.data?.length === 1, j(r));
+r = await ana.from('links').select('id').eq('experiencia_id', travada.id);
+const r2 = await ana.from('roteiro').select('id').eq('experiencia_id', travada.id);
+confere('e leva links e roteiro junto', (r.data ?? []).length === 0 && (r2.data ?? []).length === 0, j(r) + j(r2));
 
 // Limpeza: arquivos antes das linhas.
 await ana.storage.from('experiencias').remove([f2.caminho, f3.caminho, fOutra.caminho]);
