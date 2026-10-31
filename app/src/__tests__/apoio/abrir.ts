@@ -3,14 +3,9 @@ import { act, renderRouter } from 'expo-router/testing-library';
 // Caminho relativo à pasta de onde o Jest roda (app/).
 const APP = 'src/app';
 
-/**
- * Abre o app real (as rotas de `src/app`) num endereço. No SDK 57 o `renderRouter` devolve a promessa
- * do `render` (RNTL 14) com `getPathname` pendurado nela; o resultado já resolvido não o tem,
- * por isso ele volta embrulhado.
- */
+/** Abre o app real (as rotas de `src/app`) num endereço. */
 export async function abrir(initialUrl: string) {
-  const tela = renderRouter(APP, { initialUrl });
-  await tela;
+  const tela = await renderRouter(APP, { initialUrl });
   await esperar();
   return { tela };
 }

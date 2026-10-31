@@ -57,7 +57,7 @@ describe('links na tela', () => {
   beforeEach(() => {
     reiniciarSessao();
     jest.resetAllMocks();
-    abrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    abrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     jest.mocked(categorias.listarCategorias).mockResolvedValue({ ok: true, categorias: [] });
     jest.mocked(experiencias.listarExperiencias).mockResolvedValue({
       ok: true,

@@ -132,7 +132,7 @@ describe('reservas na tela', () => {
   });
 
   it('num fim de semana, já ficam à vista; guardar uma reserva mostra o código e copia pela tela de compartilhar', async () => {
-    const compartilhar = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const compartilhar = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction', activityType: undefined });
     servico.criarReserva.mockResolvedValue({ ok: true, reserva: POUSADA });
     await abrirExperiencia('planejamento', 'fim_de_semana');
     expect(screen.queryByText('Mais para planejar')).toBeNull();

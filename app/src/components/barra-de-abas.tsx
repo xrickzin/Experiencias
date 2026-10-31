@@ -121,7 +121,7 @@ function travessia(a: Ponto, b: Ponto, abas: number): Trecho[] {
  * Com menos movimento pedido pelo sistema, o laço só muda de lugar. O toque fica contido no
  * espaço da aba.
  */
-export function BarraDeAbas({ state, descriptors, navigation, insets, centro, altura }: Props) {
+export function BarraDeAbas({ state, descriptors, emitter, navigateToTab, insets, centro, altura }: Props) {
   const theme = useTheme();
   const [largura, setLargura] = useState(0);
   const atual = state.routes[state.index].name;
@@ -183,8 +183,8 @@ export function BarraDeAbas({ state, descriptors, navigation, insets, centro, al
                 accessibilityLabel={rotulo}
                 accessibilityState={{ selected: selecionada }}
                 onPress={() => {
-                  const evento = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (!selecionada && !evento.defaultPrevented) navigation.navigate(route.name, route.params);
+                  const evento = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                  if (!selecionada && !evento.defaultPrevented) navigateToTab(route.key);
                 }}
                 style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pressed ? 0.6 : 1 })}>
                 <View style={{ marginTop: ICONE_Y - 12 }}>

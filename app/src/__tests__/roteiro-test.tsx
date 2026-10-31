@@ -322,7 +322,7 @@ describe('roteiro na tela', () => {
 
   it('marcar um link da experiência no item; o link aparece no item e abre', async () => {
     const INGRESSO: Link = { id: 'l1', titulo: 'Ingresso', url: 'https://museu.com', criadoEm: '2026-10-16T12:00:00Z' };
-    const abrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const abrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     servico.editarItem.mockResolvedValue({ ok: true, item: { ...TRILHA, links: ['l1'] } });
     await abrirExperiencia({ roteiroAtivo: true }, [CAFE, TRILHA], [INGRESSO]);
     await tocar('Roteiro', 'tab');
