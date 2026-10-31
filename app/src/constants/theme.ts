@@ -32,6 +32,11 @@ const claro = {
   scrim: 'rgba(43, 39, 36, 0.55)', // atrás de confirmações e folhas
   photoBackdrop: '#2B2724', // fundo da foto em tela cheia (escuro nos dois temas)
   onPhoto: '#FAF6EE', // ícones sobre a foto em tela cheia
+
+  // Papel do álbum: molduras, polaroides, cartas e bilhetes de Nossa História. Mais claro e mais
+  // quente que as superfícies, para a foto parecer um objeto colado, não um cartão da interface.
+  papel: '#FFFCF5',
+  papelBorda: '#E2D6C1',
 };
 
 /**
@@ -60,6 +65,11 @@ const escuro: Record<keyof typeof claro, string> = {
   scrim: 'rgba(0, 0, 0, 0.6)',
   photoBackdrop: '#12100E',
   onPhoto: '#F3EDE2',
+
+  // No escuro, um papel creme apagado, destacado do fundo (1,6:1). Sobre ele: texto 9,3:1,
+  // secundário 4,9:1, fio forte 4,5:1.
+  papel: '#463B31',
+  papelBorda: '#5C4F43',
 };
 
 export const Colors = { light: claro, dark: escuro };

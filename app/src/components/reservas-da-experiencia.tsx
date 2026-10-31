@@ -29,7 +29,14 @@ const ROTULO_DO_TIPO = Object.fromEntries(TIPOS_DE_RESERVA.map((t) => [t.valor, 
  * Reservas da experiência (ADR 038, etapa 3): o código fica à vista, com um atalho para copiar.
  * Salvam na hora, à parte do "Salvar" do formulário. Os dois podem.
  */
-export function ReservasDaExperiencia({ reservas: lista }: { reservas: ReturnType<typeof useReservas> }) {
+export function ReservasDaExperiencia({
+  reservas: lista,
+  somenteLeitura = false,
+}: {
+  reservas: ReturnType<typeof useReservas>;
+  /** Na memória: só ver, copiar e abrir (ADR 042). */
+  somenteLeitura?: boolean;
+}) {
   const theme = useTheme();
   const { reservas, erro, criar, editar, excluir } = lista;
   const [editando, setEditando] = useState<Reserva | 'nova' | null>(null);
@@ -90,7 +97,7 @@ export function ReservasDaExperiencia({ reservas: lista }: { reservas: ReturnTyp
                     <Acao rotulo="Copiar código" acessivel={`Copiar o código de ${r.nome}`} onPress={() => void copiar(r.codigo!)} />
                   ) : null}
                   {r.url ? <Acao rotulo="Abrir link ↗" acessivel={`Abrir o link de ${r.nome}`} onPress={() => void abrir(r.url!)} /> : null}
-                  <Acao rotulo="Editar" acessivel={`Editar a reserva ${r.nome}`} onPress={() => setEditando(r)} />
+                  {somenteLeitura ? null : <Acao rotulo="Editar" acessivel={`Editar a reserva ${r.nome}`} onPress={() => setEditando(r)} />}
                 </View>
               </View>
             );
@@ -99,7 +106,7 @@ export function ReservasDaExperiencia({ reservas: lista }: { reservas: ReturnTyp
       )}
       {erro ? <MensagemErro>{erro}</MensagemErro> : null}
       {erroDeAcao ? <MensagemErro>{erroDeAcao}</MensagemErro> : null}
-      <Button label="Adicionar reserva" variant="secondary" onPress={() => setEditando('nova')} />
+      {somenteLeitura ? null : <Button label="Adicionar reserva" variant="secondary" onPress={() => setEditando('nova')} />}
 
       {editando ? (
         <EditorDeReserva

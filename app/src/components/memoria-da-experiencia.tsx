@@ -1,13 +1,16 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
+import { FotoEmTelaCheia } from '@/components/foto-em-tela-cheia';
+import { Moldura } from '@/components/moldura';
+import { Retrato } from '@/components/retrato';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { FontFamily, Radius, Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useImpressoes } from '@/hooks/use-impressoes';
 import { useSessao } from '@/hooks/use-sessao';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,8 +26,8 @@ type Props = {
 };
 
 /**
- * A memória (screens.md, "Detalhe de uma memória"): nossos momentos e o que ficou para nós. A foto de
- * destaque, o título e quando foi ficam no topo da tela, comuns às três abas.
+ * A memória (screens.md, "Detalhe de uma memória"): os favoritos como polaroides e as impressões como
+ * cartas. A foto de destaque, o título e quando foi ficam no topo da tela, comuns às três abas.
  * O que é da outra pessoa só aparece se o servidor mandar (regra de privacidade no banco).
  */
 export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada = false }: Props) {
@@ -32,6 +35,7 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
   const { perfil } = useSessao();
   const { minha, daOutra, registrei, salvar } = impressoes;
   const outra = perfil?.companheiro_vinculado ? (perfil.companheiro_nome ?? 'A outra pessoa') : null;
+  const eu = perfil?.nome ?? 'Você';
 
   const [escrevendo, setEscrevendo] = useState(recemFinalizada);
   const [texto, setTexto] = useState('');
@@ -70,7 +74,7 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
   }
 
   return (
-    <View style={{ gap: Spacing.four }}>
+    <View style={{ gap: Spacing.five }}>
       {recemFinalizada ? (
         <View style={{ alignItems: 'center', gap: Spacing.two }} accessibilityLiveRegion="polite">
           <View style={{ width: 48, height: 2, backgroundColor: theme.accent }} />
@@ -80,89 +84,104 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
         </View>
       ) : null}
 
-      {/* A linha das abas já separa: a primeira seção não leva filete próprio. */}
-      <Secao titulo="Nossos momentos" filete={false}>
-        <Favorito rotulo="Meu momento favorito" caminho={minha?.momentoFavorito?.caminho ?? null}>
-          Você ainda não escolheu. Abra uma foto na aba Momentos para escolher.
-        </Favorito>
-        {outra ? (
-          registrei ? (
-            <Favorito rotulo={`Momento favorito de ${outra}`} caminho={daOutra?.momentoFavorito?.caminho ?? null}>
-              {outra} ainda não escolheu um momento favorito.
-            </Favorito>
-          ) : (
-            // Sempre o mesmo texto e a mesma altura: não revela se a outra pessoa já escreveu.
-            <View
-              style={{
-                padding: Spacing.three,
-                borderRadius: Radius.field,
-                borderWidth: 1,
-                borderColor: theme.border,
-                backgroundColor: theme.backgroundElement,
-              }}>
-              <ThemedText themeColor="textSecondary">
-                A impressão e o momento favorito de {outra} serão revelados quando você registrar a sua impressão.
-              </ThemedText>
-            </View>
-          )
+      {/* Os favoritos como polaroides coladas na página, uma de cada pessoa. */}
+      <View style={{ gap: Spacing.three }}>
+        <Titulo>Nossos momentos</Titulo>
+        <View style={{ flexDirection: 'row', gap: Spacing.three, justifyContent: 'center' }}>
+          <Polaroide rotulo="Meu momento favorito" legenda={eu} caminho={minha?.momentoFavorito?.caminho ?? null} inclinacao={-2}>
+            Você ainda não escolheu. Abra uma foto na aba Momentos para escolher.
+          </Polaroide>
+          {outra ? (
+            registrei ? (
+              <Polaroide
+                rotulo={`Momento favorito de ${outra}`}
+                legenda={outra}
+                caminho={daOutra?.momentoFavorito?.caminho ?? null}
+                inclinacao={2}>
+                {outra} ainda não escolheu um momento favorito.
+              </Polaroide>
+            ) : (
+              // Sempre a mesma moldura fechada: não revela se a outra pessoa já escolheu.
+              <Polaroide rotulo={`Momento favorito de ${outra}`} legenda={outra} caminho={null} inclinacao={2} guardado />
+            )
+          ) : null}
+        </View>
+        {outra && !registrei ? (
+          <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
+            A impressão e o momento favorito de {outra} serão revelados quando você registrar a sua impressão.
+          </ThemedText>
         ) : null}
-      </Secao>
+      </View>
 
-      <Secao titulo="O que ficou para nós">
-        <ThemedText type="smallBold">Minha impressão</ThemedText>
-        {escrevendo ? (
-          <View style={{ gap: Spacing.two }}>
-            <TextField
-              label="Como foi essa experiência para você?"
-              placeholder="O que você vai querer lembrar daqui a alguns anos?"
-              value={texto}
-              onChangeText={(t) => {
-                setTexto(t);
-                setErro(undefined);
-              }}
-              error={erro}
-              maxLength={LIMITE_DA_IMPRESSAO}
-              multiline
-            />
-            <Button label="Guardar minha impressão" loading={salvando} onPress={guardar} />
-            <Button
-              label={registrei ? 'Cancelar' : 'Escrever depois'}
-              variant="text"
-              disabled={salvando}
-              onPress={() => setEscrevendo(false)}
-            />
-          </View>
-        ) : registrei ? (
-          <View style={{ gap: Spacing.two }}>
-            <Voz>{minha?.texto}</Voz>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}>
-              <Button label="Editar minha impressão" variant="secondary" onPress={abrirEscrita} />
-              <Button
-                label="Apagar minha impressão"
-                variant="destructive"
-                onPress={() => {
-                  setErroApagar(undefined);
-                  setConfirmandoApagar(true);
+      {/* As impressões como cartas: a minha e, revelada, a da outra pessoa. */}
+      <View style={{ gap: Spacing.three }}>
+        <Titulo>O que ficou para nós</Titulo>
+        <Carta
+          assinatura={registrei && !escrevendo ? eu : null}
+          autorId={perfil?.membro_id}
+          acessivel="Minha impressão"
+          acao={
+            registrei && !escrevendo ? (
+              <Button label="Editar" accessibilityLabel="Editar minha impressão" variant="text" onPress={abrirEscrita} />
+            ) : null
+          }>
+          {escrevendo ? (
+            <View style={{ gap: Spacing.two }}>
+              <TextField
+                label="Como foi essa experiência para você?"
+                placeholder="O que você vai querer lembrar daqui a alguns anos?"
+                value={texto}
+                onChangeText={(t) => {
+                  setTexto(t);
+                  setErro(undefined);
                 }}
+                error={erro}
+                maxLength={LIMITE_DA_IMPRESSAO}
+                multiline
               />
+              <Button label="Guardar minha impressão" loading={salvando} onPress={guardar} />
+              <Button
+                label={registrei ? 'Cancelar' : 'Escrever depois'}
+                variant="text"
+                disabled={salvando}
+                onPress={() => setEscrevendo(false)}
+              />
+              {/* Apagar mora dentro da edição, longe do toque de todo dia. */}
+              {registrei ? (
+                <Button
+                  label="Apagar minha impressão"
+                  variant="destructive"
+                  disabled={salvando}
+                  onPress={() => {
+                    setErroApagar(undefined);
+                    setConfirmandoApagar(true);
+                  }}
+                />
+              ) : null}
             </View>
-          </View>
-        ) : (
-          <Button label="Escrever minha impressão" variant="secondary" onPress={abrirEscrita} />
-        )}
+          ) : registrei ? (
+            <Voz>{minha?.texto}</Voz>
+          ) : (
+            <>
+              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+                O que você vai querer lembrar daqui a alguns anos?
+              </ThemedText>
+              <Button label="Escrever minha impressão" variant="secondary" onPress={abrirEscrita} />
+            </>
+          )}
+        </Carta>
 
         {outra && registrei ? (
-          <View style={{ gap: Spacing.two, marginTop: Spacing.three }}>
-            <ThemedText type="smallBold">Impressão de {outra}</ThemedText>
+          <Carta assinatura={daOutra?.texto ? outra : null} autorId={daOutra?.membroId} acessivel={`Impressão de ${outra}`}>
             {daOutra?.texto ? (
               <Voz>{daOutra.texto}</Voz>
             ) : (
               <ThemedText themeColor="textSecondary">{outra} ainda não registrou a impressão.</ThemedText>
             )}
-          </View>
+          </Carta>
         ) : null}
         {impressoes.erro ? <MensagemErro>{impressoes.erro}</MensagemErro> : null}
-      </Secao>
+      </View>
 
       <Confirmacao
         visible={confirmandoApagar}
@@ -183,51 +202,142 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
   );
 }
 
-function Secao({ titulo, filete = true, children }: { titulo: string; filete?: boolean; children: React.ReactNode }) {
+function Titulo({ children }: { children: string }) {
+  return (
+    <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
+      {children}
+    </ThemedText>
+  );
+}
+
+/** Texto de impressão na "voz" (Fraunces itálico, screens.md). As aspas já estão na carta. */
+function Voz({ children }: { children: React.ReactNode }) {
+  return <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 18, lineHeight: 28 }}>{children}</ThemedText>;
+}
+
+/**
+ * Uma carta em papel: as aspas no fio abrem, a impressão em itálico e, no pé, a assinatura de quem
+ * escreveu. O título invisível diz de quem é para o leitor de tela.
+ */
+function Carta({
+  assinatura,
+  autorId,
+  acessivel,
+  acao,
+  children,
+}: {
+  assinatura: string | null;
+  /** Para o retrato ao lado da assinatura (ADR 043). */
+  autorId?: string;
+  acessivel: string;
+  /** Discreta, no pé, do lado oposto à assinatura (editar a própria). */
+  acao?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const theme = useTheme();
   return (
     <View
       style={{
+        padding: Spacing.four,
+        paddingTop: Spacing.two,
+        paddingBottom: Spacing.two,
         gap: Spacing.two,
-        borderTopWidth: filete ? 1 : 0,
-        borderTopColor: theme.border,
-        paddingTop: filete ? Spacing.three : 0,
+        borderRadius: 2,
+        borderWidth: 1,
+        borderColor: theme.papelBorda,
+        backgroundColor: theme.papel,
       }}>
-      <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
-        {titulo}
+      <ThemedText accessibilityRole="header" style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}>
+        {acessivel}
+      </ThemedText>
+      <ThemedText
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+        style={{ fontFamily: FontFamily.display, fontSize: 48, lineHeight: 52, color: theme.accent, marginBottom: -Spacing.three }}>
+        “
       </ThemedText>
       {children}
+      {assinatura || acao ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 }}>
+          <View>{acao}</View>
+          {assinatura ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+              <Retrato membroId={autorId} tamanho={24} />
+              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 16 }}>
+                — {assinatura}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
 
-/** Texto de impressão na "voz" (Fraunces itálico, screens.md). */
-function Voz({ children }: { children: React.ReactNode }) {
-  return <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 18, lineHeight: 28 }}>“{children}”</ThemedText>;
-}
+type PolaroideProps = {
+  /** Para o leitor de tela: de quem é o favorito. */
+  rotulo: string;
+  /** Escrito no pé da polaroide: o nome de quem escolheu. */
+  legenda: string;
+  caminho: string | null;
+  /** Graus: as duas fotos ficam levemente tortas, como coladas à mão. */
+  inclinacao: number;
+  /** A moldura fechada da outra pessoa, antes da revelação. */
+  guardado?: boolean;
+  /** Sem foto escolhida: o que dizer embaixo da moldura. */
+  children?: React.ReactNode;
+};
 
-function Favorito({ rotulo, caminho, children }: { rotulo: string; caminho: string | null; children: React.ReactNode }) {
+function Polaroide({ rotulo, legenda, caminho, inclinacao, guardado = false, children }: PolaroideProps) {
   const theme = useTheme();
   const url = useUrlAssinada(caminho);
+  const [aberta, setAberta] = useState(false);
   return (
-    <View style={{ gap: Spacing.one }}>
-      <ThemedText type="smallBold">{rotulo}</ThemedText>
-      {caminho ? (
-        <View
-          style={{
-            width: 120,
-            aspectRatio: 1,
-            borderRadius: Radius.photo,
-            overflow: 'hidden',
-            backgroundColor: theme.backgroundElement,
-          }}>
-          {url ? (
-            <Image source={{ uri: url, cacheKey: `capa:${caminho}` }} contentFit="cover" style={{ flex: 1 }} accessibilityLabel={rotulo} />
-          ) : null}
-        </View>
-      ) : (
-        <ThemedText themeColor="textSecondary">{children}</ThemedText>
-      )}
+    <View style={{ flex: 1, maxWidth: 200, gap: Spacing.two }}>
+      <Pressable
+        accessible
+        accessibilityRole={caminho ? 'imagebutton' : undefined}
+        accessibilityLabel={caminho ? rotulo : `${rotulo}: ainda não escolhido`}
+        accessibilityHint={caminho ? 'Abre a foto na tela inteira.' : undefined}
+        disabled={!url}
+        onPress={() => setAberta(true)}
+        // Apertar afunda a foto de leve, como quem pega no papel.
+        style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+        <Moldura tamanho="pequena" inclinacao={inclinacao} style={{ gap: Spacing.two, paddingBottom: Spacing.three }}>
+          <View
+            style={{
+              width: '100%',
+              aspectRatio: 1,
+              overflow: 'hidden',
+              backgroundColor: theme.backgroundSelected,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            {url ? (
+              <Image
+                source={{ uri: url, cacheKey: `capa:${caminho}` }}
+                contentFit="cover"
+                style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+                accessible={false}
+              />
+            ) : caminho ? null : (
+              // Sem foto (ou ainda guardada): o fio no lugar, nunca vazio.
+              <View style={{ width: guardado ? 24 : 48, height: 2, backgroundColor: theme.accent }} />
+            )}
+          </View>
+          <ThemedText
+            numberOfLines={1}
+            style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17, lineHeight: 22, textAlign: 'center' }}>
+            {legenda}
+          </ThemedText>
+        </Moldura>
+      </Pressable>
+      {aberta && caminho ? <FotoEmTelaCheia url={url} cacheKey={`capa:${caminho}`} onFechar={() => setAberta(false)} /> : null}
+      {!caminho && children ? (
+        <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
+          {children}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }

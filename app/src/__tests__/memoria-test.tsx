@@ -45,6 +45,7 @@ const foto = (id: string): Foto => ({
   autorId: 'm1',
   capturadaEm: '2026-10-12T15:00:00Z',
   legenda: null,
+  legendaAutorId: null,
   criadoEm: '2026-10-12T15:00:00Z',
 });
 const impressao = (membroId: string, texto: string | null, favorito: string | null = null): Impressao => ({
@@ -243,10 +244,10 @@ describe('a memória e a privacidade', () => {
     await abrirMemoria([impressao('m1', 'Quero lembrar do silêncio.'), impressao('m2', 'Sem pressa.', 'b')]);
 
     expect(screen.queryByText(AVISO)).toBeNull();
-    expect(screen.getByText('“Quero lembrar do silêncio.”')).toBeTruthy();
+    expect(screen.getByText('Quero lembrar do silêncio.')).toBeTruthy();
     expect(screen.getByText('Impressão de Bia')).toBeTruthy();
-    expect(screen.getByText('“Sem pressa.”')).toBeTruthy();
-    expect(screen.getByText('Momento favorito de Bia')).toBeTruthy();
+    expect(screen.getByText('Sem pressa.')).toBeTruthy();
+    expect(screen.getByLabelText(/^Momento favorito de Bia/)).toBeTruthy();
     expect(screen.getByText('Você ainda não escolheu. Abra uma foto na aba Momentos para escolher.')).toBeTruthy();
   });
 
@@ -269,12 +270,14 @@ describe('a memória e a privacidade', () => {
     await tocar('Guardar minha impressão');
 
     expect(imp.salvarImpressao).toHaveBeenCalledWith('1', 'Foi bom.');
-    expect(await screen.findByText('“Sem pressa.”')).toBeTruthy();
+    expect(await screen.findByText('Sem pressa.')).toBeTruthy();
   });
 
   it('apagar a própria impressão confirma e explica o efeito', async () => {
     imp.salvarImpressao.mockResolvedValue({ ok: true });
     await abrirMemoria([impressao('m1', 'Foi bom.'), impressao('m2', 'Sem pressa.')]);
+    // Apagar fica dentro da edição.
+    await tocar('Editar minha impressão');
     await tocar('Apagar minha impressão');
 
     expect(
@@ -299,12 +302,16 @@ describe('a memória e a privacidade', () => {
     expect(screen.queryByText(AVISO)).toBeNull();
   });
 
-  it('memória não volta de estado e pode ser excluída', async () => {
+  it('memória não volta de estado, não edita os detalhes e pode ser excluída', async () => {
     await abrirMemoria([]);
     await aba('Detalhes');
     expect(screen.queryByRole('button', { name: /Voltar para|Começar/ })).toBeNull();
     expect(screen.queryByRole('radio', { name: 'Sem data' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Excluir memória' })).toBeTruthy();
+    // Os detalhes ficam só para ver (ADR 042).
+    expect(screen.queryByLabelText('Título')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Adicionar link' })).toBeNull();
   });
 });
 
@@ -414,7 +421,7 @@ describe('momentos: observações e momento favorito', () => {
     expect(screen.queryByRole('button', { name: /momento favorito/ })).toBeNull();
   });
 
-  it('em Vivendo guardar vem antes das fotos; na memória, as fotos vêm antes das ações', async () => {
+  it('em Vivendo guardar vem antes das fotos; na memória, acrescentar fica num "+" no topo', async () => {
     svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
     // Posição no texto da tela: o que aparece primeiro tem índice menor.
     const ordem = () => {
@@ -432,7 +439,14 @@ describe('momentos: observações e momento favorito', () => {
     await screen.findByText('12 de outubro de 2026');
     await aba('Momentos');
     await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ });
-    expect(ordem().foto).toBeLessThan(ordem().camera);
+    // A câmera mora na escolha do "+", que fica acima das fotos.
+    expect(ordem().camera).toBe(-1);
+    const tela = JSON.stringify(screen.toJSON());
+    expect(tela.indexOf('+ Acrescentar à memória')).toBeLessThan(tela.indexOf('Foto 1 de 1'));
+    await tocar('+ Acrescentar à memória');
+    expect(screen.getByRole('button', { name: 'Tirar foto' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Escolher da galeria' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Escrever observação do momento' })).toBeTruthy();
   });
 
   it('na memória, escolher a foto como meu momento favorito', async () => {
@@ -447,10 +461,14 @@ describe('momentos: observações e momento favorito', () => {
     });
 
     imp.listarImpressoes.mockResolvedValue({ ok: true, impressoes: [impressao('m1', null, 'a')] });
-    await tocar('Escolher como meu momento favorito');
+    await tocar('Ações da foto');
+    await tocar('Escolher como meu favorito');
 
     expect(imp.escolherMomentoFavorito).toHaveBeenCalledWith('1', 'a');
-    expect(screen.getByRole('button', { name: 'Deixar de ser meu momento favorito' })).toBeTruthy();
+    expect(screen.getByText('seu momento favorito')).toBeTruthy();
+    await tocar('Ações da foto');
+    expect(screen.getByRole('button', { name: 'Deixar de ser meu favorito' })).toBeTruthy();
+    await tocar('Cancelar');
     await tocar('Fechar');
     expect(screen.getByRole('imagebutton', { name: /seu momento favorito$/ })).toBeTruthy();
   });
@@ -487,7 +505,7 @@ describe('Nossa História', () => {
     await abrir('/nossa-historia');
     await screen.findByText('Com foto');
 
-    expect(screen.getAllByRole('header').map((h) => h.props.children)).toEqual(
+    expect(screen.getAllByRole('header').map((h) => h.props.accessibilityLabel ?? h.props.children)).toEqual(
       expect.arrayContaining(['Outubro de 2026', 'Setembro de 2026'])
     );
     expect(screen.getByText('Em algum dia de outubro')).toBeTruthy();

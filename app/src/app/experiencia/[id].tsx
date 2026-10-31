@@ -1,26 +1,29 @@
 import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import { AccessibilityInfo, Modal, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 import { Abas } from '@/components/abas';
 import { Button } from '@/components/button';
 import { CartaoDoOrcamento, CartaoDoRoteiro } from '@/components/cartoes-de-recurso';
-import { CamposDaExperiencia, duracaoDe, valoresDe, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
+import { CamposDaExperiencia, DetalhesDaMemoria, duracaoDe, valoresDe, type ValoresDaExperiencia } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
 import { FolhaDeEdicao } from '@/components/folha-de-edicao';
+import { GuiasDeslizantes } from '@/components/guias-deslizantes';
 import { MarcoDoLaco, type Marco } from '@/components/marco-do-laco';
 import { MemoriaDaExperiencia } from '@/components/memoria-da-experiencia';
 import { MensagemErro } from '@/components/mensagem-erro';
+import { Moldura } from '@/components/moldura';
 import { MomentosDaExperiencia } from '@/components/momentos-da-experiencia';
 import { OrcamentoDaExperiencia } from '@/components/orcamento-da-experiencia';
 import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { RoteiroDaExperiencia } from '@/components/roteiro-da-experiencia';
 import { Screen } from '@/components/screen';
 import { SecoesDePlanejamento } from '@/components/secoes-de-planejamento';
-import { ScreenHeader, voltar } from '@/components/screen-header';
+import { IconButton, ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { useImpressoes } from '@/hooks/use-impressoes';
 import { useRoteiro } from '@/hooks/use-roteiro';
@@ -125,7 +128,6 @@ type FormularioProps = {
 };
 
 function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: FormularioProps) {
-  const theme = useTheme();
   const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar, definirRoteiro, definirOrcamentoAtivo } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(() => valoresDe(experiencia));
   const [erroTitulo, setErroTitulo] = useState<string>();
@@ -160,13 +162,18 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   const abas = [...ABAS[estado].slice(0, posicaoDosRecursos), ...recursos, ...ABAS[estado].slice(posicaoDosRecursos)];
   const textos = POR_ESTADO[estado];
   const destaque = useUrlAssinada(memoria ? (experiencia.fotoDestaque?.caminho ?? null) : null);
-  const ondeEQuando = [descreverReferencia(experiencia.referencia), experiencia.local].filter(Boolean).join(' · ');
+  // O local some quando repete o título ("Campos do Jordão" em Campos do Jordão).
+  const localDiferente = experiencia.local && experiencia.local.trim().toLowerCase() !== experiencia.titulo.trim().toLowerCase() ? experiencia.local : null;
+  const ondeEQuando = [descreverReferencia(experiencia.referencia), localDiferente].filter(Boolean).join(' · ');
   const impressoes = useImpressoes(experiencia.id);
   const carregarImpressoes = impressoes.carregar;
   // O que importa em cada momento: a memória; vivendo, os momentos; planejando, os detalhes.
   const [abaEscolhida, setAba] = useState<Aba>(memoria ? 'memoria' : estado === 'vivendo' ? 'momentos' : 'detalhes');
   // O roteiro foi desligado (aqui ou pela outra pessoa) com a guia aberta: volta para a principal.
   const aba = abas.some((a) => a.valor === abaEscolhida) ? abaEscolhida : abas[0].valor;
+  // As páginas das guias e o laço andam juntos por este valor (o dedo ou o toque o movem).
+  const indiceDaAba = abas.findIndex((a) => a.valor === aba);
+  const progresso = useSharedValue(indiceDaAba);
   // Os cards do roteiro e do orçamento: qual está mudando, o erro de cada um e qual pede confirmação.
   const [confirmandoDesligar, setConfirmandoDesligar] = useState<Recurso | null>(null);
   const [mudandoRecurso, setMudandoRecurso] = useState<Recurso | null>(null);
@@ -187,7 +194,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
 
   async function salvar() {
     const tituloInvalido = validarTituloDoDesejo(valores.titulo);
-    const referencia = (memoria ? lerReferenciaDaMemoria : lerReferencia)(valores.referencia);
+    const referencia = lerReferencia(valores.referencia);
     setErroTitulo(tituloInvalido);
     setErroReferencia(referencia.ok ? undefined : referencia.erro);
     if (tituloInvalido || !referencia.ok) return;
@@ -349,28 +356,32 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
         {erroTransicao && estado !== 'vivendo' ? <MensagemErro>{erroTransicao}</MensagemErro> : null}
       </View>
 
-      <View style={{ gap: Spacing.three }}>
-        <CamposDaExperiencia
-          valores={valores}
-          exigirData={memoria}
-          erroTitulo={erroTitulo}
-          erroReferencia={erroReferencia}
-          onChange={(novos) => {
-            setValores(novos);
-            setErroTitulo(undefined);
-            setErroReferencia(undefined);
-            setSalvo(false);
-            setErroGeral(undefined);
-          }}
-        />
-        {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
-        {salvo ? (
-          <ThemedText type="small" accessibilityLiveRegion="polite">
-            Salvo.
-          </ThemedText>
-        ) : null}
-        <Button label="Salvar" loading={enviando} disabled={excluindo || mudando} onPress={salvar} />
-      </View>
+      {/* Na memória, os detalhes são só para ver (ADR 042). */}
+      {memoria ? (
+        <DetalhesDaMemoria experiencia={experiencia} />
+      ) : (
+        <View style={{ gap: Spacing.three }}>
+          <CamposDaExperiencia
+            valores={valores}
+            erroTitulo={erroTitulo}
+            erroReferencia={erroReferencia}
+            onChange={(novos) => {
+              setValores(novos);
+              setErroTitulo(undefined);
+              setErroReferencia(undefined);
+              setSalvo(false);
+              setErroGeral(undefined);
+            }}
+          />
+          {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
+          {salvo ? (
+            <ThemedText type="small" accessibilityLiveRegion="polite">
+              Salvo.
+            </ThemedText>
+          ) : null}
+          <Button label="Salvar" loading={enviando} disabled={excluindo || mudando} onPress={salvar} />
+        </View>
+      )}
 
       <View style={{ marginTop: Spacing.five }}>
         <SecoesDePlanejamento experiencia={experiencia} />
@@ -417,74 +428,63 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <ScreenHeader
-        eyebrow={textos.eyebrow}
-        title={experiencia.titulo}
-        description={memoria ? ondeEQuando || textos.frase : textos.frase}
-        onBack={voltar}
-      />
-
-      {/* Na memória, a foto de destaque assume (screens.md) e acompanha as três abas. */}
-      {memoria && experiencia.fotoDestaque ? (
-        <View
-          style={{
-            width: '100%',
-            aspectRatio: 4 / 3,
-            borderRadius: Radius.photo,
-            overflow: 'hidden',
-            backgroundColor: theme.backgroundSelected,
-            marginTop: -Spacing.two,
-            marginBottom: Spacing.four,
-          }}>
-          {destaque ? (
-            <Image
-              source={{ uri: destaque, cacheKey: `capa:${experiencia.fotoDestaque?.caminho}` }}
-              contentFit="cover"
-              style={{ flex: 1 }}
-              transition={200}
-              accessibilityLabel={`Foto de destaque de ${experiencia.titulo}`}
-            />
-          ) : null}
-        </View>
-      ) : null}
+      {memoria ? (
+        <CapaDaMemoria
+          titulo={experiencia.titulo}
+          ondeEQuando={ondeEQuando}
+          caminho={experiencia.fotoDestaque?.caminho ?? null}
+          url={destaque}
+        />
+      ) : (
+        <ScreenHeader eyebrow={textos.eyebrow} title={experiencia.titulo} description={textos.frase} onBack={voltar} />
+      )}
 
       {/* Registros existem a partir de Planejamento (memory.md); em Desejo, só há abas com o roteiro ligado. */}
       {abas.length > 1 ? (
         <>
-          <Abas<Aba> abas={abas} atual={aba} onChange={setAba} />
-          {aba === 'memoria' ? (
-            <MemoriaDaExperiencia experiencia={experiencia} impressoes={impressoes} recemFinalizada={recemFinalizada} />
-          ) : aba === 'roteiro' ? (
-            <RoteiroDaExperiencia experiencia={experiencia} roteiro={roteiro} />
-          ) : aba === 'orcamento' ? (
-            <OrcamentoDaExperiencia experiencia={experiencia} />
-          ) : aba === 'momentos' ? (
-            <MomentosDaExperiencia
-              experiencia={experiencia}
-              finalizar={
-                estado === 'vivendo'
-                  ? {
-                      disabled: ocupado,
-                      onPress: () => {
-                        setErroFinal(undefined);
-                        setConfirmandoFinal(true);
-                      },
+          <Abas<Aba> abas={abas} atual={aba} onChange={setAba} progresso={progresso} />
+          <GuiasDeslizantes
+            indice={indiceDaAba}
+            onIndice={(i) => setAba(abas[i].valor)}
+            progresso={progresso}
+            paginas={abas.map(({ valor }) => (
+              <Fragment key={valor}>
+                {valor === 'memoria' ? (
+                  <MemoriaDaExperiencia experiencia={experiencia} impressoes={impressoes} recemFinalizada={recemFinalizada} />
+                ) : valor === 'roteiro' ? (
+                  <RoteiroDaExperiencia experiencia={experiencia} roteiro={roteiro} />
+                ) : valor === 'orcamento' ? (
+                  <OrcamentoDaExperiencia experiencia={experiencia} />
+                ) : valor === 'momentos' ? (
+                  <MomentosDaExperiencia
+                    experiencia={experiencia}
+                    finalizar={
+                      estado === 'vivendo'
+                        ? {
+                            disabled: ocupado,
+                            onPress: () => {
+                              setErroFinal(undefined);
+                              setConfirmandoFinal(true);
+                            },
+                          }
+                        : undefined
                     }
-                  : undefined
-              }
-              favorito={
-                memoria
-                  ? {
-                      fotoId: impressoes.minha?.momentoFavorito?.id ?? null,
-                      escolher: impressoes.escolherFavorito,
-                      recarregar: () => void carregarImpressoes(),
+                    favorito={
+                      memoria
+                        ? {
+                            fotoId: impressoes.minha?.momentoFavorito?.id ?? null,
+                            escolher: impressoes.escolherFavorito,
+                            recarregar: () => void carregarImpressoes(),
+                          }
+                        : undefined
                     }
-                  : undefined
-              }
-            />
-          ) : (
-            detalhes
-          )}
+                  />
+                ) : (
+                  detalhes
+                )}
+              </Fragment>
+            ))}
+          />
         </>
       ) : (
         detalhes
@@ -573,5 +573,52 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
         onCancel={() => setConfirmandoExclusao(false)}
       />
     </Screen>
+  );
+}
+
+type CapaProps = { titulo: string; ondeEQuando: string; caminho: string | null; url: string | null };
+
+/**
+ * A capa da memória, como a de um álbum: a foto de destaque na moldura de papel e, escritos no
+ * rodapé, o título e quando foi. Baixa o bastante para as polaroides e as guias aparecerem logo.
+ * Sem destaque, a moldura guarda só o título.
+ */
+function CapaDaMemoria({ titulo, ondeEQuando, caminho, url }: CapaProps) {
+  const theme = useTheme();
+  return (
+    <View style={{ gap: Spacing.two, marginBottom: Spacing.four }}>
+      <IconButton icon="voltar" label="Voltar" edge="left" onPress={voltar} />
+      <Moldura>
+        {caminho ? (
+          <View style={{ width: '100%', aspectRatio: 3 / 2, overflow: 'hidden', backgroundColor: theme.backgroundSelected }}>
+            {url ? (
+              <Image
+                source={{ uri: url, cacheKey: `capa:${caminho}` }}
+                contentFit="cover"
+                style={{ flex: 1 }}
+                transition={200}
+                accessibilityLabel={`Foto de destaque de ${titulo}`}
+              />
+            ) : null}
+          </View>
+        ) : null}
+        <View style={{ alignItems: 'center', gap: Spacing.half, paddingTop: Spacing.three, paddingBottom: Spacing.one }}>
+          <ThemedText
+            accessibilityRole="header"
+            style={{ fontFamily: FontFamily.display, fontSize: 28, lineHeight: 36, textAlign: 'center' }}>
+            {titulo}
+          </ThemedText>
+          {ondeEQuando ? (
+            // Largura toda: centrado pelo próprio bloco, o Android media o itálico como texto reto e
+            // cortava a última palavra.
+            <ThemedText
+              themeColor="textSecondary"
+              style={{ alignSelf: 'stretch', fontFamily: FontFamily.display, fontStyle: 'italic', textAlign: 'center' }}>
+              {ondeEQuando}
+            </ThemedText>
+          ) : null}
+        </View>
+      </Moldura>
+    </View>
   );
 }

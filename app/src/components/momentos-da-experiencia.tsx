@@ -1,19 +1,23 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Confirmacao } from '@/components/confirmacao';
 import { FolhaDeEdicao } from '@/components/folha-de-edicao';
+import { FolhaDeEscolha } from '@/components/folha-de-escolha';
 import { FotoEmTelaCheia } from '@/components/foto-em-tela-cheia';
+import { Icone } from '@/components/icone';
+import { Moldura } from '@/components/moldura';
+import { Retrato } from '@/components/retrato';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Opcoes } from '@/components/opcoes';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { useFotos } from '@/hooks/use-fotos';
 import { useObservacoes } from '@/hooks/use-observacoes';
@@ -43,6 +47,8 @@ import { lerData, mascararData } from '@/services/referencia-temporal';
 // volta só para o aparelho ler quando a foto foi tirada; ele não é enviado ao servidor.
 const OPCOES = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.85, base64: true, exif: true };
 const LIMITE_DA_GALERIA = 10;
+// As primeiras miniaturas da tela (as mais recentes) passam na frente das outras ao carregar.
+const MINIATURAS_PRIMEIRO = 12;
 
 /**
  * Quando cada foto foi tirada: o EXIF quando vem; da galeria do Android, a data da própria galeria
@@ -91,10 +97,18 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
   const theme = useTheme();
   const { perfil } = useSessao();
   const { fotos, carregando, erro, envio, carregar, enviar, excluir, legendar, datar } = useFotos(experiencia.id);
-  const insets = useSafeAreaInsets();
   const observacoes = useObservacoes(experiencia.id);
   const [erroDaAcao, setErroDaAcao] = useState<string>();
-  const [aberta, setAberta] = useState<Foto | null>(null);
+  const [abertaId, setAbertaId] = useState<string | null>(null);
+  const aberta = fotos.find((f) => f.id === abertaId) ?? null;
+  // As ações da foto aberta (destaque, favorito, salvar, compartilhar, excluir) e o "+" da memória.
+  const [acoesAbertas, setAcoesAbertas] = useState(false);
+  const [acrescentando, setAcrescentando] = useState(false);
+  const [editandoData, setEditandoData] = useState(false);
+  const { width: larguraDaTela } = useWindowDimensions();
+  const pagina = useRef<FlatList<Foto>>(null);
+  const paginaVista = useRef(-1);
+  const [alturaDaPagina, setAlturaDaPagina] = useState(0);
   const [telaCheia, setTelaCheia] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
@@ -163,7 +177,7 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
       if (aberta.id === destaqueId) void recarregar();
       // Era o meu favorito: o servidor também o limpou.
       if (aberta.id === favorito?.fotoId) favorito.recarregar();
-      setAberta(null);
+      setAbertaId(null);
     } else {
       setErroExclusao(r.mensagem);
     }
@@ -175,7 +189,8 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
     setErroDestaque(undefined);
     const r = await definirDestaque(experiencia.id, aberta.id === destaqueId ? null : aberta.id);
     setMarcando(false);
-    if (!r.ok) setErroDestaque(r.mensagem);
+    if (r.ok) setAcoesAbertas(false);
+    else setErroDestaque(r.mensagem);
   }
 
   async function alternarFavorito() {
@@ -184,7 +199,8 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
     setErroDestaque(undefined);
     const r = await favorito.escolher(aberta.id === favorito.fotoId ? null : aberta.id);
     setMarcando(false);
-    if (!r.ok) setErroDestaque(r.mensagem);
+    if (r.ok) setAcoesAbertas(false);
+    else setErroDestaque(r.mensagem);
   }
 
   const enviando = envio !== null;
@@ -196,11 +212,23 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
   // Numeração na ordem em que aparecem, para o leitor de tela dizer "Foto 3 de 12".
   const ordem = grupos.flatMap((g) => g.periodos.flatMap((p) => p.fotos.filter((i) => i.tipo === 'foto')));
   const posicao = new Map(ordem.map((f, i) => [f.id, i + 1]));
+  const fotosEmOrdem = ordem as Foto[];
+  const indiceAberto = aberta ? fotosEmOrdem.findIndex((f) => f.id === aberta.id) : -1;
+
+  // A foto aberta mudou de lugar (outra data) ou foi aberta por fora do deslizar: a página acompanha.
+  useEffect(() => {
+    if (indiceAberto < 0 || indiceAberto === paginaVista.current) return;
+    paginaVista.current = indiceAberto;
+    pagina.current?.scrollToIndex({ index: indiceAberto, animated: false });
+  }, [indiceAberto]);
   const ehFavorito = (id: string) => favorito?.fotoId === id;
 
   // Vivendo: guardar o momento vem primeiro, com a câmera em destaque. Antes e depois, o que já
   // foi guardado é o protagonista e as ações ficam abaixo, discretas.
   const vivendo = experiencia.estado === 'vivendo';
+  // Na memória, os momentos viram páginas de álbum: dias como capítulos, fotos em moldura de papel e
+  // observações como bilhetes. Um lugar para revisitar com calma.
+  const acolhedor = experiencia.estado === 'memoria';
   const acoes = (
     <View style={{ gap: Spacing.two }}>
       <Button label="Tirar foto" variant={vivendo ? 'primary' : 'secondary'} disabled={enviando} onPress={tirarFoto} />
@@ -220,6 +248,20 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
   return (
     <View style={{ gap: Spacing.four }}>
       {vivendo ? acoes : null}
+
+      {acolhedor ? (
+        <View style={{ gap: Spacing.two }}>
+          <Button label="+ Acrescentar à memória" variant="secondary" disabled={enviando} onPress={() => setAcrescentando(true)} />
+          {enviando ? (
+            <ThemedText type="small" accessibilityLiveRegion="polite">
+              {envio.total > 1 ? `Guardando foto ${envio.atual} de ${envio.total}…` : 'Guardando foto…'}
+            </ThemedText>
+          ) : null}
+          {erro ? <MensagemErro>{erro}</MensagemErro> : null}
+          {observacoes.erro ? <MensagemErro>{observacoes.erro}</MensagemErro> : null}
+          {erroDaAcao ? <MensagemErro>{erroDaAcao}</MensagemErro> : null}
+        </View>
+      ) : null}
 
       {vivendo && finalizar ? (
         // A passagem para Memória à vista, com o fio, sem disputar com "Tirar foto" (o principal).
@@ -242,28 +284,48 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
         </ThemedText>
       ) : (
         grupos.map((grupo, i) => (
-          <View key={grupo.dia} style={{ gap: Spacing.three }}>
-            {/* O primeiro dia encosta na linha das abas; o filete só separa das ações ou do dia anterior. */}
-            <ThemedText
-              type="subtitle"
-              accessibilityRole="header"
-              style={{
-                fontSize: 22,
-                lineHeight: 30,
-                borderTopWidth: i > 0 || vivendo ? 1 : 0,
-                borderTopColor: theme.border,
-                paddingTop: i > 0 || vivendo ? Spacing.three : 0,
-              }}>
-              {grupo.rotulo}
-            </ThemedText>
+          <View key={grupo.dia} style={{ gap: Spacing.three, marginTop: acolhedor && i > 0 ? Spacing.three : 0 }}>
+            {acolhedor ? (
+              // Cada dia é um capítulo: o fio curto e o dia na voz editorial, sem filete.
+              <View style={{ gap: Spacing.two }}>
+                <View
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                  style={{ width: 24, height: 2, backgroundColor: theme.accent }}
+                />
+                <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 26, lineHeight: 34 }}>
+                  {grupo.rotulo}
+                </ThemedText>
+              </View>
+            ) : (
+              // O primeiro dia encosta na linha das abas; o filete só separa das ações ou do dia anterior.
+              <ThemedText
+                type="subtitle"
+                accessibilityRole="header"
+                style={{
+                  fontSize: 22,
+                  lineHeight: 30,
+                  borderTopWidth: i > 0 || vivendo ? 1 : 0,
+                  borderTopColor: theme.border,
+                  paddingTop: i > 0 || vivendo ? Spacing.three : 0,
+                }}>
+                {grupo.rotulo}
+              </ThemedText>
+            )}
             {grupo.periodos.map(({ periodo, fotos: doPeriodo }) => {
               const fotosDoPeriodo = doPeriodo.filter((i): i is Foto & { tipo: 'foto' } => i.tipo === 'foto');
               const obsDoPeriodo = doPeriodo.filter((i): i is Observacao & { tipo: 'observacao' } => i.tipo === 'observacao');
               return (
                 <View key={periodo} style={{ gap: Spacing.two }}>
-                  <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 1 }}>
-                    {ROTULO_DO_PERIODO[periodo].toUpperCase()}
-                  </ThemedText>
+                  {acolhedor ? (
+                    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 16 }}>
+                      {ROTULO_DO_PERIODO[periodo]}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 1 }}>
+                      {ROTULO_DO_PERIODO[periodo].toUpperCase()}
+                    </ThemedText>
+                  )}
                   {fotosDoPeriodo.length > 0 ? (
                     <View
                       style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two }}
@@ -280,18 +342,58 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
                             accessibilityLabel={`Foto ${posicao.get(foto.id)} de ${fotos.length}, ${grupo.rotulo.toLowerCase()}, ${ROTULO_DO_PERIODO[periodo].toLowerCase()}${foto.legenda ? `, legenda: ${foto.legenda}` : ''}${marcas.length ? `, ${marcas.join(', ')}` : ''}`}
                             onPress={() => {
                               setErroDestaque(undefined);
-                              setAberta(foto);
+                              setAbertaId(foto.id);
                             }}
-                            style={{
-                              width: lado ?? '31%',
-                              aspectRatio: 1,
-                              borderRadius: Radius.photo,
-                              overflow: 'hidden',
-                              backgroundColor: theme.backgroundElement,
-                              borderWidth: foto.id === destaqueId ? 3 : 0,
-                              borderColor: theme.text,
-                            }}>
-                            {foto.miniatura || foto.url ? (
+                            style={({ pressed }) =>
+                              acolhedor
+                                ? // Na memória, cada foto fica na moldura de papel, como colada no álbum.
+                                  { width: lado ?? '31%', aspectRatio: 1, transform: [{ scale: pressed ? 0.97 : 1 }] }
+                                : {
+                                    width: lado ?? '31%',
+                                    aspectRatio: 1,
+                                    borderRadius: Radius.photo,
+                                    overflow: 'hidden',
+                                    backgroundColor: theme.backgroundElement,
+                                    borderWidth: foto.id === destaqueId ? 3 : 0,
+                                    borderColor: theme.text,
+                                  }
+                            }>
+                            {acolhedor ? (
+                              <Moldura tamanho="miniatura" style={{ flex: 1 }}>
+                                <View style={{ flex: 1, overflow: 'hidden', backgroundColor: theme.backgroundSelected }}>
+                                  {foto.miniatura || foto.url ? (
+                                    <Image
+                                      source={{
+                                        uri: (foto.miniatura ?? foto.url) as string,
+                                        cacheKey: foto.miniatura ? caminhoDaMiniatura(foto.caminho) : foto.caminho,
+                                      }}
+                                      contentFit="cover"
+                                      style={{ flex: 1 }}
+                                      transition={150}
+                                      priority={(posicao.get(foto.id) ?? 0) <= MINIATURAS_PRIMEIRO ? 'high' : 'low'}
+                                    />
+                                  ) : null}
+                                </View>
+                                {foto.id === destaqueId || ehFavorito(foto.id) ? (
+                                  // A marca escrita no papel, no lugar da etiqueta de loja.
+                                  <View
+                                    style={{
+                                      position: 'absolute',
+                                      left: Spacing.one,
+                                      bottom: Spacing.one,
+                                      paddingHorizontal: Spacing.one,
+                                      backgroundColor: theme.papel,
+                                    }}>
+                                    <ThemedText
+                                      style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 13, lineHeight: 18, color: theme.accentStrong }}>
+                                      {[foto.id === destaqueId ? 'capa' : null, ehFavorito(foto.id) ? 'favorito' : null]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    </ThemedText>
+                                  </View>
+                                ) : null}
+                              </Moldura>
+                            ) : foto.miniatura || foto.url ? (
                               <Image
                                 source={{
                                   uri: (foto.miniatura ?? foto.url) as string,
@@ -301,9 +403,10 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
                                 contentFit="cover"
                                 style={{ flex: 1 }}
                                 transition={150}
+                                priority={(posicao.get(foto.id) ?? 0) <= MINIATURAS_PRIMEIRO ? 'high' : 'low'}
                               />
                             ) : null}
-                            {foto.id === destaqueId || ehFavorito(foto.id) ? (
+                            {!acolhedor && (foto.id === destaqueId || ehFavorito(foto.id)) ? (
                               <View
                                 style={{
                                   position: 'absolute',
@@ -333,14 +436,36 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
                         onPress={() => setEditando(obs)}
                         style={({ pressed }) => ({
                           gap: Spacing.half,
-                          paddingLeft: Spacing.three,
-                          paddingVertical: Spacing.one,
-                          borderLeftWidth: 2,
-                          borderLeftColor: theme.accent,
                           opacity: pressed ? 0.7 : 1,
+                          ...(acolhedor
+                            ? {
+                                // Um bilhete em papel, assinado por quem escreveu.
+                                padding: Spacing.three,
+                                borderRadius: 2,
+                                borderWidth: 1,
+                                borderColor: theme.papelBorda,
+                                backgroundColor: theme.papel,
+                              }
+                            : {
+                                paddingLeft: Spacing.three,
+                                paddingVertical: Spacing.one,
+                                borderLeftWidth: 2,
+                                borderLeftColor: theme.accent,
+                              }),
                         })}>
-                        <ThemedText>{obs.texto}</ThemedText>
-                        {autor ? (
+                        <ThemedText
+                          style={acolhedor ? { fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17, lineHeight: 26 } : undefined}>
+                          {obs.texto}
+                        </ThemedText>
+                        {autor && acolhedor ? (
+                          // Na memória, o bilhete é assinado: o retrato e o nome de quem escreveu.
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.one }}>
+                            <Retrato membroId={obs.autorId} tamanho={20} />
+                            <ThemedText type="small" themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+                              — {autor}
+                            </ThemedText>
+                          </View>
+                        ) : autor ? (
                           <ThemedText type="small" themeColor="textSecondary">
                             {autor}
                           </ThemedText>
@@ -355,9 +480,40 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
         ))
       )}
 
-      {vivendo ? null : (
+      {vivendo || acolhedor ? null : (
         <View style={{ borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>{acoes}</View>
       )}
+
+      <FolhaDeEscolha
+        testID="acrescentar-a-memoria"
+        visivel={acrescentando}
+        titulo="O que vocês querem acrescentar?"
+        onFechar={() => setAcrescentando(false)}>
+        <Button
+          label="Tirar foto"
+          onPress={() => {
+            setAcrescentando(false);
+            void tirarFoto();
+          }}
+        />
+        <Button
+          label="Escolher da galeria"
+          variant="secondary"
+          onPress={() => {
+            setAcrescentando(false);
+            void escolherDaGaleria();
+          }}
+        />
+        <Button
+          label="Escrever observação do momento"
+          variant="secondary"
+          onPress={() => {
+            setAcrescentando(false);
+            setEditando('nova');
+          }}
+        />
+        <Button label="Cancelar" variant="text" onPress={() => setAcrescentando(false)} />
+      </FolhaDeEscolha>
 
       <EditorDeObservacao
         key={editando === null ? 'fechado' : editando === 'nova' ? 'nova' : editando.id}
@@ -377,89 +533,140 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
         animationType="fade"
         statusBarTranslucent
         navigationBarTranslucent
-        onRequestClose={() => setAberta(null)}>
-        {/* O modal desenha por baixo das barras do sistema: o conteúdo fica entre elas. No Android, a
-            foto encolhe para a legenda e a data ficarem acima do teclado. */}
+        onRequestClose={() => setAbertaId(null)}>
+        {/* A foto é o centro: ocupa o que pode, e deslizar para o lado passa para a próxima. Embaixo, a
+            legenda em destaque e quando foi tirada; o resto mora em "Ações". No Android, a foto encolhe
+            para a legenda ficar acima do teclado. */}
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: theme.background }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'android' ? 'padding' : undefined}
-          style={{
-            flex: 1,
-            backgroundColor: theme.background,
-            padding: Spacing.four,
-            paddingTop: Spacing.four + insets.top,
-            paddingBottom: Spacing.four + insets.bottom,
-            gap: Spacing.three,
-          }}>
-          <View style={{ flex: 1, borderRadius: Radius.photo, overflow: 'hidden' }}>
-            {aberta?.url ? (
-              <Pressable
-                style={{ flex: 1 }}
-                accessibilityRole="imagebutton"
-                accessibilityLabel="Ver a foto em tela cheia"
-                accessibilityHint="Abre a foto na tela inteira, com zoom."
-                onPress={() => setTelaCheia(true)}>
-                <Image
-                  source={{ uri: aberta.url, cacheKey: aberta.caminho }}
-                  contentFit="contain"
-                  style={{ flex: 1 }}
-                />
-              </Pressable>
-            ) : (
-              <ThemedText themeColor="textSecondary">Não foi possível mostrar esta foto agora.</ThemedText>
-            )}
-          </View>
-          {aberta ? (
-            <Legenda
-              key={aberta.id}
-              legenda={aberta.legenda}
-              onSalvar={async (texto) => {
-                const r = await legendar(aberta.id, texto);
-                if (r.ok) setAberta({ ...aberta, legenda: r.legenda });
-                return r;
-              }}
-            />
-          ) : null}
-          {aberta ? (
-            <DataDaFoto
-              key={`data-${aberta.id}`}
-              foto={aberta}
-              onSalvar={async (instante) => {
-                const r = await datar(aberta.id, instante);
-                if (r.ok) setAberta({ ...aberta, capturadaEm: r.capturadaEm });
-                return r;
-              }}
-            />
-          ) : null}
-          {aberta?.id === destaqueId ? (
-            <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
-              Esta é a foto de destaque de {experiencia.titulo}.
+          style={{ flex: 1, paddingTop: Spacing.two, paddingBottom: Spacing.three, gap: Spacing.three }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.three }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Fechar"
+              hitSlop={Spacing.one}
+              onPress={() => setAbertaId(null)}
+              style={({ pressed }) => ({
+                width: 48,
+                height: 48,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 24,
+                backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
+              })}>
+              <Icone nome="fechar" cor={theme.text} />
+            </Pressable>
+            <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1, textAlign: 'center' }}>
+              {indiceAberto >= 0 ? `${indiceAberto + 1} de ${fotosEmOrdem.length}` : ''}
             </ThemedText>
-          ) : null}
+            <Button
+              label="Ações"
+              accessibilityLabel="Ações da foto"
+              variant="text"
+              onPress={() => {
+                setErroDestaque(undefined);
+                setAcoesAbertas(true);
+              }}
+            />
+          </View>
+
+          <FlatList
+            testID="paginas-da-foto"
+            ref={pagina}
+            data={fotosEmOrdem}
+            keyExtractor={(f) => f.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={Math.max(indiceAberto, 0)}
+            getItemLayout={(_, index) => ({ length: larguraDaTela, offset: larguraDaTela * index, index })}
+            onMomentumScrollEnd={(e) => {
+              const i = Math.round(e.nativeEvent.contentOffset.x / larguraDaTela);
+              const foto = fotosEmOrdem[i];
+              if (!foto) return;
+              paginaVista.current = i;
+              setErroDestaque(undefined);
+              setAbertaId(foto.id);
+            }}
+            style={{ flex: 1 }}
+            onLayout={(e) => setAlturaDaPagina(e.nativeEvent.layout.height)}
+            renderItem={({ item, index }) => (
+              <View
+                style={{ width: larguraDaTela }}
+                // Só a foto à vista fala com o leitor de tela; as vizinhas esperam o deslizar.
+                importantForAccessibility={index === indiceAberto ? 'auto' : 'no-hide-descendants'}
+                accessibilityElementsHidden={index !== indiceAberto}>
+                <PolaroideDaFoto
+                  foto={item}
+                  largura={larguraDaTela}
+                  altura={alturaDaPagina}
+                  marcas={[
+                    item.id === destaqueId ? 'foto de capa' : null,
+                    ehFavorito(item.id) ? 'seu momento favorito' : null,
+                  ].filter((m) => m !== null)}
+                  onAbrir={() => setTelaCheia(true)}>
+                  {/* A legenda já está na moldura; aqui, só escrever ou trocar, e quando foi tirada. */}
+                  <Legenda legenda={item.legenda} mostrarTexto={false} onSalvar={(texto) => legendar(item.id, texto)} />
+                  {item.legenda ? <DataDaFoto foto={item} /> : null}
+                </PolaroideDaFoto>
+              </View>
+            )}
+          />
+
+        </KeyboardAvoidingView>
+        </SafeAreaView>
+
+        {editandoData && aberta ? (
+          <EditorDaDataDaFoto
+            foto={aberta}
+            onSalvar={(instante) => datar(aberta.id, instante)}
+            onFechar={() => setEditandoData(false)}
+          />
+        ) : null}
+
+        <FolhaDeEscolha testID="acoes-da-foto" visivel={acoesAbertas} titulo="Esta foto" onFechar={() => setAcoesAbertas(false)}>
+          <RotuloDoGrupo>Para esta memória</RotuloDoGrupo>
           <Button
-            label={aberta?.id === destaqueId ? 'Tirar do destaque' : 'Usar como foto de destaque'}
+            label={aberta?.id === destaqueId ? 'Tirar da capa' : 'Usar como capa'}
+            accessibilityLabel={aberta?.id === destaqueId ? 'Tirar do destaque' : 'Usar como foto de destaque'}
+            variant="secondary"
             loading={marcando}
             onPress={alternarDestaque}
           />
           {favorito && aberta ? (
             <Button
-              label={ehFavorito(aberta.id) ? 'Deixar de ser meu momento favorito' : 'Escolher como meu momento favorito'}
+              label={ehFavorito(aberta.id) ? 'Deixar de ser meu favorito' : 'Escolher como meu favorito'}
               variant="secondary"
               disabled={marcando}
               onPress={alternarFavorito}
             />
           ) : null}
           {erroDestaque ? <MensagemErro>{erroDestaque}</MensagemErro> : null}
+          <RotuloDoGrupo>Levar com vocês</RotuloDoGrupo>
           {aberta ? <SalvarOuCompartilhar key={`levar-${aberta.id}`} foto={aberta} /> : null}
-          <Button
-            label="Excluir foto"
-            variant="destructive"
-            onPress={() => {
-              setErroExclusao(undefined);
-              setConfirmando(true);
-            }}
-          />
-          <Button label="Fechar" variant="text" onPress={() => setAberta(null)} />
-        </KeyboardAvoidingView>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.two }}>
+            <Button
+              label="Alterar a data"
+              accessibilityLabel="Alterar quando foi tirada"
+              variant="text"
+              onPress={() => {
+                setAcoesAbertas(false);
+                setEditandoData(true);
+              }}
+            />
+            <Button
+              label="Excluir foto"
+              variant="text"
+              onPress={() => {
+                setAcoesAbertas(false);
+                setErroExclusao(undefined);
+                setConfirmando(true);
+              }}
+            />
+          </View>
+          <Button label="Cancelar" variant="text" onPress={() => setAcoesAbertas(false)} />
+        </FolhaDeEscolha>
         <Confirmacao
           visible={confirmando}
           title="Excluir esta foto?"
@@ -697,14 +904,26 @@ function EditorDeObservacao({ observacao, onSalvar, onExcluir, onFechar }: Edito
  * Quando a foto foi tirada (ADR 032): mostra o dia e o período em que ela aparece e deixa escolher
  * outros, para corrigir uma data que a galeria não informou ou informou errado. Os dois podem.
  */
-function DataDaFoto({ foto, onSalvar }: { foto: Foto; onSalvar: (instante: string) => Promise<Resultado> }) {
+function DataDaFoto({ foto }: { foto: Foto }) {
+  const [agora] = useState(() => new Date());
+  const { dia, periodo } = diaEPeriodo(momentoDaFoto(foto));
+  return (
+    <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }}>
+      Tirada em: {rotuloDoDia(dia, agora)} · {ROTULO_DO_PERIODO[periodo]}
+    </ThemedText>
+  );
+}
+
+/**
+ * Corrigir quando a foto foi tirada (ADR 032), numa folha própria aberta pelas ações: o dia e o
+ * período em que ela aparece, para uma data que a galeria não informou ou informou errado.
+ */
+function EditorDaDataDaFoto({ foto, onSalvar, onFechar }: { foto: Foto; onSalvar: (instante: string) => Promise<Resultado>; onFechar: () => void }) {
   const [agora] = useState(() => new Date());
   const inicial = momentoInicial(momentoDaFoto(foto), agora);
-  const [editando, setEditando] = useState(false);
   const [momento, setMomento] = useState<Momento>(inicial.momento);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string>();
-  const { dia, periodo } = diaEPeriodo(momentoDaFoto(foto));
 
   async function guardar() {
     const lido = lerMomento(momento, inicial.hoje, inicial.ontem, agora);
@@ -716,14 +935,16 @@ function DataDaFoto({ foto, onSalvar }: { foto: Foto; onSalvar: (instante: strin
     setErro(undefined);
     const r = await onSalvar(lido.instante);
     setSalvando(false);
-    if (r.ok) setEditando(false);
+    if (r.ok) onFechar();
     else setErro(r.mensagem);
   }
 
-  if (editando) {
-    return (
-      <View style={{ gap: Spacing.two }}>
-        <ThemedText type="smallBold">Quando a foto foi tirada?</ThemedText>
+  return (
+    <Modal testID="data-da-foto" visible animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onFechar}>
+      <FolhaDeEdicao>
+        <ThemedText type="subtitle" style={{ fontSize: 24, lineHeight: 32 }} accessibilityRole="header">
+          Quando a foto foi tirada?
+        </ThemedText>
         <EscolhaDoMomento
           momento={momento}
           onChange={(m) => {
@@ -737,26 +958,9 @@ function DataDaFoto({ foto, onSalvar }: { foto: Foto; onSalvar: (instante: strin
           rotuloDoCampo="Dia em que a foto foi tirada"
         />
         <Button label="Guardar data" loading={salvando} onPress={guardar} />
-        <Button label="Cancelar" variant="text" disabled={salvando} onPress={() => setEditando(false)} />
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ gap: Spacing.one, alignItems: 'center' }}>
-      <ThemedText type="small" themeColor="textSecondary">
-        Tirada em: {rotuloDoDia(dia, agora)} · {ROTULO_DO_PERIODO[periodo]}
-      </ThemedText>
-      <Button
-        label="Alterar quando foi tirada"
-        variant="text"
-        onPress={() => {
-          setMomento(inicial.momento);
-          setErro(undefined);
-          setEditando(true);
-        }}
-      />
-    </View>
+        <Button label="Cancelar" variant="text" disabled={salvando} onPress={onFechar} />
+      </FolhaDeEdicao>
+    </Modal>
   );
 }
 
@@ -779,26 +983,23 @@ function SalvarOuCompartilhar({ foto }: { foto: Foto }) {
 
   return (
     <View style={{ gap: Spacing.one }}>
-      <View style={{ flexDirection: 'row', gap: Spacing.two }}>
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Salvar no celular"
-            variant="secondary"
-            loading={fazendo === 'salvar'}
-            disabled={fazendo !== null}
-            onPress={() => fazer('salvar')}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Compartilhar"
-            variant="secondary"
-            loading={fazendo === 'compartilhar'}
-            disabled={fazendo !== null}
-            accessibilityHint="Abre as opções do celular para enviar a foto a alguém."
-            onPress={() => fazer('compartilhar')}
-          />
-        </View>
+      {/* Um por linha: lado a lado, os rótulos quebravam. */}
+      <View style={{ gap: Spacing.two }}>
+        <Button
+          label="Salvar no celular"
+          variant="secondary"
+          loading={fazendo === 'salvar'}
+          disabled={fazendo !== null}
+          onPress={() => fazer('salvar')}
+        />
+        <Button
+          label="Compartilhar"
+          variant="secondary"
+          loading={fazendo === 'compartilhar'}
+          disabled={fazendo !== null}
+          accessibilityHint="Abre as opções do celular para enviar a foto a alguém."
+          onPress={() => fazer('compartilhar')}
+        />
       </View>
       {aviso?.ok ? (
         <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
@@ -812,7 +1013,16 @@ function SalvarOuCompartilhar({ foto }: { foto: Foto }) {
 }
 
 /** Legenda da foto aberta: mostra, escreve, troca ou tira (guardar vazio). Os dois podem (ADR 030). */
-function Legenda({ legenda, onSalvar }: { legenda: string | null; onSalvar: (texto: string) => Promise<Resultado> }) {
+function Legenda({
+  legenda,
+  onSalvar,
+  mostrarTexto = true,
+}: {
+  legenda: string | null;
+  onSalvar: (texto: string) => Promise<Resultado>;
+  /** Sem o texto quando ele já aparece em outro lugar (a moldura da foto aberta). */
+  mostrarTexto?: boolean;
+}) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(legenda ?? '');
   const [salvando, setSalvando] = useState(false);
@@ -850,7 +1060,11 @@ function Legenda({ legenda, onSalvar }: { legenda: string | null; onSalvar: (tex
 
   return (
     <View style={{ gap: Spacing.one }}>
-      {legenda ? <ThemedText style={{ textAlign: 'center' }}>{legenda}</ThemedText> : null}
+      {legenda && mostrarTexto ? (
+        <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 20, lineHeight: 28, textAlign: 'center' }}>
+          {legenda}
+        </ThemedText>
+      ) : null}
       <Button
         label={legenda ? 'Editar legenda' : 'Adicionar legenda'}
         variant="text"
@@ -861,4 +1075,107 @@ function Legenda({ legenda, onSalvar }: { legenda: string | null; onSalvar: (tex
       />
     </View>
   );
+}
+
+// O rodapé da moldura (marca e legenda), as margens e o que vem embaixo (legenda e data), para a
+// foto saber quanto espaço sobra.
+const RODAPE_DA_POLAROIDE = 104;
+const ABAIXO_DA_POLAROIDE = 88;
+const MARGEM_DA_POLAROIDE = Spacing.three;
+
+type PolaroideDaFotoProps = {
+  foto: Foto;
+  largura: number;
+  altura: number;
+  marcas: string[];
+  onAbrir: () => void;
+  /** Logo abaixo da moldura: escrever a legenda e quando foi tirada. */
+  children?: React.ReactNode;
+};
+
+/**
+ * A foto aberta como uma polaroide: moldura de papel, a foto na proporção dela (do tamanho que couber)
+ * e, no rodapé, a marca e a legenda escrita à mão. Tocar abre a tela cheia, com zoom.
+ */
+function PolaroideDaFoto({ foto, largura, altura, marcas, onAbrir, children }: PolaroideDaFotoProps) {
+  const theme = useTheme();
+  // Retrato até a foto chegar e dizer a proporção dela.
+  const [proporcao, setProporcao] = useState(3 / 4);
+  const larguraLivre = largura - 2 * Spacing.four - 2 * MARGEM_DA_POLAROIDE;
+  const alturaLivre = Math.max(altura - RODAPE_DA_POLAROIDE - ABAIXO_DA_POLAROIDE - 2 * MARGEM_DA_POLAROIDE - Spacing.four, 120);
+  const larguraDaFoto = Math.min(larguraLivre, alturaLivre * proporcao);
+
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two }}>
+      <Moldura style={{ width: larguraDaFoto + 2 * MARGEM_DA_POLAROIDE, paddingBottom: Spacing.two }}>
+        {foto.url ? (
+          <Pressable
+            accessibilityRole="imagebutton"
+            accessibilityLabel="Ver a foto em tela cheia"
+            accessibilityHint="Abre a foto na tela inteira, com zoom. Deslize para o lado para ver as outras."
+            onPress={onAbrir}
+            style={{ width: larguraDaFoto, aspectRatio: proporcao, backgroundColor: theme.backgroundSelected }}>
+            <Image
+              source={{ uri: foto.url, cacheKey: foto.caminho }}
+              // Enquanto a foto inteira chega, a miniatura (já carregada na grade) segura o lugar.
+              placeholder={foto.miniatura ? { uri: foto.miniatura, cacheKey: caminhoDaMiniatura(foto.caminho) } : undefined}
+              placeholderContentFit="cover"
+              contentFit="cover"
+              onLoad={(e) => {
+                if (e.source.width && e.source.height) setProporcao(e.source.width / e.source.height);
+              }}
+              style={{ flex: 1 }}
+            />
+          </Pressable>
+        ) : (
+          <View style={{ width: larguraDaFoto, aspectRatio: proporcao, alignItems: 'center', justifyContent: 'center' }}>
+            <ThemedText themeColor="textSecondary" style={{ textAlign: 'center' }}>
+              Não foi possível mostrar esta foto agora.
+            </ThemedText>
+          </View>
+        )}
+        <View style={{ minHeight: RODAPE_DA_POLAROIDE - Spacing.three, justifyContent: 'center', gap: Spacing.one, paddingTop: Spacing.two }}>
+          {marcas.length ? (
+            <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14, color: theme.accentStrong, textAlign: 'center' }}>
+              {marcas.join(' · ')}
+            </ThemedText>
+          ) : null}
+          {/* Sem legenda, o pé da polaroide guarda quando foi, escrito à mão. */}
+          <ThemedText
+            numberOfLines={3}
+            themeColor={foto.legenda ? 'text' : 'textSecondary'}
+            style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 19, lineHeight: 26, textAlign: 'center' }}>
+            {foto.legenda ?? quandoFoiTirada(foto)}
+          </ThemedText>
+          {/* Os retratos discretos no pé (ADR 043): à esquerda, quem escreveu a legenda; no canto
+              direito, quem guardou a foto. Sendo a mesma pessoa, basta o do canto. */}
+          {foto.legenda && foto.legendaAutorId && foto.legendaAutorId !== foto.autorId ? (
+            <View style={{ position: 'absolute', left: 0, bottom: 0 }}>
+              <Retrato membroId={foto.legendaAutorId} />
+            </View>
+          ) : null}
+          <View style={{ position: 'absolute', right: 0, bottom: 0 }}>
+            <Retrato membroId={foto.autorId} />
+          </View>
+        </View>
+      </Moldura>
+      <View style={{ width: '100%', paddingHorizontal: Spacing.four, gap: Spacing.one }}>{children}</View>
+    </View>
+  );
+}
+
+/** O título de um grupo de ações, na voz do álbum (sem maiúsculas). */
+function RotuloDoGrupo({ children }: { children: string }) {
+  return (
+    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 15, marginTop: Spacing.one }}>
+      {children}
+    </ThemedText>
+  );
+}
+
+/** "8 de outubro, à noite": quando a foto foi tirada, para o pé da polaroide sem legenda. */
+function quandoFoiTirada(foto: Foto) {
+  const { dia, periodo } = diaEPeriodo(momentoDaFoto(foto));
+  const parte = { madrugada: 'de madrugada', manha: 'de manhã', tarde: 'à tarde', noite: 'à noite' }[periodo];
+  return `${rotuloDoDia(dia, new Date())}, ${parte}`;
 }

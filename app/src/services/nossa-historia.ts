@@ -6,7 +6,7 @@ export type MesDaHistoria = {
   chave: string;
   /** "Outubro de 2026". */
   rotulo: string;
-  /** Memórias com dia, em ordem cronológica crescente. */
+  /** Memórias com dia, da mais recente à mais antiga. */
   comDia: Experiencia[];
   /** Memórias só com mês/ano: ficam à parte, no fim do mês, sem sugerir um dia (ADR 031). */
   semDia: Experiencia[];
@@ -14,7 +14,7 @@ export type MesDaHistoria = {
 
 /**
  * Agrupa as memórias pelo mês de início da referência temporal, do mês mais recente ao mais
- * antigo. Um período aparece uma vez só, no mês em que começa.
+ * antigo, e dentro do mês também. Um período aparece uma vez só, no mês em que começa.
  */
 export function agruparPorMes(memorias: Experiencia[]): MesDaHistoria[] {
   const meses = new Map<string, MesDaHistoria>();
@@ -33,7 +33,7 @@ export function agruparPorMes(memorias: Experiencia[]): MesDaHistoria[] {
   }
 
   const porData = (a: Experiencia, b: Experiencia) =>
-    (chaveDeOrdem(a.referencia) ?? '').localeCompare(chaveDeOrdem(b.referencia) ?? '');
+    (chaveDeOrdem(b.referencia) ?? '').localeCompare(chaveDeOrdem(a.referencia) ?? '');
   const porTitulo = (a: Experiencia, b: Experiencia) => a.titulo.localeCompare(b.titulo, 'pt-BR');
   return [...meses.values()]
     .sort((a, b) => b.chave.localeCompare(a.chave))

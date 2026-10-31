@@ -6,8 +6,11 @@ export type Perfil = {
   membro_id: string;
   nome: string;
   laco_id: string;
+  /** Foto de perfil no Storage do Laço (ADR 043); ausente em perfis antigos. */
+  foto_caminho?: string | null;
   companheiro_vinculado: boolean;
   companheiro_nome: string | null;
+  companheiro_foto_caminho?: string | null;
 };
 
 export type Falha = { ok: false; codigo: string; mensagem: string };
@@ -34,6 +37,7 @@ const MENSAGENS: Record<string, string> = {
   link_invalido: 'Esse link não é mais válido. Peça um novo.',
   link_expirado: 'Esse link expirou ou já foi usado. Peça um novo.',
   desejo_invalido: 'Confira os dados do desejo: o título é obrigatório e os textos têm limite de tamanho.',
+  memoria_travada: 'Essa experiência já virou memória: os detalhes não mudam mais.',
   desejo_inexistente: 'Esse desejo não existe mais.',
   transicao_invalida: 'Essa mudança não é possível a partir do estado atual.',
   destaque_invalido: 'Não foi possível usar essa foto como destaque. Tente de novo.',

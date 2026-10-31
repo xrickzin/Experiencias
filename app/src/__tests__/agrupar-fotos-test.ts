@@ -16,6 +16,7 @@ const foto = (id: string, capturadaEm: string | null, criadoEm = '2026-10-15T20:
   autorId: null,
   capturadaEm,
   legenda: null,
+  legendaAutorId: null,
   criadoEm,
 });
 

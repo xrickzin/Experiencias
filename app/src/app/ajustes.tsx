@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -7,6 +8,7 @@ import { Confirmacao } from '@/components/confirmacao';
 import { GerenciarCategorias } from '@/components/gerenciar-categorias';
 import { MensagemErro } from '@/components/mensagem-erro';
 import { Opcoes } from '@/components/opcoes';
+import { Retrato } from '@/components/retrato';
 import { Screen } from '@/components/screen';
 import { ScreenHeader, voltar } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
@@ -14,7 +16,9 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useSessao } from '@/hooks/use-sessao';
 import { useTheme } from '@/hooks/use-theme';
+import { definirFotoDePerfil } from '@/services/fotos';
 import { atualizarMeuNome } from '@/services/laco';
+import { gerarMiniatura } from '@/services/miniatura';
 import { escolherTema, lerPreferenciaDeTema, type PreferenciaDeTema } from '@/services/tema';
 import { validarNome } from '@/services/validacao';
 
@@ -110,6 +114,8 @@ export default function Ajustes() {
         <Button label="Salvar nome" loading={enviando && !saindo} disabled={saindo} onPress={salvar} />
       </View>
 
+      <FotoDePerfil />
+
       {/* Aparência: vale só neste aparelho; cada pessoa escolhe a sua (ADR 037). */}
       <View style={{ gap: Spacing.two, marginTop: Spacing.five, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>
         <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
@@ -161,5 +167,61 @@ export default function Ajustes() {
         onCancel={() => setConfirmandoSaida(false)}
       />
     </Screen>
+  );
+}
+
+/**
+ * A foto de perfil (ADR 043): aparece pequena ao lado do nome, na legenda das fotos, nas cartas e nos
+ * bilhetes. Cada pessoa escolhe e troca só a própria. Recortada em quadrado no seletor do aparelho.
+ */
+function FotoDePerfil() {
+  const theme = useTheme();
+  const { perfil, atualizar } = useSessao();
+  const [trocando, setTrocando] = useState(false);
+  const [erro, setErro] = useState<string>();
+  if (!perfil) return null;
+  const temFoto = Boolean(perfil.foto_caminho);
+
+  async function trocar(base64: string | null) {
+    if (!perfil) return;
+    setTrocando(true);
+    setErro(undefined);
+    const r = await definirFotoDePerfil(perfil.laco_id, perfil.membro_id, base64, perfil.foto_caminho ?? null);
+    if (r.ok) await atualizar();
+    else setErro(r.mensagem);
+    setTrocando(false);
+  }
+
+  async function escolher() {
+    setErro(undefined);
+    const r = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (r.canceled) return;
+    const imagem = r.assets[0];
+    // Pequena de propósito: aparece em tamanho de selo.
+    const base64 = await gerarMiniatura(imagem.uri, imagem.width, imagem.height);
+    if (!base64) return setErro('Não foi possível preparar essa foto. Tente outra.');
+    await trocar(base64);
+  }
+
+  return (
+    <View style={{ gap: Spacing.three, marginTop: Spacing.five, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.four }}>
+      <ThemedText type="subtitle" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 30 }}>
+        Sua foto
+      </ThemedText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+        <Retrato membroId={perfil.membro_id} tamanho={72} />
+        <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
+          Aparece pequena ao lado do seu nome, nas fotos que você guardar, nas suas cartas e nos seus bilhetes.
+        </ThemedText>
+      </View>
+      {erro ? <MensagemErro>{erro}</MensagemErro> : null}
+      <Button label={temFoto ? 'Trocar foto' : 'Escolher foto'} variant="secondary" loading={trocando} onPress={() => void escolher()} />
+      {temFoto ? <Button label="Tirar a foto" variant="text" disabled={trocando} onPress={() => void trocar(null)} /> : null}
+    </View>
   );
 }

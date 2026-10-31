@@ -37,7 +37,10 @@ export function OrcamentoDaExperiencia({ experiencia }: { experiencia: Experienc
           </ThemedText>
         </View>
       )}
-      <Button label={valor === null ? 'Definir valor' : 'Mudar valor'} variant="secondary" onPress={() => setEditando(true)} />
+      {/* Na memória, o valor é só para ver (ADR 042). */}
+      {experiencia.estado === 'memoria' ? null : (
+        <Button label={valor === null ? 'Definir valor' : 'Mudar valor'} variant="secondary" onPress={() => setEditando(true)} />
+      )}
       {editando ? <EditorDoOrcamento experiencia={experiencia} onFechar={() => setEditando(false)} /> : null}
     </View>
   );

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Icone, type NomeDoIcone } from '@/components/icone';
@@ -9,13 +10,16 @@ import { useTheme } from '@/hooks/use-theme';
 type Acao = { icon: NomeDoIcone; label: string; onPress: () => void };
 
 type ScreenHeaderProps = {
-  eyebrow: string;
+  /** Rótulo acima do título. As abas principais dispensam: a barra de baixo já diz onde se está. */
+  eyebrow?: string;
   title: string;
   description?: string;
   /** Telas de detalhe: seta de voltar no topo, onde se procura a saída. */
   onBack?: () => void;
   /** Ação ao lado do título (ex.: Ajustes no Início). */
   action?: Acao;
+  /** Antes do título, na mesma linha (ex.: os retratos do casal no Início). */
+  antesDoTitulo?: ReactNode;
 };
 
 /** Volta para onde a pessoa estava; aberta direto (link, app reaberto), vai para o Início. */
@@ -25,7 +29,7 @@ export function voltar() {
 }
 
 /** Cabeçalho das telas. O fio vermelho curto no topo é a assinatura do Laço. */
-export function ScreenHeader({ eyebrow, title, description, onBack, action }: ScreenHeaderProps) {
+export function ScreenHeader({ eyebrow, title, description, onBack, action, antesDoTitulo }: ScreenHeaderProps) {
   const theme = useTheme();
 
   return (
@@ -38,10 +42,13 @@ export function ScreenHeader({ eyebrow, title, description, onBack, action }: Sc
         importantForAccessibility="no-hide-descendants"
         style={{ width: 32, height: 2, backgroundColor: theme.accent, marginBottom: Spacing.two }}
       />
-      <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 1 }}>
-        {eyebrow.toUpperCase()}
-      </ThemedText>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two }}>
+      {eyebrow ? (
+        <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 1 }}>
+          {eyebrow.toUpperCase()}
+        </ThemedText>
+      ) : null}
+      <View style={{ flexDirection: 'row', alignItems: antesDoTitulo ? 'center' : 'flex-start', gap: Spacing.two }}>
+        {antesDoTitulo}
         <ThemedText type="subtitle" accessibilityRole="header" style={{ flex: 1 }}>
           {title}
         </ThemedText>
@@ -53,7 +60,7 @@ export function ScreenHeader({ eyebrow, title, description, onBack, action }: Sc
 }
 
 /** Ícone tocável com área de 48 px e rótulo para o leitor de tela; o desenho alinha com a margem do conteúdo. */
-function IconButton({ icon, label, onPress, edge }: Acao & { edge: 'left' | 'right' }) {
+export function IconButton({ icon, label, onPress, edge }: Acao & { edge: 'left' | 'right' }) {
   const theme = useTheme();
   return (
     <Pressable

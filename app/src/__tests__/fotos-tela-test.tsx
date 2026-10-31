@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { act, fireEvent, screen } from 'expo-router/testing-library';
+import { Dimensions } from 'react-native';
 
 import * as servico from '@/services/experiencias';
 import * as fotos from '@/services/fotos';
@@ -36,6 +37,7 @@ const foto = (id: string, capturadaEm: string | null = '2026-10-15T15:00:00Z'): 
   autorId: 'm1',
   capturadaEm,
   legenda: null,
+  legendaAutorId: null,
   criadoEm: '2026-10-15T20:00:00Z',
 });
 const asset = (n: number) =>
@@ -171,8 +173,10 @@ describe('quando a foto foi tirada', () => {
     svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
     svc.datarFoto.mockImplementation(async (_id, capturadaEm) => ({ ok: true, capturadaEm }));
     await abrirFoto();
-    expect(screen.getByText(/^Tirada em: /)).toBeTruthy();
+    // Sem legenda, o pé da polaroide diz quando foi tirada.
+    expect(screen.getByText(/, (de madrugada|de manhã|à tarde|à noite)$/)).toBeTruthy();
 
+    await tocar('Ações da foto');
     await tocar('Alterar quando foi tirada');
     await act(async () => {
       await fireEvent.press(screen.getByRole('radio', { name: 'Outro dia' }));
@@ -187,12 +191,13 @@ describe('quando a foto foi tirada', () => {
 
     // Noite em Brasília é guardada no meio do período (21h = 00h UTC do dia seguinte).
     expect(svc.datarFoto).toHaveBeenCalledWith('a', '2022-06-11T00:00:00.000Z');
-    expect(screen.getByText(/^Tirada em: .*2022 · Noite$/)).toBeTruthy();
+    expect(screen.getByText(/2022, à noite$/)).toBeTruthy();
   });
 
   it('dia no futuro não é aceito e não chama o servidor', async () => {
     svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a')] });
     await abrirFoto();
+    await tocar('Ações da foto');
     await tocar('Alterar quando foi tirada');
     await act(async () => {
       await fireEvent.press(screen.getByRole('radio', { name: 'Outro dia' }));
@@ -214,6 +219,7 @@ describe('salvar no celular ou compartilhar', () => {
     await act(async () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
     });
+    await tocar('Ações da foto');
   }
 
   it('salvar no celular confirma; falha explica o que conferir', async () => {
@@ -270,6 +276,23 @@ describe('foto em tela cheia', () => {
   });
 });
 
+describe('deslizar entre as fotos', () => {
+  it('na foto aberta, deslizar para o lado passa para a próxima', async () => {
+    svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a'), foto('b', '2026-10-15T16:00:00Z')] });
+    await abrirEm('vivendo');
+    await act(async () => {
+      await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 2/ }));
+    });
+    expect(screen.getByText('1 de 2')).toBeTruthy();
+
+    const { width } = Dimensions.get('window');
+    await act(async () => {
+      fireEvent(screen.getByTestId('paginas-da-foto'), 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: width, y: 0 } } });
+    });
+    expect(screen.getByText('2 de 2')).toBeTruthy();
+  });
+});
+
 describe('foto de destaque', () => {
   it('na foto aberta, "Usar como foto de destaque" marca a miniatura', async () => {
     svc.listarFotos.mockResolvedValue({ ok: true, fotos: [foto('a'), foto('b', '2026-10-15T16:00:00Z')] });
@@ -282,11 +305,15 @@ describe('foto de destaque', () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 2 de 2/ }));
     });
 
+    await tocar('Ações da foto');
     await tocar('Usar como foto de destaque');
 
     expect(exp.definirFotoDestaque).toHaveBeenCalledWith('1', 'a');
-    expect(screen.getByText('Esta é a foto de destaque de Viagem.')).toBeTruthy();
+    // As ações fecham e a marca aparece embaixo da foto.
+    expect(screen.getByText('foto de capa')).toBeTruthy();
+    await tocar('Ações da foto');
     expect(screen.getByRole('button', { name: 'Tirar do destaque' })).toBeTruthy();
+    await tocar('Cancelar');
     await tocar('Fechar');
     expect(screen.getByRole('imagebutton', { name: /foto de destaque$/ })).toBeTruthy();
     expect(screen.getByText('DESTAQUE')).toBeTruthy();
@@ -305,9 +332,11 @@ describe('foto de destaque', () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /foto de destaque$/ }));
     });
 
+    await tocar('Ações da foto');
     await tocar('Tirar do destaque');
 
     expect(exp.definirFotoDestaque).toHaveBeenCalledWith('1', null);
+    await tocar('Ações da foto');
     expect(screen.getByRole('button', { name: 'Usar como foto de destaque' })).toBeTruthy();
   });
 
@@ -319,6 +348,7 @@ describe('foto de destaque', () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
     });
 
+    await tocar('Ações da foto');
     await tocar('Usar como foto de destaque');
 
     expect(screen.getByText('Sem conexão.')).toBeTruthy();
@@ -411,6 +441,7 @@ describe('fotos na experiência', () => {
       await fireEvent.press(await screen.findByRole('imagebutton', { name: /^Foto 1 de 1/ }));
     });
 
+    await tocar('Ações da foto');
     await tocar('Excluir foto');
     expect(screen.getByText('Excluir esta foto?')).toBeTruthy();
     await tocar('Sim, excluir foto');

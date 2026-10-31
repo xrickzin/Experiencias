@@ -53,7 +53,10 @@ export function RoteiroDaExperiencia({ experiencia, roteiro }: { experiencia: Ex
   const { itens, erro, carregado, criar, editar, mover, excluir } = roteiro;
   const [agora] = useState(() => new Date());
   const sugeridos = useMemo(() => diasDaExperiencia(experiencia.referencia), [experiencia.referencia]);
-  const dias = useMemo(() => agruparRoteiro(itens, sugeridos, agora), [itens, sugeridos, agora]);
+  // Na memória, o roteiro é só para ver (ADR 042): sem os dias vazios, sem editar nem arrastar.
+  const leitura = experiencia.estado === 'memoria';
+  const todosOsDias = useMemo(() => agruparRoteiro(itens, sugeridos, agora), [itens, sugeridos, agora]);
+  const dias = leitura ? todosOsDias.filter((d) => d.itens.length > 0) : todosOsDias;
   const [editando, setEditando] = useState<{ item: ItemDoRoteiro | null; dia?: string } | null>(null);
   // Arrastando: a rolagem e os outros dias esperam.
   const [arrastando, setArrastando] = useState(false);
@@ -91,13 +94,13 @@ export function RoteiroDaExperiencia({ experiencia, roteiro }: { experiencia: Ex
             {resumo}
           </ThemedText>
         ) : null}
-        <ThemedText type="small" themeColor="textSecondary">
+        {leitura ? null : <ThemedText type="small" themeColor="textSecondary">
           {itens.length > 1
             ? 'Toquem num item para editar. Para mudar a ordem, segurem e arrastem.'
             : sugeridos.length
               ? 'O que vocês vão fazer em cada dia, de manhã à noite.'
               : 'Para ver cada dia aqui, escolham as datas em Detalhes. Enquanto isso, dá para adicionar itens em qualquer data.'}
-        </ThemedText>
+        </ThemedText>}
       </View>
 
       {erro ? <MensagemErro>{erro}</MensagemErro> : null}
@@ -110,20 +113,22 @@ export function RoteiroDaExperiencia({ experiencia, roteiro }: { experiencia: Ex
               dia={d}
               links={links.links}
               onAbrirLink={(url) => void abrirLink(url)}
-              bloqueado={arrastando}
+              bloqueado={arrastando || leitura}
               onArrastando={setArrastando}
-              onAdicionar={() => setEditando({ item: null, dia: d.dia })}
-              onEditar={(item) => setEditando({ item })}
+              onAdicionar={leitura ? undefined : () => setEditando({ item: null, dia: d.dia })}
+              onEditar={leitura ? undefined : (item) => setEditando({ item })}
               onMover={(id, posicao) => void mover(id, posicao)}
             />
           ))
         : null}
 
-      <Button
-        label="Adicionar ao roteiro"
-        variant="secondary"
-        onPress={() => setEditando({ item: null, dia: dias[0]?.dia })}
-      />
+      {leitura ? null : (
+        <Button
+          label="Adicionar ao roteiro"
+          variant="secondary"
+          onPress={() => setEditando({ item: null, dia: dias[0]?.dia })}
+        />
+      )}
 
       {editando ? (
         <EditorDoItem
@@ -149,8 +154,9 @@ type DiaProps = {
   onAbrirLink: (url: string) => void;
   bloqueado: boolean;
   onArrastando: (sim: boolean) => void;
-  onAdicionar: () => void;
-  onEditar: (item: ItemDoRoteiro) => void;
+  /** Sem estas duas, o dia é só para ver (memória). */
+  onAdicionar?: () => void;
+  onEditar?: (item: ItemDoRoteiro) => void;
   onMover: (id: string, posicao: ReturnType<typeof posicaoAoSoltar>) => void;
 };
 
@@ -293,7 +299,7 @@ function DiaDoRoteiroView({ dia, links, onAbrirLink, bloqueado, onArrastando, on
                   links={links.filter((l) => item.links.includes(l.id))}
                   onAbrirLink={onAbrirLink}
                   erguido={arrastado?.id === item.id}
-                  onEditar={() => onEditar(item)}
+                  onEditar={onEditar ? () => onEditar(item) : undefined}
                   onPasso={(sentido) => {
                     const posicao = posicaoUmPasso(dia.itens, item.id, sentido);
                     if (posicao) onMover(item.id, posicao);
@@ -305,9 +311,11 @@ function DiaDoRoteiroView({ dia, links, onAbrirLink, bloqueado, onArrastando, on
         </View>
       )}
 
-      <View style={{ alignItems: 'flex-start' }}>
-        <Button label="+ Adicionar neste dia" variant="text" accessibilityLabel={`Adicionar ao roteiro em ${titulo}`} onPress={onAdicionar} />
-      </View>
+      {onAdicionar ? (
+        <View style={{ alignItems: 'flex-start' }}>
+          <Button label="+ Adicionar neste dia" variant="text" accessibilityLabel={`Adicionar ao roteiro em ${titulo}`} onPress={onAdicionar} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -363,7 +371,7 @@ type LinhaProps = {
   links: Link[];
   onAbrirLink: (url: string) => void;
   erguido: boolean;
-  onEditar: () => void;
+  onEditar?: () => void;
   onPasso: (sentido: -1 | 1) => void;
 };
 
@@ -383,17 +391,22 @@ function LinhaDoItem({ item, links, onAbrirLink, erguido, onEditar, onPasso }: L
         backgroundColor: erguido ? theme.background : 'transparent',
       }}>
       <Pressable
-        accessibilityRole="button"
+        accessibilityRole={onEditar ? 'button' : 'text'}
         accessibilityLabel={`${item.horario ? `${item.horario}, ` : ''}${item.texto}, ${ROTULO_DO_PERIODO[item.periodo].toLowerCase()}`}
-        accessibilityHint="Toque para editar."
-        accessibilityActions={[
-          { name: 'subir', label: 'Mover para cima' },
-          { name: 'descer', label: 'Mover para baixo' },
-        ]}
+        accessibilityHint={onEditar ? 'Toque para editar.' : undefined}
+        accessibilityActions={
+          onEditar
+            ? [
+                { name: 'subir', label: 'Mover para cima' },
+                { name: 'descer', label: 'Mover para baixo' },
+              ]
+            : undefined
+        }
         onAccessibilityAction={(e) => onPasso(e.nativeEvent.actionName === 'subir' ? -1 : 1)}
+        disabled={!onEditar}
         onPress={onEditar}
         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 36, opacity: pressed ? 0.6 : 1 })}>
-        <Alca />
+        {onEditar ? <Alca /> : null}
         {item.horario ? (
           <ThemedText type="smallBold" style={{ fontVariant: ['tabular-nums'], minWidth: 44 }}>
             {item.horario}

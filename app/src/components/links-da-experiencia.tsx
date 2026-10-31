@@ -16,9 +16,10 @@ import { descreverEndereco, LIMITE_DO_TITULO_DO_LINK, type Link } from '@/servic
 
 /**
  * Links da experiência (ADR 039): tocar abre o site ou o lugar no Google Maps; "Editar" muda ou
- * exclui. Salvam na hora, à parte do "Salvar" do formulário. Os dois podem.
+ * exclui. Salvam na hora, à parte do "Salvar" do formulário. Os dois podem. Na memória, só abrem, e
+ * a seção some sem links (ADR 042).
  */
-export function LinksDaExperiencia({ experienciaId }: { experienciaId: string }) {
+export function LinksDaExperiencia({ experienciaId, somenteLeitura = false }: { experienciaId: string; somenteLeitura?: boolean }) {
   const theme = useTheme();
   const { links, erro, carregar, criar, editar, excluir } = useLinks(experienciaId);
   const [editando, setEditando] = useState<Link | 'novo' | null>(null);
@@ -40,6 +41,7 @@ export function LinksDaExperiencia({ experienciaId }: { experienciaId: string })
   }
 
   const aberto = editando && editando !== 'novo' ? editando : null;
+  if (somenteLeitura && links.length === 0 && !erro) return null;
 
   return (
     <View style={{ gap: Spacing.two }}>
@@ -68,7 +70,7 @@ export function LinksDaExperiencia({ experienciaId }: { experienciaId: string })
                     {dominio} ↗
                   </ThemedText>
                 </Pressable>
-                <Pressable
+                {somenteLeitura ? null : <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Editar o link ${l.titulo}`}
                   hitSlop={8}
@@ -77,7 +79,7 @@ export function LinksDaExperiencia({ experienciaId }: { experienciaId: string })
                   <ThemedText type="smallBold" style={{ textDecorationLine: 'underline' }}>
                     Editar
                   </ThemedText>
-                </Pressable>
+                </Pressable>}
               </View>
             );
           })}
@@ -85,7 +87,7 @@ export function LinksDaExperiencia({ experienciaId }: { experienciaId: string })
       )}
       {erro ? <MensagemErro>{erro}</MensagemErro> : null}
       {erroAoAbrir ? <MensagemErro>{erroAoAbrir}</MensagemErro> : null}
-      <Button label="Adicionar link" variant="secondary" onPress={() => setEditando('novo')} />
+      {somenteLeitura ? null : <Button label="Adicionar link" variant="secondary" onPress={() => setEditando('novo')} />}
 
       {editando ? (
         <EditorDeLink

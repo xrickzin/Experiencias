@@ -125,6 +125,44 @@ export function CamposDaExperiencia({
   );
 }
 
+/**
+ * Os detalhes de uma memória, só para ver (ADR 042). Título e quando ficam no topo da tela; aqui, o
+ * resto que existir. Sem nada, não mostra nada.
+ */
+export function DetalhesDaMemoria({ experiencia }: { experiencia: Experiencia }) {
+  const { categorias } = useCategorias();
+  const nomes = categorias.filter((c) => experiencia.categorias.includes(c.id)).map((c) => c.nome);
+  const linhas = [
+    nomes.length ? { rotulo: 'Categorias', valor: nomes.join(' · ') } : null,
+    experiencia.tamanho ? { rotulo: 'Duração', valor: ROTULO_DO_TAMANHO[experiencia.tamanho] } : null,
+    experiencia.local ? { rotulo: 'Local', valor: experiencia.local } : null,
+    experiencia.observacoes ? { rotulo: 'Observações', valor: experiencia.observacoes } : null,
+  ].filter((l) => l !== null);
+
+  return (
+    <View style={{ gap: Spacing.three }}>
+      <ThemedText type="small" themeColor="textSecondary" style={{ fontStyle: 'italic' }}>
+        Como foi vivida: os detalhes de uma memória não mudam mais. Fotos e impressões continuam abertas.
+      </ThemedText>
+      {linhas.map((l) => (
+        <View key={l.rotulo} style={{ gap: Spacing.half }}>
+          <ThemedText type="smallBold">{l.rotulo}</ThemedText>
+          <ThemedText selectable>{l.valor}</ThemedText>
+        </View>
+      ))}
+      {experiencia.local ? (
+        <View style={{ alignItems: 'flex-start' }}>
+          <Button
+            label="Abrir no mapa"
+            variant="text"
+            onPress={() => void Linking.openURL(enderecoNoMapa(experiencia.local!)).catch(() => {})}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /** Duração: escolhida, ou só mostrada quando as datas de um período já dizem qual é. */
 function Duracao({ valores, onChange }: { valores: ValoresDaExperiencia; onChange: (t: Tamanho | null) => void }) {
   const r = lerReferencia(valores.referencia);

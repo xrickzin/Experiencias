@@ -158,6 +158,8 @@ function falhaDoServico(erro: NonNullable<ErroServico>): Falha {
   if (ehErroDeRede(erro)) return falha('rede');
   // 23514: violação de CHECK (título vazio, textos acima do limite, referência incoerente).
   if (erro.code === '23514') return falha('desejo_invalido');
+  // A outra pessoa finalizou com o formulário aberto (ADR 042).
+  if (erro.message === 'memoria_travada') return falha('memoria_travada');
   return falha('desconhecido');
 }
 

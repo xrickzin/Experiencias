@@ -14,7 +14,7 @@ import { sugereReservas } from '@/services/tamanho';
 /**
  * As seções de planejamento abaixo do formulário (ADR 038). Links valem em todo estado. Reservas, em
  * Planejamento e Vivendo: à vista quando o tamanho pede; senão, em "Mais para planejar". Uma seção
- * com conteúdo aparece sempre, em qualquer estado.
+ * com conteúdo aparece sempre, em qualquer estado. Na memória, só para ver (ADR 042).
  */
 export function SecoesDePlanejamento({ experiencia }: { experiencia: Experiencia }) {
   const reservas = useReservas(experiencia.id);
@@ -28,14 +28,15 @@ export function SecoesDePlanejamento({ experiencia }: { experiencia: Experiencia
   );
 
   const planejando = experiencia.estado === 'planejamento' || experiencia.estado === 'vivendo';
+  const memoria = experiencia.estado === 'memoria';
   const comReservas = reservas.reservas.length > 0 || Boolean(reservas.erro);
   const mostrarReservas = comReservas || (planejando && (sugereReservas(experiencia.tamanho) || reservasAbertas));
   const escondidas = planejando && reservas.carregado && !mostrarReservas;
 
   return (
     <View style={{ gap: Spacing.five }}>
-      <LinksDaExperiencia experienciaId={experiencia.id} />
-      {mostrarReservas ? <ReservasDaExperiencia reservas={reservas} /> : null}
+      <LinksDaExperiencia experienciaId={experiencia.id} somenteLeitura={memoria} />
+      {mostrarReservas ? <ReservasDaExperiencia reservas={reservas} somenteLeitura={memoria} /> : null}
       {escondidas ? (
         <View style={{ gap: Spacing.two }}>
           <ThemedText type="smallBold" accessibilityRole="header">

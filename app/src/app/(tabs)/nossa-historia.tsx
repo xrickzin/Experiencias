@@ -1,22 +1,23 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { EmptyState } from '@/components/empty-state';
-import { LinhaDaExperiencia } from '@/components/linha-da-experiencia';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { PaginaDoAlbum } from '@/components/pagina-do-album';
 import { ThemedText } from '@/components/themed-text';
 import { useExperiencias } from '@/hooks/use-experiencias';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { Experiencia } from '@/services/experiencias';
 import { assinarCaminhos } from '@/services/fotos';
 import { agruparPorMes } from '@/services/nossa-historia';
 
 /**
- * O álbum do casal: as memórias agrupadas pelo mês de início, do mês mais recente ao mais antigo,
- * com a foto de destaque quando existir. Um fio sutil na lateral liga os meses (ux/our-story.md).
+ * O álbum do casal: as memórias agrupadas pelo mês de início, da mais recente à mais antiga, cada
+ * mês uma página com a foto de destaque quando existir. Um fio sutil na lateral liga os meses
+ * (ux/our-story.md).
  */
 export default function NossaHistoria() {
   const theme = useTheme();
@@ -38,15 +39,6 @@ export default function NossaHistoria() {
       ativo = false;
     };
   }, [chaveDosCaminhos]);
-
-  const item = (m: Experiencia, semQuando = false) => (
-    <LinhaDaExperiencia
-      key={m.id}
-      experiencia={m}
-      fotoDestaqueUrl={m.fotoDestaque ? (urls.get(m.fotoDestaque.caminho) ?? null) : null}
-      semQuando={semQuando}
-    />
-  );
 
   useFocusEffect(
     useCallback(() => {
@@ -83,30 +75,14 @@ export default function NossaHistoria() {
         />
       ) : (
         <View>
-          <View style={{ borderLeftWidth: 1, borderLeftColor: theme.accent, paddingLeft: Spacing.three }}>
+          <View style={{ paddingLeft: Spacing.three + Spacing.one, gap: Spacing.five }}>
+            <FioLateral />
             {meses.map((mes) => (
-              <View key={mes.chave} style={{ marginBottom: Spacing.four }}>
-                {/* Cada mês é um capítulo do álbum: título na voz editorial. */}
-                <ThemedText
-                  type="subtitle"
-                  accessibilityRole="header"
-                  style={{ fontSize: 22, lineHeight: 30, marginBottom: Spacing.one }}>
-                  {mes.rotulo}
-                </ThemedText>
-                {mes.comDia.map((m) => item(m))}
-                {mes.semDia.length > 0 ? (
-                  <>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: Spacing.three }}>
-                      {`Em algum dia de ${mes.rotulo.split(' de ')[0].toLowerCase()}`}
-                    </ThemedText>
-                    {mes.semDia.map((m) => item(m, true))}
-                  </>
-                ) : null}
-              </View>
+              <PaginaDoAlbum key={mes.chave} mes={mes} urls={urls} />
             ))}
           </View>
           {/* Não existe fim da história: o fio continua. */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.two }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.four }}>
             <ThemedText type="small" themeColor="textSecondary" style={{ fontStyle: 'italic' }}>
               E ainda tem muito por viver.
             </ThemedText>
@@ -119,5 +95,27 @@ export default function NossaHistoria() {
         </View>
       )}
     </Screen>
+  );
+}
+
+/** O fio que liga os meses: o mesmo fio ondulado das guias, descendo pela lateral da história. */
+function FioLateral() {
+  const theme = useTheme();
+  const [altura, setAltura] = useState(0);
+  let d = 'M4 0';
+  for (let y = 0, i = 0; y < altura; y += 18, i++) d += ` Q${4 + (i % 2 ? 1.5 : -1.5)} ${y + 9} 4 ${y + 18}`;
+  return (
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      pointerEvents="none"
+      onLayout={(e) => setAltura(e.nativeEvent.layout.height)}
+      style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8 }}>
+      {altura ? (
+        <Svg width={8} height={altura}>
+          <Path d={d} stroke={theme.accentSoft} strokeWidth={1.5} fill="none" strokeLinecap="round" />
+        </Svg>
+      ) : null}
+    </View>
   );
 }

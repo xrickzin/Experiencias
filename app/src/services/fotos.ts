@@ -21,6 +21,8 @@ export type Foto = {
   capturadaEm: string | null;
   /** Texto curto opcional, dos dois (ADR 030). */
   legenda: string | null;
+  /** Quem escreveu a legenda (ADR 043); nulo sem legenda. */
+  legendaAutorId: string | null;
   criadoEm: string;
 };
 
@@ -72,6 +74,7 @@ type Linha = {
   autor_id: string | null;
   capturada_em: string | null;
   legenda: string | null;
+  legenda_autor_id?: string | null;
   criado_em: string;
 };
 
@@ -87,20 +90,26 @@ const paraFoto = (l: Linha, url: string | null, miniatura: string | null): Foto 
   autorId: l.autor_id,
   capturadaEm: l.capturada_em,
   legenda: l.legenda,
+  legendaAutorId: l.legenda_autor_id ?? null,
   criadoEm: l.criado_em,
 });
 
 export async function listarFotos(experienciaId: string): Promise<Resultado<{ fotos: Foto[] }>> {
   if (!supabase) return falha('sem_configuracao');
   try {
-    const { data, error } = await supabase
-      .from('registros')
-      .select(COLUNAS)
-      .eq('experiencia_id', experienciaId)
-      .eq('tipo', 'foto')
-      .order('criado_em', { ascending: true });
+    const consultar = (colunas: string) =>
+      supabase!
+        .from('registros')
+        .select(colunas)
+        .eq('experiencia_id', experienciaId)
+        .eq('tipo', 'foto')
+        .order('criado_em', { ascending: true });
+    let { data, error } = await consultar(`${COLUNAS}, legenda_autor_id`);
+    // ponytail: sem a migração 20261031140000 no banco, a coluna não existe e a lista segue sem o
+    // autor da legenda. Tirar esta segunda consulta quando a migração estiver aplicada no projeto real.
+    if (error && /legenda_autor_id/.test(error.message ?? '')) ({ data, error } = await consultar(COLUNAS));
     if (error) return ehErroDeRede(error) ? falha('rede') : falha('desconhecido');
-    const linhas = data as Linha[];
+    const linhas = data as unknown as Linha[];
     if (linhas.length === 0) return { ok: true, fotos: [] };
 
     // Foto e miniatura numa só chamada; a miniatura que não existe (fotos antigas) volta sem URL.
@@ -167,6 +176,38 @@ export async function enviarFoto(
       .createSignedUrls(miniatura ? [caminho, caminhoDaMiniatura(caminho)] : [caminho], VALIDADE_DA_URL_S);
     const [inteira, pequena] = (assinadas.data ?? []).map((a) => a.signedUrl ?? null);
     return { ok: true, foto: paraFoto(data as Linha, inteira ?? null, pequena ?? null) };
+  } catch {
+    return falha('rede');
+  }
+}
+
+/**
+ * Troca a foto de perfil de quem está usando (ADR 043): envia a nova, passa a usá-la e só então apaga
+ * a anterior. Sem `base64`, tira a foto. Cada um mexe só na própria (regra no banco).
+ */
+export async function definirFotoDePerfil(
+  lacoId: string,
+  membroId: string,
+  base64: string | null,
+  anterior: string | null
+): Promise<Resultado<{ caminho: string | null }>> {
+  if (!supabase) return falha('sem_configuracao');
+  const caminho = base64 ? `${lacoId}/perfil/${membroId}-${Date.now()}.jpg` : null;
+  try {
+    if (caminho && base64) {
+      const envio = await supabase.storage
+        .from(BUCKET)
+        .upload(caminho, base64ParaBytes(base64), { contentType: 'image/jpeg', upsert: false });
+      if (envio.error) return falhaDoStorage(envio.error, 'foto_nao_enviada');
+    }
+    const { error } = await supabase.from('membros').update({ foto_caminho: caminho }).eq('id', membroId);
+    if (error) {
+      if (caminho) await supabase.storage.from(BUCKET).remove([caminho]);
+      return ehErroDeRede(error) ? falha('rede') : falha('foto_nao_enviada');
+    }
+    // A anterior é só limpeza: se não sair agora, não atrapalha.
+    if (anterior) await supabase.storage.from(BUCKET).remove([anterior]);
+    return { ok: true, caminho };
   } catch {
     return falha('rede');
   }

@@ -3,6 +3,7 @@
 import {
   assinarCaminhos,
   base64ParaBytes,
+  definirFotoDePerfil,
   enviarFoto,
   excluirFoto,
   listarFotos,
@@ -20,9 +21,10 @@ const resposta = (chave: string) => mockRespostas[chave] ?? { data: null, error:
 function mockTabela() {
   let operacao = 'select';
   const c: Record<string, unknown> = {};
-  for (const m of ['select', 'insert', 'delete', 'eq', 'order', 'single']) {
+  for (const m of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'single']) {
     c[m] = (...args: unknown[]) => {
-      if (m === 'insert' || m === 'delete') operacao = m;
+      if (m === 'insert' || m === 'update' || m === 'delete') operacao = m;
+      if (m === 'update') mockOrdem.push(`registro.update:${JSON.stringify(args[0])}`);
       if (m === 'insert') mockOrdem.push(`registro.insert:${JSON.stringify(args[0])}`);
       return c;
     };
@@ -218,5 +220,34 @@ describe('assinarCaminhos (capas e favoritos)', () => {
     const urls = await assinarCaminhos(['nova.jpg', 'antiga.jpg']);
     expect(urls.get('nova.jpg')).toBe('https://assinada/nova.mini.jpg');
     expect(urls.get('antiga.jpg')).toBe('https://assinada/antiga.jpg');
+  });
+});
+
+describe('foto de perfil (ADR 043)', () => {
+  beforeEach(() => {
+    mockOrdem.length = 0;
+    for (const k of Object.keys(mockRespostas)) delete mockRespostas[k];
+  });
+
+  it('envia na pasta de perfil, passa a usar e só então apaga a anterior', async () => {
+    const r = await definirFotoDePerfil('l1', 'm1', 'QUJD', 'l1/perfil/m1-1.jpg');
+    expect(r).toMatchObject({ ok: true, caminho: expect.stringMatching(/^l1\/perfil\/m1-\d+\.jpg$/) });
+    expect(mockOrdem[0]).toMatch(/^arquivo\.upload:l1\/perfil\/m1-\d+\.jpg:image\/jpeg:false$/);
+    expect(mockOrdem[1]).toMatch(/^registro\.update:\{"foto_caminho":"l1\/perfil\/m1-\d+\.jpg"\}$/);
+    expect(mockOrdem.at(-1)).toBe('arquivo.remove:l1/perfil/m1-1.jpg');
+  });
+
+  it('se o perfil não aceitar, o arquivo enviado é apagado e a anterior fica', async () => {
+    responder('registro.update', { data: null, error: { message: 'violates check constraint' } });
+    const r = await definirFotoDePerfil('l1', 'm1', 'QUJD', 'l1/perfil/m1-1.jpg');
+    expect(r.ok).toBe(false);
+    expect(mockOrdem.at(-1)).toMatch(/^arquivo\.remove:l1\/perfil\/m1-\d+\.jpg$/);
+    expect(mockOrdem).not.toContain('arquivo.remove:l1/perfil/m1-1.jpg');
+  });
+
+  it('tirar a foto limpa o perfil e apaga o arquivo', async () => {
+    const r = await definirFotoDePerfil('l1', 'm1', null, 'l1/perfil/m1-1.jpg');
+    expect(r).toEqual({ ok: true, caminho: null });
+    expect(mockOrdem).toEqual(['registro.update:{"foto_caminho":null}', 'registro.update', 'arquivo.remove:l1/perfil/m1-1.jpg']);
   });
 });

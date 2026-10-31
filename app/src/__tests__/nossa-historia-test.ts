@@ -20,7 +20,7 @@ const resumo = (memorias: Experiencia[]) =>
   }));
 
 describe('Nossa História: agrupamento por mês', () => {
-  it('meses do mais recente ao mais antigo; dentro do mês, ordem crescente', () => {
+  it('meses do mais recente ao mais antigo, e dentro do mês também', () => {
     expect(
       resumo([
         memoria('Teatro', ref('data', '2026-10-24')),
@@ -29,7 +29,7 @@ describe('Nossa História: agrupamento por mês', () => {
         memoria('Almoço', ref('data_horario', '2026-10-03', null, '12:00:00')),
       ])
     ).toEqual([
-      { rotulo: 'Outubro de 2026', comDia: ['Almoço', 'Jantar', 'Teatro'], semDia: [] },
+      { rotulo: 'Outubro de 2026', comDia: ['Teatro', 'Jantar', 'Almoço'], semDia: [] },
       { rotulo: 'Setembro de 2026', comDia: ['Feira'], semDia: [] },
     ]);
   });

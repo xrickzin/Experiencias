@@ -59,9 +59,11 @@ export function useFotos(experienciaId: string) {
 
   const legendar = useCallback(async (id: string, legenda: string) => {
     const r = await legendarFoto(id, legenda);
-    if (r.ok) setFotos((atuais) => atuais.map((f) => (f.id === id ? { ...f, legenda: r.legenda } : f)));
+    // Quem escreve passa a ser o autor da legenda (o servidor grava o mesmo).
+    const autor = r.ok && r.legenda ? (perfil?.membro_id ?? null) : null;
+    if (r.ok) setFotos((atuais) => atuais.map((f) => (f.id === id ? { ...f, legenda: r.legenda, legendaAutorId: autor } : f)));
     return r;
-  }, []);
+  }, [perfil?.membro_id]);
 
   const datar = useCallback(async (id: string, capturadaEm: string) => {
     const r = await datarFoto(id, capturadaEm);
