@@ -258,7 +258,7 @@ describe('Início', () => {
     lista(experiencia('d1', 'Desejo'));
     await abrir('/');
     expect(await screen.findByText('O que vocês querem viver?')).toBeTruthy();
-    expect(screen.getByText('1 desejo para viver juntos.')).toBeTruthy();
+    expect(screen.getByText('1 desejo no céu de vocês')).toBeTruthy();
   });
 
   it('mostra Vivendo em destaque, as próximas e o que está em preparação', async () => {
@@ -270,12 +270,12 @@ describe('Início', () => {
     );
     await abrir('/');
 
-    expect(await screen.findByText('VIVENDO AGORA')).toBeTruthy();
+    expect(await screen.findByText('Vivendo agora')).toBeTruthy();
     expect(screen.getByText('Fim de semana na serra')).toBeTruthy();
     expect(screen.getByText('Continuar experiência →')).toBeTruthy();
-    expect(screen.getByText('NOSSO PRÓXIMO MOMENTO')).toBeTruthy();
+    expect(screen.getByText('Nosso próximo momento')).toBeTruthy();
     expect(screen.getByText('Jantar')).toBeTruthy();
-    expect(screen.getByText('ESTAMOS PREPARANDO')).toBeTruthy();
+    expect(screen.getByText('Estamos preparando')).toBeTruthy();
     expect(screen.getByText('Teatro')).toBeTruthy();
     // Desejos não são listados em Início, só contados.
     expect(screen.queryByText('Piquenique')).toBeNull();

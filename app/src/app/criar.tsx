@@ -15,10 +15,11 @@ import { validarTituloDoDesejo } from '@/services/validacao';
 
 /** Criar só existe em Desejo ou, para algo vivido antes do aplicativo, em Memória (ADR 008). */
 export default function Criar() {
-  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+  // `titulo`: um começo já escrito (as sementes de Desejos).
+  const { tipo, titulo } = useLocalSearchParams<{ tipo?: string; titulo?: string }>();
   const memoria = tipo === 'memoria';
   const { adicionarDesejo, registrarMemoria } = useExperiencias();
-  const [valores, setValores] = useState<ValoresDaExperiencia>(valoresVazios);
+  const [valores, setValores] = useState<ValoresDaExperiencia>(() => ({ ...valoresVazios(), titulo: titulo ?? '' }));
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
   const [erroGeral, setErroGeral] = useState<string>();

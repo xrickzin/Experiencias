@@ -311,3 +311,51 @@ describe('categorias e tamanho', () => {
     );
   });
 });
+
+describe('céu de desejos', () => {
+  beforeEach(() => {
+    servico.listarExperiencias.mockResolvedValue({
+      ok: true,
+      experiencias: [
+        desejo('1', 'Ver o nascer do sol', { local: 'Praia' }),
+        desejo('2', 'Aula de cerâmica', { local: 'Vila Madalena' }),
+        desejo('3', 'Lisboa', { referencia: { precisao: 'mes_ano', inicio: '2099-05-01', fim: null, horario: null } }),
+      ],
+    });
+  });
+
+  it('procurar mostra só o que combina, sem diferenciar acento', async () => {
+    await abrir('/desejos');
+    await screen.findByText('Aula de cerâmica');
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Procurar um desejo'), 'ceramica');
+    });
+    expect(screen.getByText('Aula de cerâmica')).toBeTruthy();
+    expect(screen.queryByText('Ver o nascer do sol')).toBeNull();
+
+    await act(async () => {
+      await fireEvent.changeText(screen.getByLabelText('Procurar um desejo'), 'xyz');
+    });
+    expect(screen.getByText('Nenhum desejo com essa palavra.')).toBeTruthy();
+  });
+
+  it('na lista, os desejos ficam agrupados pelo horizonte', async () => {
+    await abrir('/desejos');
+    await screen.findByText('Lisboa');
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Lista' }));
+    });
+    const titulos = screen.getAllByRole('header').map((h) => h.props.children);
+    expect(titulos).toEqual(expect.arrayContaining(['Um dia', 'Sem pressa']));
+  });
+
+  it('uma semente abre a criação com o começo já escrito', async () => {
+    await abrir('/desejos');
+    await screen.findByText('Lisboa');
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('button', { name: 'Começar um desejo: Um lugar que nunca fomos' }));
+    });
+    await esperar();
+    expect(screen.getByLabelText('Título, obrigatório').props.value).toBe('Um lugar que nunca fomos');
+  });
+});
