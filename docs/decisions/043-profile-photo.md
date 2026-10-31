@@ -22,5 +22,4 @@
   - `meu_perfil` devolve `foto_caminho` e `companheiro_foto_caminho`;
   - política de Storage que só aceita envio na pasta `perfil` do próprio Laço, com o próprio id no nome. Ler e excluir seguem as regras do bucket.
 - A foto é reduzida no aparelho (até 1080 px, como as miniaturas) antes de subir. Trocar envia a nova, passa a usá-la e só então apaga a anterior.
-- Suítes do banco: `supabase/tests/foto-perfil.mjs` e, para o autor da legenda, `supabase/tests/legendas.mjs`.
-- Até a migração do autor da legenda chegar ao projeto real, a lista de fotos segue sem ele (`listarFotos` repete a consulta sem a coluna). Serviço: `definirFotoDePerfil` em `app/src/services/fotos.ts`. Componente: `app/src/components/retrato.tsx`.
+- Suítes do banco: `supabase/tests/foto-perfil.mjs` e, para o autor da legenda, `supabase/tests/legendas.mjs`. Serviço: `definirFotoDePerfil` em `app/src/services/fotos.ts`. Componente: `app/src/components/retrato.tsx`.
