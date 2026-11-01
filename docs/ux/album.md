@@ -7,7 +7,7 @@ Como Nossa História e a memória aberta se apresentam no app. Direção pedida 
 - **Papel** (`papel` e `papelBorda` em `app/src/constants/theme.ts`): mais claro e mais quente que as superfícies da interface, nos dois temas. No escuro, um creme apagado que se destaca do fundo; os textos sobre ele passam do contraste mínimo.
 - **Moldura única** (`app/src/components/moldura.tsx`), em três tamanhos: miniatura (grade de momentos), pequena (polaroides lado a lado, fotos da lista) e retrato (capas, foto aberta). Só as polaroides soltas giram de leve; capas e grades ficam retas.
 - **O fio:** ondulado e fino em toda Nossa História, inclusive a linha lateral que liga os meses. Nas guias, o próprio fio dá o laço (não há desenho por cima).
-- **Voz do álbum:** rótulos e datas em Fraunces itálico ("favorito", "capa", "8 de outubro, à noite"), sem maiúsculas espaçadas. Nada de rótulo acima de título.
+- **Voz do álbum:** rótulos e datas em Fraunces itálico ("favorito", "capa", "8 de outubro, à noite"), com `FontFamily.voz`, o arquivo itálico de verdade, e nunca `fontStyle: 'italic'` sobre a SemiBold; sem maiúsculas espaçadas. Nada de rótulo acima de título.
 
 ## Lista de Nossa História
 
