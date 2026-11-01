@@ -69,7 +69,7 @@ describe('orçamento na tela', () => {
     return e;
   }
 
-  async function tocar(rotulo: string, papel: 'button' | 'tab' = 'button') {
+  async function tocar(rotulo: string, papel: 'button' | 'tab' | 'checkbox' = 'button') {
     await act(async () => {
       await fireEvent.press(screen.getByRole(papel, { name: rotulo }));
     });
@@ -165,13 +165,15 @@ describe('orçamento na tela', () => {
     expect(nomesDasAbas()).toEqual(['Memória', 'Momentos', 'Orçamento', 'Detalhes']);
   });
 
-  it('ao criar, o card vale junto com "Adicionar desejo"', async () => {
+  it('ao criar, o card vale junto com o desejo guardado', async () => {
     exp.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [] });
     exp.criarDesejo.mockResolvedValue({ ok: true, desejo: experiencia('9', 'Serra', { orcamentoAtivo: true }) });
     await abrir('/criar');
-    await tocar('Usar orçamento');
+    await tocar('Mais um pouco');
+    await tocar('Querem já ir planejando?');
+    await tocar('Usar orçamento', 'checkbox');
     await preencher('Título, obrigatório', 'Serra');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
     expect(exp.criarDesejo).toHaveBeenCalledWith(expect.objectContaining({ orcamentoAtivo: true, roteiroAtivo: false }));
   });
 });

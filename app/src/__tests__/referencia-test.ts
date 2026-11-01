@@ -1,6 +1,7 @@
 import { organizarInicio } from '@/services/inicio';
 import {
   camposDaReferencia,
+  descreverCurto,
   descreverReferencia,
   lerReferencia,
   mascararData,
@@ -185,5 +186,20 @@ describe('organizarInicio', () => {
   it('sem nada em andamento, todas as listas ficam vazias', () => {
     const r = organizarInicio([experiencia('d1', 'Desejo')], agora);
     expect([r.vivendo, r.proximas, r.planejamentos]).toEqual([[], [], []]);
+  });
+});
+
+describe('descreverCurto', () => {
+  const hoje = new Date(2026, 9, 31);
+  const r = (precisao: string, inicio: string, fim: string | null = null) =>
+    ({ precisao, inicio, fim, horario: null }) as Parameters<typeof descreverCurto>[0];
+
+  it('cabe no céu: ano só quando não é o de agora', () => {
+    expect(descreverCurto(r('data', '2026-12-12'), hoje)).toBe('12 dez.');
+    expect(descreverCurto(r('periodo', '2026-12-12', '2026-12-14'), hoje)).toBe('12–14 dez.');
+    expect(descreverCurto(r('periodo', '2027-01-30', '2027-02-02'), hoje)).toBe('30 jan. – 2 fev. 2027');
+    expect(descreverCurto(r('mes_ano', '2026-11-01'), hoje)).toBe('nov. 2026');
+    expect(descreverCurto(r('periodo', '2026-12-28', '2027-01-03'), hoje)).toBe('28 dez. – 3 jan. 2027');
+    expect(descreverCurto(r('sem_data', ''), hoje)).toBeNull();
   });
 });

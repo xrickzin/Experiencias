@@ -231,14 +231,16 @@ describe('roteiro na tela', () => {
     expect(screen.queryByText(/Combina com/)).toBeNull();
   });
 
-  it('ao criar, o card vale junto com "Adicionar desejo"', async () => {
+  it('ao criar, o card vale junto com o desejo guardado', async () => {
     exp.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [] });
     exp.criarDesejo.mockResolvedValue({ ok: true, desejo: experiencia('9', 'Serra', { roteiroAtivo: true }) });
     await abrir('/criar');
-    await tocar('Usar roteiro');
+    await tocar('Mais um pouco');
+    await tocar('Querem já ir planejando?');
+    await tocar('Usar roteiro', 'checkbox');
     expect(screen.getByText('Vai junto com o desejo')).toBeTruthy();
     await preencher('Título, obrigatório', 'Serra');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
     expect(exp.criarDesejo).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Serra', roteiroAtivo: true }));
   });
 

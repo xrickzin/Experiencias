@@ -205,9 +205,10 @@ describe('referência temporal na tela', () => {
     await abrir('/criar');
 
     await preencher('Título, obrigatório', 'Campos do Jordão');
-    await escolher('Mês');
+    await tocar('Quando? sem pressa');
+    await escolher('Num mês');
     await preencher('Mês e ano', '072027');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
 
     expect(mock.criarDesejo).toHaveBeenCalledWith(
       expect.objectContaining({ referencia: { precisao: 'mes_ano', inicio: '2027-07-01', fim: null, horario: null } })

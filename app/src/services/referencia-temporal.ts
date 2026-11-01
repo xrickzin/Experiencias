@@ -187,6 +187,26 @@ export function descreverReferencia(r: ReferenciaTemporal): string | null {
   }
 }
 
+/**
+ * A referência curta, para espaços estreitos como o céu de desejos: "12 dez.", "12–14 dez.",
+ * "dez. 2027". O ano só aparece quando não é o de `hoje`.
+ */
+export function descreverCurto(r: ReferenciaTemporal, hoje: Date): string | null {
+  if (r.precisao === 'sem_data' || !r.inicio) return null;
+  const i = partes(r.inicio);
+  const mes = (m: number) => `${MESES[m - 1].slice(0, 3)}.`;
+  const ano = i.ano === hoje.getFullYear() ? '' : ` ${i.ano}`;
+  if (r.precisao === 'mes_ano') return `${mes(i.mes)}${ano || ` ${i.ano}`}`;
+  if (r.precisao === 'periodo' && r.fim && r.fim !== r.inicio) {
+    const f = partes(r.fim);
+    if (i.mes === f.mes && i.ano === f.ano) return `${i.dia}–${f.dia} ${mes(i.mes)}${ano}`;
+    // Atravessando o ano, o fim diz o seu.
+    const anoDoFim = f.ano === hoje.getFullYear() && f.ano === i.ano ? '' : ` ${f.ano}`;
+    return `${i.dia} ${mes(i.mes)}${i.ano === f.ano ? '' : ano} – ${f.dia} ${mes(f.mes)}${anoDoFim}`;
+  }
+  return `${i.dia} ${mes(i.mes)}${ano}`;
+}
+
 /** Chave de ordenação pela referência disponível (data e horário), ou nulo sem data. */
 export function chaveDeOrdem(r: ReferenciaTemporal): string | null {
   if (!r.inicio) return null;

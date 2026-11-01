@@ -80,7 +80,7 @@ describe('lista de desejos', () => {
       .mockResolvedValue({ ok: true, experiencias: [desejo('1', 'Ver o nascer do sol')] });
     await abrir('/desejos');
 
-    expect(await screen.findByText('Não foi possível carregar')).toBeTruthy();
+    expect(await screen.findByText('O céu não acendeu agora')).toBeTruthy();
     expect(screen.getByText(SEM_REDE)).toBeTruthy();
 
     await tocar('Tentar de novo');
@@ -100,9 +100,13 @@ describe('criar desejo', () => {
     const { tela } = await abrir('/criar');
 
     await preencher('Título, obrigatório', '  Ver o nascer do sol  ');
+    // Os detalhes são perguntas que se abrem ao toque.
+    await tocar('Onde?');
     await preencher('Local', 'Praia');
+    await tocar('Mais um pouco');
+    await tocar('Algo para não esquecer?');
     await preencher('Observações', 'Levar café');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
 
     expect(servico.criarDesejo).toHaveBeenCalledWith({
       titulo: '  Ver o nascer do sol  ',
@@ -123,9 +127,9 @@ describe('criar desejo', () => {
     const { tela } = await abrir('/criar');
 
     await preencher('Título, obrigatório', '   ');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
 
-    expect(screen.getByText('Escreva um título para continuar.')).toBeTruthy();
+    expect(screen.getByText('Escrevam uma frase para o desejo virar estrela.')).toBeTruthy();
     expect(servico.criarDesejo).not.toHaveBeenCalled();
     expect(tela.getPathname()).toBe('/criar');
   });
@@ -136,11 +140,11 @@ describe('criar desejo', () => {
     const { tela } = await abrir('/criar');
 
     await preencher('Título, obrigatório', 'Ver o nascer do sol');
-    await tocar('Adicionar desejo');
+    await tocar('Guardar no céu');
 
     expect(screen.getByText(SEM_REDE)).toBeTruthy();
     expect(tela.getPathname()).toBe('/criar');
-    expect(screen.getByRole('button', { name: 'Adicionar desejo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Guardar no céu' })).toBeTruthy();
   });
 });
 
@@ -267,9 +271,14 @@ describe('categorias e tamanho', () => {
     });
     await abrir('/desejos');
     await screen.findByText('Sessão de cinema');
+    // Modo e filtros moram numa folha, aberta por um botão só.
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('button', { name: /^Filtrar/ }));
+    });
     expect(screen.queryByRole('radio', { name: 'Um dia' })).toBeNull(); // nenhum desejo de um dia
 
     await tocarEm('radio', 'Filme');
+    expect(screen.getByRole('button', { name: 'Filtrar. Agora: Só Filme' })).toBeTruthy();
     expect(screen.getByText('Sessão de cinema')).toBeTruthy();
     expect(screen.queryByText('Lisboa')).toBeNull();
     expect(screen.queryByText('Sem nada')).toBeNull();
@@ -291,9 +300,12 @@ describe('categorias e tamanho', () => {
     await act(async () => {
       await fireEvent.changeText(await screen.findByLabelText('Título, obrigatório'), 'Maratona de Star Wars');
     });
+    await tocar('Mais um pouco');
+    await tocar('Por quanto tempo?');
     await tocarEm('radio', 'Uma noite');
+    await tocar('Que tipo de desejo?');
     await tocarEm('checkbox', 'Filme');
-    await tocarEm('checkbox', '+ Nova categoria');
+    await tocar('+ Nova categoria');
     await act(async () => {
       await fireEvent.changeText(screen.getByLabelText('Nome da categoria'), 'Coisas nerds');
     });
@@ -304,7 +316,7 @@ describe('categorias e tamanho', () => {
     expect(screen.getByRole('checkbox', { name: 'Coisas nerds' }).props.accessibilityState).toMatchObject({ checked: true });
 
     await act(async () => {
-      await fireEvent.press(screen.getByRole('button', { name: 'Adicionar desejo' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Guardar no céu' }));
     });
     expect(servico.criarDesejo).toHaveBeenCalledWith(
       expect.objectContaining({ titulo: 'Maratona de Star Wars', tamanho: 'noite', categorias: [FILME.id, 'c-nerd'] })
@@ -342,20 +354,47 @@ describe('céu de desejos', () => {
   it('na lista, os desejos ficam agrupados pelo horizonte', async () => {
     await abrir('/desejos');
     await screen.findByText('Lisboa');
+    // O modo troca num toque, pelo link ao lado dos filtros.
     await act(async () => {
-      await fireEvent.press(screen.getByRole('radio', { name: 'Lista' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Ver em lista' }));
     });
     const titulos = screen.getAllByRole('header').map((h) => h.props.children);
-    expect(titulos).toEqual(expect.arrayContaining(['Um dia', 'Sem pressa']));
+    expect(titulos).toEqual(expect.arrayContaining(['Algum dia', 'Sem pressa']));
   });
 
-  it('uma semente abre a criação com o começo já escrito', async () => {
+  it('voltando da criação, a chegada da estrela nova é dita em palavras', async () => {
+    await abrir('/desejos?nova=3');
+    expect(await screen.findByText('Mais uma estrela no céu: “Lisboa”')).toBeTruthy();
+  });
+
+  it('uma semente abre a criação com o começo como exemplo', async () => {
     await abrir('/desejos');
     await screen.findByText('Lisboa');
     await act(async () => {
       await fireEvent.press(screen.getByRole('button', { name: 'Começar um desejo: Um lugar que nunca fomos' }));
     });
     await esperar();
-    expect(screen.getByLabelText('Título, obrigatório').props.value).toBe('Um lugar que nunca fomos');
+    // A semente vira o exemplo do campo; o título continua vazio, para a frase ser deles.
+    const campo = screen.getByLabelText('Título, obrigatório');
+    expect(campo.props.placeholder).toBe('Um lugar que nunca fomos…');
+    expect(campo.props.value).toBe('');
+  });
+});
+
+describe('criar desejo como acalento', () => {
+  it('com a frase escrita, voltar pede confirmação antes de descartar', async () => {
+    servico.listarExperiencias.mockResolvedValue({ ok: true, experiencias: [] });
+    const { tela } = await abrir('/criar');
+    await preencher('Título, obrigatório', 'Ver a aurora');
+    await tocar('Voltar');
+    expect(screen.getByText('Sair sem guardar este desejo?')).toBeTruthy();
+    await tocar('Continuar escrevendo');
+    expect(screen.queryByText('Sair sem guardar este desejo?')).toBeNull();
+    expect(tela.getPathname()).toBe('/criar');
+
+    await tocar('Voltar');
+    await tocar('Sair sem guardar');
+    expect(tela.getPathname()).not.toBe('/criar');
+    expect(servico.criarDesejo).not.toHaveBeenCalled();
   });
 });

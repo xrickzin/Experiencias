@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Linking, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { LinhaDeCaderno } from '@/components/linha-de-caderno';
+import { MensagemErro } from '@/components/mensagem-erro';
 import { Chip, Grupo, Opcoes } from '@/components/opcoes';
 import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
 import { TextField } from '@/components/text-field';
@@ -164,12 +166,21 @@ export function DetalhesDaMemoria({ experiencia }: { experiencia: Experiencia })
 }
 
 /** Duração: escolhida, ou só mostrada quando as datas de um período já dizem qual é. */
-function Duracao({ valores, onChange }: { valores: ValoresDaExperiencia; onChange: (t: Tamanho | null) => void }) {
+export function Duracao({
+  valores,
+  onChange,
+  semRotulo = false,
+}: {
+  valores: ValoresDaExperiencia;
+  onChange: (t: Tamanho | null) => void;
+  /** A pergunta do criar já diz o que é. */
+  semRotulo?: boolean;
+}) {
   const r = lerReferencia(valores.referencia);
   const pelasDatas = r.ok ? tamanhoPelasDatas(r.referencia) : null;
   return (
     <View style={{ gap: Spacing.two }}>
-      <ThemedText type="smallBold">Duração</ThemedText>
+      {semRotulo ? null : <ThemedText type="smallBold">Duração</ThemedText>}
       {pelasDatas ? (
         <View style={{ gap: Spacing.half }} accessible accessibilityLabel={`Duração: ${ROTULO_DO_TAMANHO[pelasDatas]}, calculada pelas datas.`}>
           <ThemedText>{ROTULO_DO_TAMANHO[pelasDatas]}</ThemedText>
@@ -182,6 +193,7 @@ function Duracao({ valores, onChange }: { valores: ValoresDaExperiencia; onChang
           rotulo="Duração"
           opcoes={OPCOES_DE_TAMANHO}
           atual={valores.tamanho ?? SEM_TAMANHO}
+          voz={semRotulo}
           onChange={(v) => onChange(v === SEM_TAMANHO ? null : (v as Tamanho))}
         />
       )}
@@ -190,7 +202,19 @@ function Duracao({ valores, onChange }: { valores: ValoresDaExperiencia; onChang
 }
 
 /** Marcar várias categorias e criar uma nova, que já entra marcada. */
-function Categorias({ marcadas, onChange }: { marcadas: string[]; onChange: (ids: string[]) => void }) {
+export function Categorias({
+  marcadas,
+  onChange,
+  semRotulo = false,
+  editavel = true,
+}: {
+  marcadas: string[];
+  onChange: (ids: string[]) => void;
+  /** A pergunta do criar já diz o que é. */
+  semRotulo?: boolean;
+  /** "Editar categorias" leva a Ajustes: no meio de um rascunho, não. */
+  editavel?: boolean;
+}) {
   const { categorias, criar } = useCategorias();
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState('');
@@ -210,8 +234,8 @@ function Categorias({ marcadas, onChange }: { marcadas: string[]; onChange: (ids
 
   return (
     <View style={{ gap: Spacing.two }}>
-      <ThemedText type="smallBold">Categorias</ThemedText>
-      <Grupo rotulo="Categorias" papel="list">
+      {semRotulo ? null : <ThemedText type="smallBold">Categorias</ThemedText>}
+      <Grupo rotulo="Categorias" papel="list" voz={semRotulo}>
         {categorias.map((c) => {
           const marcada = marcadas.includes(c.id);
           return (
@@ -220,18 +244,40 @@ function Categorias({ marcadas, onChange }: { marcadas: string[]; onChange: (ids
               texto={c.nome}
               escolhida={marcada}
               papel="checkbox"
+              voz={semRotulo}
               onPress={() => onChange(marcada ? marcadas.filter((id) => id !== c.id) : [...marcadas, c.id])}
             />
           );
         })}
-        {criando ? null : <Chip texto="+ Nova categoria" escolhida={false} papel="checkbox" onPress={() => setCriando(true)} />}
+        {criando ? null : <Chip texto="+ Nova categoria" escolhida={false} papel="button" voz={semRotulo} onPress={() => setCriando(true)} />}
       </Grupo>
-      {criando ? null : (
+      {criando || !editavel ? null : (
         <View style={{ alignItems: 'flex-start' }}>
           <Button label="Editar categorias" variant="text" onPress={() => router.push('/ajustes')} />
         </View>
       )}
-      {criando ? (
+      {criando && semRotulo ? (
+        // No criar do desejo, a categoria nova também é uma linha de caderno.
+        <View style={{ gap: Spacing.one }}>
+          <LinhaDeCaderno
+            rotulo="Nome da categoria"
+            pergunta="Como vocês chamam?"
+            exemplo="Coisas nerds…"
+            valor={nome}
+            limite={LIMITE_DO_NOME_DA_CATEGORIA}
+            autoFocus
+            onChange={(t) => {
+              setNome(t);
+              setErro(undefined);
+            }}
+          />
+          {erro ? <MensagemErro>{erro}</MensagemErro> : null}
+          <View style={{ flexDirection: 'row', gap: Spacing.three }}>
+            <Button label="Criar" accessibilityLabel="Criar categoria" variant="text" loading={salvando} onPress={guardar} />
+            <Button label="deixa pra lá" accessibilityLabel="Cancelar" variant="text" disabled={salvando} onPress={() => setCriando(false)} />
+          </View>
+        </View>
+      ) : criando ? (
         <View style={{ gap: Spacing.two }}>
           <TextField
             label="Nome da categoria"
