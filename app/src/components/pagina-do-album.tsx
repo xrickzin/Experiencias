@@ -118,7 +118,7 @@ function Capa({ experiencia, url }: { experiencia: Experiencia; url: string | nu
             {experiencia.titulo}
           </ThemedText>
           {quando ? (
-            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }} numberOfLines={1}>
+            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }} numberOfLines={1}>
               {quando}
             </ThemedText>
           ) : null}
@@ -159,7 +159,7 @@ function Grade({
                       {m.titulo}
                     </ThemedText>
                     {detalhe ? (
-                      <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14 }} numberOfLines={1}>
+                      <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 14 }} numberOfLines={1}>
                         {detalhe}
                       </ThemedText>
                     ) : null}

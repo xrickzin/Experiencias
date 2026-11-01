@@ -112,7 +112,7 @@ export default function Inicio() {
             borderBottomWidth: 1,
             borderColor: theme.border,
           }}>
-          <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+          <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
             Para começar
           </ThemedText>
           <ThemedText type="subtitle" style={{ fontSize: 26, lineHeight: 34 }}>
@@ -150,7 +150,7 @@ export default function Inicio() {
             borderColor: theme.border,
             opacity: pressed ? 0.7 : 1,
           })}>
-          <ThemedText style={{ flex: 1, fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17 }}>
+          <ThemedText style={{ flex: 1, fontFamily: FontFamily.voz, fontSize: 17 }}>
             {totalDeDesejos === 0 ? 'Comecem o céu de vocês' : frasesDeDesejos(totalDeDesejos)}
           </ThemedText>
           <ThemedText themeColor="textSecondary">→</ThemedText>
@@ -178,7 +178,7 @@ function Bloco({
       <ThemedText
         accessibilityRole="header"
         themeColor="textSecondary"
-        style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17, marginBottom: Spacing.one }}>
+        style={{ fontFamily: FontFamily.voz, fontSize: 17, marginBottom: Spacing.one }}>
         {titulo}
       </ThemedText>
       <View style={filete ? { borderTopWidth: 1, borderTopColor: theme.border } : null}>{children}</View>
@@ -231,7 +231,7 @@ function UltimaPagina({ memoria }: { memoria: Experiencia }) {
   const quando = descreverReferencia(memoria.referencia);
   return (
     <View style={{ gap: Spacing.two }}>
-      <ThemedText accessibilityRole="header" themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17 }}>
+      <ThemedText accessibilityRole="header" themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 17 }}>
         A última página da nossa história
       </ThemedText>
       <Pressable
@@ -252,7 +252,7 @@ function UltimaPagina({ memoria }: { memoria: Experiencia }) {
               {memoria.titulo}
             </ThemedText>
             {quando ? (
-              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14 }}>
+              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 14 }}>
                 {quando}
               </ThemedText>
             ) : null}

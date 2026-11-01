@@ -163,7 +163,7 @@ export function MemoriaDaExperiencia({ experiencia, impressoes, recemFinalizada 
             <Voz>{minha?.texto}</Voz>
           ) : (
             <>
-              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
                 O que você vai querer lembrar daqui a alguns anos?
               </ThemedText>
               <Button label="Escrever minha impressão" variant="secondary" onPress={abrirEscrita} />
@@ -212,7 +212,7 @@ function Titulo({ children }: { children: string }) {
 
 /** Texto de impressão na "voz" (Fraunces itálico, screens.md). As aspas já estão na carta. */
 function Voz({ children }: { children: React.ReactNode }) {
-  return <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 18, lineHeight: 28 }}>{children}</ThemedText>;
+  return <ThemedText style={{ fontFamily: FontFamily.voz, fontSize: 18, lineHeight: 28 }}>{children}</ThemedText>;
 }
 
 /**
@@ -263,7 +263,7 @@ function Carta({
           {assinatura ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
               <Retrato membroId={autorId} tamanho={24} />
-              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 16 }}>
+              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 16 }}>
                 — {assinatura}
               </ThemedText>
             </View>
@@ -327,7 +327,7 @@ function Polaroide({ rotulo, legenda, caminho, inclinacao, guardado = false, chi
           </View>
           <ThemedText
             numberOfLines={1}
-            style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17, lineHeight: 22, textAlign: 'center' }}>
+            style={{ fontFamily: FontFamily.voz, fontSize: 17, lineHeight: 22, textAlign: 'center' }}>
             {legenda}
           </ThemedText>
         </Moldura>

@@ -613,7 +613,7 @@ function CapaDaMemoria({ titulo, ondeEQuando, caminho, url }: CapaProps) {
             // cortava a última palavra.
             <ThemedText
               themeColor="textSecondary"
-              style={{ alignSelf: 'stretch', fontFamily: FontFamily.display, fontStyle: 'italic', textAlign: 'center' }}>
+              style={{ alignSelf: 'stretch', fontFamily: FontFamily.voz, textAlign: 'center' }}>
               {ondeEQuando}
             </ThemedText>
           ) : null}

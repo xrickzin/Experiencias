@@ -103,6 +103,7 @@ export const Fonts = Platform.select({
  */
 export const FontFamily = {
   display: 'Fraunces-SemiBold', // títulos e momentos editoriais ou afetivos
+  voz: 'Fraunces-Italic', // a voz do álbum: itálico de verdade, não o SemiBold inclinado
   body: 'Figtree-Medium', // texto corrido, formulários, navegação
   bodyStrong: 'Figtree-SemiBold', // ênfase na interface
 } as const;

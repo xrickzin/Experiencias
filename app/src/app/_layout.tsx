@@ -46,6 +46,7 @@ export default function RootLayout() {
   }, []);
   const [fontsLoaded, fontError] = useFonts({
     [FontFamily.display]: require('@/assets/fonts/Fraunces-SemiBold.ttf'),
+    [FontFamily.voz]: require('@/assets/fonts/Fraunces-Italic.ttf'),
     [FontFamily.body]: require('@/assets/fonts/Figtree-Medium.ttf'),
     [FontFamily.bodyStrong]: require('@/assets/fonts/Figtree-SemiBold.ttf'),
   });

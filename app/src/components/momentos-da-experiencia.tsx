@@ -318,7 +318,7 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
               return (
                 <View key={periodo} style={{ gap: Spacing.two }}>
                   {acolhedor ? (
-                    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 16 }}>
+                    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 16 }}>
                       {ROTULO_DO_PERIODO[periodo]}
                     </ThemedText>
                   ) : (
@@ -385,7 +385,7 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
                                       backgroundColor: theme.papel,
                                     }}>
                                     <ThemedText
-                                      style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 13, lineHeight: 18, color: theme.accentStrong }}>
+                                      style={{ fontFamily: FontFamily.voz, fontSize: 13, lineHeight: 18, color: theme.accentStrong }}>
                                       {[foto.id === destaqueId ? 'capa' : null, ehFavorito(foto.id) ? 'favorito' : null]
                                         .filter(Boolean)
                                         .join(' · ')}
@@ -454,14 +454,14 @@ export function MomentosDaExperiencia({ experiencia, favorito, finalizar }: Mome
                               }),
                         })}>
                         <ThemedText
-                          style={acolhedor ? { fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 17, lineHeight: 26 } : undefined}>
+                          style={acolhedor ? { fontFamily: FontFamily.voz, fontSize: 17, lineHeight: 26 } : undefined}>
                           {obs.texto}
                         </ThemedText>
                         {autor && acolhedor ? (
                           // Na memória, o bilhete é assinado: o retrato e o nome de quem escreveu.
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.one }}>
                             <Retrato membroId={obs.autorId} tamanho={20} />
-                            <ThemedText type="small" themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+                            <ThemedText type="small" themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
                               — {autor}
                             </ThemedText>
                           </View>
@@ -1061,7 +1061,7 @@ function Legenda({
   return (
     <View style={{ gap: Spacing.one }}>
       {legenda && mostrarTexto ? (
-        <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 20, lineHeight: 28, textAlign: 'center' }}>
+        <ThemedText style={{ fontFamily: FontFamily.voz, fontSize: 20, lineHeight: 28, textAlign: 'center' }}>
           {legenda}
         </ThemedText>
       ) : null}
@@ -1136,7 +1136,7 @@ function PolaroideDaFoto({ foto, largura, altura, marcas, onAbrir, children }: P
         )}
         <View style={{ minHeight: RODAPE_DA_POLAROIDE - Spacing.three, justifyContent: 'center', gap: Spacing.one, paddingTop: Spacing.two }}>
           {marcas.length ? (
-            <ThemedText style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 14, color: theme.accentStrong, textAlign: 'center' }}>
+            <ThemedText style={{ fontFamily: FontFamily.voz, fontSize: 14, color: theme.accentStrong, textAlign: 'center' }}>
               {marcas.join(' · ')}
             </ThemedText>
           ) : null}
@@ -1144,7 +1144,7 @@ function PolaroideDaFoto({ foto, largura, altura, marcas, onAbrir, children }: P
           <ThemedText
             numberOfLines={3}
             themeColor={foto.legenda ? 'text' : 'textSecondary'}
-            style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 19, lineHeight: 26, textAlign: 'center' }}>
+            style={{ fontFamily: FontFamily.voz, fontSize: 19, lineHeight: 26, textAlign: 'center' }}>
             {foto.legenda ?? quandoFoiTirada(foto)}
           </ThemedText>
           {/* Os retratos discretos no pé (ADR 043): à esquerda, quem escreveu a legenda; no canto
@@ -1167,7 +1167,7 @@ function PolaroideDaFoto({ foto, largura, altura, marcas, onAbrir, children }: P
 /** O título de um grupo de ações, na voz do álbum (sem maiúsculas). */
 function RotuloDoGrupo({ children }: { children: string }) {
   return (
-    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic', fontSize: 15, marginTop: Spacing.one }}>
+    <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 15, marginTop: Spacing.one }}>
       {children}
     </ThemedText>
   );

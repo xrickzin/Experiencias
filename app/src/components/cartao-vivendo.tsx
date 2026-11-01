@@ -59,7 +59,7 @@ export function CartaoVivendo({ experiencia }: { experiencia: Experiencia }) {
             {experiencia.titulo}
           </ThemedText>
           {detalhes ? (
-            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.display, fontStyle: 'italic' }}>
+            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
               {detalhes}
             </ThemedText>
           ) : null}
