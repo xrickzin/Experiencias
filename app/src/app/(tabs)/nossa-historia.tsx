@@ -4,12 +4,14 @@ import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { EmptyState } from '@/components/empty-state';
+import { NossosDias } from '@/components/nossos-dias';
+import { Opcoes } from '@/components/opcoes';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { PaginaDoAlbum } from '@/components/pagina-do-album';
 import { ThemedText } from '@/components/themed-text';
 import { useExperiencias } from '@/hooks/use-experiencias';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { assinarCaminhos } from '@/services/fotos';
 import { agruparPorMes } from '@/services/nossa-historia';
@@ -23,7 +25,10 @@ export default function NossaHistoria() {
   const theme = useTheme();
   const { experiencias, carregando, erro, recarregar } = useExperiencias();
   const memorias = experiencias.filter((e) => e.estado === 'memoria');
-  const meses = agruparPorMes(memorias);
+  // O álbum e Nossos dias (ADR 045): o marcante e o simples. A tela abre sempre no álbum.
+  const [lado, setLado] = useState<'album' | 'dias'>('album');
+  const doLado = memorias.filter((m) => m.noAlbum === (lado === 'album'));
+  const meses = agruparPorMes(doLado);
 
   // As fotos de destaque de todas as memórias, numa só chamada ao Storage.
   const caminhos = memorias.flatMap((m) => (m.fotoDestaque ? [m.fotoDestaque.caminho] : []));
@@ -48,11 +53,7 @@ export default function NossaHistoria() {
 
   return (
     <Screen>
-      <ScreenHeader
-        eyebrow="Nossa História"
-        title="O álbum de vocês"
-        description="Tudo o que já vivemos juntos."
-      />
+      <ScreenHeader title="Nossa História" description="Tudo o que já vivemos juntos." />
       {carregando ? (
         <ThemedText themeColor="textSecondary" accessibilityLiveRegion="polite">
           Carregando…
@@ -74,6 +75,24 @@ export default function NossaHistoria() {
           onAction={() => router.push('/criar?tipo=memoria')}
         />
       ) : (
+        <View style={{ gap: Spacing.four }}>
+          <Opcoes
+            rotulo="Qual lado da história"
+            voz
+            opcoes={[
+              { valor: 'album', rotulo: 'O álbum' },
+              { valor: 'dias', rotulo: 'Nossos dias' },
+            ]}
+            atual={lado}
+            onChange={setLado}
+          />
+          {lado === 'dias' ? (
+            <NossosDias dias={doLado} urls={urls} />
+          ) : meses.length === 0 ? (
+            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
+              {doLado.length === 0 && memorias.length ? 'Nenhuma página no álbum ainda. Os dias simples estão em Nossos dias.' : 'Nenhuma página no álbum ainda.'}
+            </ThemedText>
+          ) : (
         <View>
           <View style={{ paddingLeft: Spacing.three + Spacing.one, gap: Spacing.five }}>
             <FioLateral />
@@ -83,7 +102,7 @@ export default function NossaHistoria() {
           </View>
           {/* Não existe fim da história: o fio continua. */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.four }}>
-            <ThemedText type="small" themeColor="textSecondary" style={{ fontStyle: 'italic' }}>
+            <ThemedText type="small" themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
               E ainda tem muito por viver.
             </ThemedText>
             <View
@@ -92,6 +111,8 @@ export default function NossaHistoria() {
               style={{ flex: 1, height: 1, backgroundColor: theme.accent }}
             />
           </View>
+        </View>
+          )}
         </View>
       )}
     </Screen>
@@ -119,3 +140,4 @@ function FioLateral() {
     </View>
   );
 }
+

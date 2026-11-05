@@ -16,6 +16,7 @@ export const experiencia = (id: string, titulo: string, extra: Partial<Experienc
   roteiroAtivo: false,
   orcamentoAtivo: false,
   orcamentoCentavos: null,
+  noAlbum: true,
   criadoEm: '2026-10-15T12:00:00Z',
   atualizadoEm: '2026-10-15T12:00:00Z',
   ...extra,

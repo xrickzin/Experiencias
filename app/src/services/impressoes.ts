@@ -46,6 +46,43 @@ export async function listarImpressoes(experienciaId: string): Promise<Resultado
   }
 }
 
+/**
+ * As impressões de várias memórias de uma vez (Nossos dias, ADR 045), por memória. A mesma regra do
+ * banco vale: a da outra pessoa só vem para quem já registrou a própria naquela memória.
+ */
+export async function listarImpressoesDe(experienciaIds: string[]): Promise<Resultado<{ porMemoria: Map<string, Impressao[]> }>> {
+  if (!supabase) return falha('sem_configuracao');
+  if (!experienciaIds.length) return { ok: true, porMemoria: new Map() };
+  try {
+    // Em lotes de 100: a lista de ids vai na URL, e centenas de ids passariam do limite.
+    const lotes = [];
+    for (let i = 0; i < experienciaIds.length; i += 100) lotes.push(experienciaIds.slice(i, i + 100));
+    const respostas = await Promise.all(
+      lotes.map((ids) =>
+        supabase!
+          .from('impressoes')
+          .select('experiencia_id, membro_id, texto, momento_favorito_id, momento_favorito:registros(caminho)')
+          .in('experiencia_id', ids)
+      )
+    );
+    const erro = respostas.find((r) => r.error)?.error;
+    if (erro) return ehErroDeRede(erro) ? falha('rede') : falha('desconhecido');
+    const porMemoria = new Map<string, Impressao[]>();
+    for (const l of respostas.flatMap((r) => r.data ?? []) as unknown as (Linha & { experiencia_id: string })[]) {
+      const impressao: Impressao = {
+        membroId: l.membro_id,
+        texto: l.texto,
+        momentoFavorito:
+          l.momento_favorito_id && l.momento_favorito ? { id: l.momento_favorito_id, caminho: l.momento_favorito.caminho } : null,
+      };
+      porMemoria.set(l.experiencia_id, [...(porMemoria.get(l.experiencia_id) ?? []), impressao]);
+    }
+    return { ok: true, porMemoria };
+  } catch {
+    return falha('rede');
+  }
+}
+
 async function chamar(funcao: string, parametros: Record<string, unknown>): Promise<Resultado> {
   if (!supabase) return falha('sem_configuracao');
   try {

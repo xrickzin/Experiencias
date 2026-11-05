@@ -1,6 +1,7 @@
 // Fase 5 nas telas: o "+" com as duas formas de criar, registrar uma memória, finalizar (com e sem
 // data), a aba Memória com a regra de privacidade, observações e o momento favorito.
 import { act, fireEvent, screen } from 'expo-router/testing-library';
+import { AccessibilityInfo } from 'react-native';
 
 import * as servico from '@/services/experiencias';
 import type { Experiencia } from '@/services/experiencias';
@@ -86,6 +87,7 @@ beforeEach(() => {
   svc.assinarCaminhos.mockResolvedValue(new Map());
   obs.listarObservacoes.mockResolvedValue({ ok: true, observacoes: [] });
   imp.listarImpressoes.mockResolvedValue({ ok: true, impressoes: [] });
+  imp.listarImpressoesDe.mockResolvedValue({ ok: true, porMemoria: new Map() });
   lista();
 });
 
@@ -125,11 +127,17 @@ describe('criar pelo +', () => {
       await fireEvent.press(screen.getByRole('radio', { name: 'Mês' }));
     });
     await escrever('Mês e ano', '032019');
+    // O álbum vem marcado; dá para mandar para Nossos dias (ADR 045).
+    expect(screen.getByRole('radio', { name: 'Sim, no álbum' }).props.accessibilityState).toMatchObject({ checked: true });
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Nos nossos dias' }));
+    });
 
     await tocar('Guardar memória');
 
     expect(exp.registrarMemoria).toHaveBeenCalledWith(
       expect.objectContaining({
+        noAlbum: false,
         titulo: 'Primeiro encontro',
         referencia: { precisao: 'mes_ano', inicio: '2019-03-01', fim: null, horario: null },
       })
@@ -153,11 +161,11 @@ describe('finalizar', () => {
       return { ok: true };
     });
     await abrirVivendo(comData);
-    expect(screen.getByText('Ela vira uma memória e não volta para Vivendo. Fotos e observações continuam com ela.')).toBeTruthy();
+    expect(screen.getByText(/Isso entra no álbum, ou fica nos nossos dias\?/)).toBeTruthy();
 
-    await tocar('Finalizar');
+    await tocar('Sim, no álbum');
 
-    expect(exp.finalizarExperiencia).toHaveBeenCalledWith('1', null);
+    expect(exp.finalizarExperiencia).toHaveBeenCalledWith('1', null, true);
     expect(await screen.findByText('Essa experiência virou uma memória.')).toBeTruthy();
     // O marco da fase nova vem por cima; ao continuar, fica a memória.
     expect(screen.getByText('A experiência termina.')).toBeTruthy();
@@ -184,7 +192,8 @@ describe('finalizar', () => {
       return { ok: true };
     });
     await abrirVivendo();
-    await tocar('Finalizar');
+    // Nos nossos dias (ADR 045): a escolha segue até depois de pedir a data.
+    await tocar('Nos nossos dias');
 
     expect(screen.getByText('Quando vocês viveram isso?')).toBeTruthy();
     await tocar('Finalizar');
@@ -205,14 +214,14 @@ describe('finalizar', () => {
       inicio: '2026-10-12',
       fim: null,
       horario: null,
-    });
+    }, false);
     expect(await screen.findByText('Essa experiência virou uma memória.')).toBeTruthy();
   });
 
   it('falha: avisa e continua em Vivendo', async () => {
     exp.finalizarExperiencia.mockResolvedValue({ ok: false, codigo: 'rede', mensagem: 'Sem conexão.' });
     await abrirVivendo(comData);
-    await tocar('Finalizar');
+    await tocar('Sim, no álbum');
 
     expect(screen.getByText('Sem conexão.')).toBeTruthy();
     expect(screen.getByText('Está acontecendo.')).toBeTruthy();
@@ -312,6 +321,15 @@ describe('a memória e a privacidade', () => {
     expect(screen.queryByLabelText('Título')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Adicionar link' })).toBeNull();
+  });
+
+  it('a memória sai do álbum e volta, mesmo com os detalhes travados (ADR 045)', async () => {
+    exp.definirNoAlbum.mockResolvedValue({ ok: true, experiencia: memoria({ noAlbum: false }) });
+    await abrirMemoria([]);
+    await aba('Detalhes');
+    await tocar('Tirar do álbum');
+    expect(exp.definirNoAlbum).toHaveBeenCalledWith('1', false);
+    expect(screen.getByRole('button', { name: 'Levar para o álbum' })).toBeTruthy();
   });
 });
 
@@ -512,5 +530,70 @@ describe('Nossa História', () => {
     expect(svc.assinarCaminhos).toHaveBeenCalledWith(['l1/a/f1.jpg']);
     expect(screen.getAllByTestId('historia-foto')).toHaveLength(1);
     expect(screen.getByText('E ainda tem muito por viver.')).toBeTruthy();
+  });
+  it('o álbum e Nossos dias: abre no álbum; o simples fica no outro lado', async () => {
+    lista(memoria({ id: 'a', titulo: 'Pedido de namoro' }), memoria({ id: 'b', titulo: 'Filme no sofá', noAlbum: false }));
+    await abrir('/nossa-historia');
+    await screen.findByText('Pedido de namoro');
+    expect(screen.queryByText('Filme no sofá')).toBeNull();
+
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Nossos dias' }));
+    });
+    expect(screen.getByText('Filme no sofá')).toBeTruthy();
+    expect(screen.queryByText('Pedido de namoro')).toBeNull();
+  });
+
+  it('Nossos dias: o caderno com as impressões visíveis, a busca por tema e mês e escrever a sua', async () => {
+    const outubro = (dia: string) => ({ referencia: { precisao: 'data' as const, inicio: `2026-10-${dia}`, fim: null, horario: null } });
+    lista(
+      memoria({ id: 'f', titulo: 'Duna 2 no sofá', noAlbum: false, ...outubro('24') }),
+      memoria({ id: 'p', titulo: 'Pizza em casa', noAlbum: false, ...outubro('12') }),
+      memoria({ id: 's', titulo: 'Café sem pressa', noAlbum: false, referencia: { precisao: 'data', inicio: '2026-09-20', fim: null, horario: null } })
+    );
+    imp.listarImpressoesDe.mockResolvedValue({
+      ok: true,
+      porMemoria: new Map([['f', [impressao('m2', 'Dormi no fim, mas valeu')]]]),
+    });
+    imp.salvarImpressao.mockResolvedValue({ ok: true });
+    jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    await abrir('/nossa-historia');
+    await screen.findByRole('radio', { name: 'Nossos dias' });
+    await act(async () => {
+      await fireEvent.press(screen.getByRole('radio', { name: 'Nossos dias' }));
+    });
+
+    expect(await screen.findByLabelText('Impressão de Bia: Dormi no fim, mas valeu')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Duna 2 no sofá, sábado, 24 de outubro de 2026' })).toBeTruthy();
+
+    // A busca entende o mês e a impressão.
+    await escrever('Procurar nos nossos dias', 'setembro');
+    expect(screen.getByText('Café sem pressa')).toBeTruthy();
+    expect(screen.queryByText('Pizza em casa')).toBeNull();
+    await escrever('Procurar nos nossos dias', 'valeu');
+    expect(screen.getByText('Duna 2 no sofá')).toBeTruthy();
+    expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith('1 dia encontrado');
+    await escrever('Procurar nos nossos dias', 'xyz');
+    expect(screen.getByText('Nada nos nossos dias com “xyz”.')).toBeTruthy();
+    await act(async () => {
+      await fireEvent.press(screen.getAllByRole('button', { name: 'Limpar a busca' })[0]);
+    });
+
+    // Abrir a linha e escrever a própria impressão ali mesmo.
+    await tocar('Duna 2 no sofá, sábado, 24 de outubro de 2026');
+    await escrever('Minha impressão sobre Duna 2 no sofá', 'Melhor domingo do mês');
+    await tocar('Guardar minha impressão');
+    expect(imp.salvarImpressao).toHaveBeenCalledWith('f', 'Melhor domingo do mês');
+    expect(imp.listarImpressoesDe).toHaveBeenCalledTimes(2);
+  });
+
+  it('a última página no Início vem só do álbum', async () => {
+    lista(
+      memoria({ id: 'a', titulo: 'Viagem a Paraty', referencia: { precisao: 'data', inicio: '2026-09-01', fim: null, horario: null } }),
+      memoria({ id: 'b', titulo: 'Pizza em casa', noAlbum: false })
+    );
+    await abrir('/');
+    expect(await screen.findByText('Viagem a Paraty')).toBeTruthy();
+    expect(screen.queryByText('Pizza em casa')).toBeNull();
   });
 });

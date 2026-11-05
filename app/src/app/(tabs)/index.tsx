@@ -43,7 +43,8 @@ export default function Inicio() {
   const temAndamento = inicio.vivendo.length + inicio.todosOsPlanejamentos.length > 0;
   const { totalDeDesejos } = inicio;
   // A memória mais recente, a mesma que abre Nossa História.
-  const primeiroMes = agruparPorMes(experiencias.filter((e) => e.estado === 'memoria'))[0];
+  // Só o álbum ocupa essa vitrine; os dias simples ficam em Nossa História (ADR 045).
+  const primeiroMes = agruparPorMes(experiencias.filter((e) => e.estado === 'memoria' && e.noAlbum))[0];
   const ultimaMemoria = primeiroMes ? (primeiroMes.comDia[0] ?? primeiroMes.semDia[0]) : undefined;
 
   return (

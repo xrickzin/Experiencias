@@ -18,6 +18,8 @@ type ConfirmacaoProps = {
   error?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Uma segunda resposta além de confirmar ("Nos nossos dias" ao finalizar, ADR 045). */
+  alternativa?: { label: string; onPress: () => void };
 };
 
 /**
@@ -36,6 +38,7 @@ export function Confirmacao({
   error,
   onConfirm,
   onCancel,
+  alternativa,
 }: ConfirmacaoProps) {
   const theme = useTheme();
 
@@ -88,6 +91,7 @@ export function Confirmacao({
               loading={loading}
               onPress={onConfirm}
             />
+            {alternativa ? <Button label={alternativa.label} variant="secondary" disabled={loading} onPress={alternativa.onPress} /> : null}
             <Button label={cancelLabel} variant="secondary" disabled={loading} onPress={onCancel} />
           </View>
         </View>

@@ -194,8 +194,9 @@ describe('referência temporal na tela', () => {
     lista(experiencia('1', 'Viagem', { referencia: { precisao: 'mes_ano', inicio: '2026-11-01', fim: null, horario: null } }));
     await abrir('/experiencia/1');
     await screen.findByText('Ainda é só uma ideia por enquanto.');
+    await tocar('Quando? novembro de 2026');
 
-    expect(screen.getByRole('radio', { name: 'Mês' }).props.accessibilityState.checked).toBe(true);
+    expect(screen.getByRole('radio', { name: 'Num mês' }).props.accessibilityState.checked).toBe(true);
     expect(screen.getByLabelText('Mês e ano').props.value).toBe('11/2026');
   });
 

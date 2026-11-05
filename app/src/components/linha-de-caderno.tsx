@@ -49,6 +49,8 @@ export function LinhaDeCaderno({ rotulo, pergunta, exemplo, valor, limite, varia
           lineHeight: 26,
           color: theme.text,
           paddingVertical: Spacing.two,
+          // Sem o recuo padrão do Android: o texto alinha com a pergunta acima.
+          paddingHorizontal: 0,
           borderBottomWidth: 1,
           borderBottomColor: focado ? theme.accent : theme.border,
         }}

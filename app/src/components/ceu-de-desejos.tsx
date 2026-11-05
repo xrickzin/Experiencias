@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -10,7 +10,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, G, Mask, Path, Rect } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily, Spacing } from '@/constants/theme';
@@ -88,23 +88,46 @@ export function CeuDeDesejos({ porHorizonte, acesos, nova }: Props) {
   // Mesmo com poucos desejos, o céu tem altura de céu.
   const altura = Math.max(y, ALTURA_MINIMA);
 
-  // O fio: por categoria, liga as estrelas de cima para baixo com curvas suaves.
+  // O fio: por categoria, liga as estrelas de cima para baixo com curvas suaves. Um desejo de várias
+  // categorias entra em cada constelação, até LINHAS_POR_DESEJO delas.
   const porCategoria = new Map<string, typeof estrelas>();
   for (const e of estrelas) {
-    const cat = e.desejo.categorias[0];
-    if (!cat) continue;
-    porCategoria.set(cat, [...(porCategoria.get(cat) ?? []), e]);
+    for (const cat of e.desejo.categorias.slice(0, LINHAS_POR_DESEJO)) {
+      porCategoria.set(cat, [...(porCategoria.get(cat) ?? []), e]);
+    }
   }
+  // Onde estão os textos das estrelas (medidos na tela): o fio nunca passa por cima deles. Uma máscara
+  // apaga o fio nessas caixas, e ele parece passar por trás do título e da data.
+  const [larguraPx, setLarguraPx] = useState(0);
+  const [caixas, setCaixas] = useState<Record<string, Caixa[]>>({});
+  const aoMedir = useCallback((id: string, novas: Caixa[]) => {
+    setCaixas((atuais) => (JSON.stringify(atuais[id]) === JSON.stringify(novas) ? atuais : { ...atuais, [id]: novas }));
+  }, []);
+  const vazios = [...estrelas.map((e) => e.desejo.id), ...faixas.map((f) => `faixa:${f.nome}`)].flatMap((id) => caixas[id] ?? []);
+
+  // Cada estrela no desenho (x em % da largura, y em pontos): o centro da estrela e a caixa do texto.
+  const noDesenho = (e: (typeof estrelas)[number]): NoCeu => {
+    const medidas = caixas[e.desejo.id];
+    const pct = (px: number) => (larguraPx ? (px / larguraPx) * 100 : 0);
+    return {
+      x: e.x + pct(6.5),
+      y: e.y + 9,
+      texto:
+        medidas?.length && larguraPx
+          ? {
+              direita: pct(Math.max(...medidas.map((c) => c.x + c.largura))),
+              topo: Math.min(...medidas.map((c) => c.y)),
+              base: Math.max(...medidas.map((c) => c.y + c.altura)),
+            }
+          : null,
+    };
+  };
   const fios = [...porCategoria.values()]
     .filter((grupo) => grupo.length > 1)
     .map((grupo) => {
-      const pontos = grupo.map((e) => ({ x: e.x + 1.5, y: e.y + 9 }));
-      let d = `M${pontos[0].x} ${pontos[0].y}`;
-      for (let i = 1; i < pontos.length; i++) {
-        const a = pontos[i - 1];
-        const b = pontos[i];
-        d += ` Q${(a.x + b.x) / 2 + (i % 2 ? 6 : -6)} ${(a.y + b.y) / 2} ${b.x} ${b.y}`;
-      }
+      const nos = grupo.map(noDesenho);
+      let d = `M${nos[0].x} ${nos[0].y}`;
+      for (let i = 1; i < nos.length; i++) d += ligacao(nos[i - 1], nos[i]);
       return { d, aceso: grupo.some((e) => acesos.has(e.desejo.id)) };
     });
 
@@ -131,7 +154,7 @@ export function CeuDeDesejos({ porHorizonte, acesos, nova }: Props) {
           experimental_backgroundImage: `linear-gradient(to bottom, ${theme.background}, transparent)`,
         }}
       />
-      <View style={{ flex: 1, marginHorizontal: Spacing.three }}>
+      <View style={{ flex: 1, marginHorizontal: Spacing.three }} onLayout={(e) => setLarguraPx(e.nativeEvent.layout.width)}>
       <Svg
         width="100%"
         height={altura}
@@ -151,19 +174,37 @@ export function CeuDeDesejos({ porHorizonte, acesos, nova }: Props) {
             vectorEffect="non-scaling-stroke"
           />
         ))}
-        {fios.map((f, i) => (
-          <Path
-            key={i}
-            d={f.d}
-            stroke={f.aceso ? theme.accent : theme.accentSoft}
-            strokeWidth={f.aceso ? 1.2 : 0.8}
-            // Discreto o bastante para não brigar com os títulos que ele atravessa.
-            opacity={f.aceso ? 0.55 : 0.4}
-            fill="none"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        {larguraPx ? (
+          <Defs>
+            <Mask id="sem-texto" maskUnits="userSpaceOnUse" x={0} y={0} width={100} height={altura}>
+              <Rect x={0} y={0} width={100} height={altura} fill="white" />
+              {vazios.map((c, i) => (
+                <Rect
+                  key={i}
+                  x={((c.x - FOLGA) / larguraPx) * 100}
+                  y={c.y - FOLGA}
+                  width={((c.largura + 2 * FOLGA) / larguraPx) * 100}
+                  height={c.altura + 2 * FOLGA}
+                  fill="black"
+                />
+              ))}
+            </Mask>
+          </Defs>
+        ) : null}
+        <G mask={larguraPx ? 'url(#sem-texto)' : undefined}>
+          {fios.map((f, i) => (
+            <Path
+              key={i}
+              d={f.d}
+              stroke={f.aceso ? theme.accent : theme.accentSoft}
+              strokeWidth={f.aceso ? 1.2 : 0.8}
+              opacity={f.aceso ? 0.55 : 0.4}
+              fill="none"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </G>
       </Svg>
 
       {faixas.map((f) => (
@@ -172,6 +213,11 @@ export function CeuDeDesejos({ porHorizonte, acesos, nova }: Props) {
           accessibilityRole="header"
           themeColor="textSecondary"
           maxFontSizeMultiplier={1.2}
+          // O nome da faixa também é texto: o fio passa por trás dele.
+          onLayout={(e) => {
+            const { x, y, width, height } = e.nativeEvent.layout;
+            aoMedir(`faixa:${f.nome}`, [{ x, y, largura: width, altura: height }]);
+          }}
           style={{ position: 'absolute', top: f.y + Spacing.one, left: '4%', fontFamily: FontFamily.voz, fontSize: 14 }}>
           {f.nome}
         </ThemedText>
@@ -197,6 +243,7 @@ export function CeuDeDesejos({ porHorizonte, acesos, nova }: Props) {
           aceso={acesos.has(desejo.id)}
           cintila={desejo.id === quemCintila}
           chegando={desejo.id === nova}
+          onMedir={aoMedir}
         />
       ))}
       </View>
@@ -211,11 +258,70 @@ const ESTRELA: Record<Horizonte, { tamanho: number; apagada: boolean }> = {
   'Sem pressa': { tamanho: 9, apagada: true },
 };
 
+export type NoCeu = { x: number; y: number; texto: { direita: number; topo: number; base: number } | null };
+
+/**
+ * O trecho de fio de uma estrela até a próxima da mesma constelação, contornando os textos (x em %
+ * da largura, y em pontos). O texto de cada estrela fica à direita dela; então:
+ * - na mesma coluna, o fio desce pela margem, à esquerda dos títulos;
+ * - da coluna esquerda para a direita, desce até abaixo do próprio texto, corre por baixo dele e
+ *   sobe pelo vão entre as colunas;
+ * - da direita para a esquerda, desce pelo vão até logo acima do título de destino, corre por cima
+ *   dele e entra na estrela pela esquerda.
+ * Sem as medidas ainda, uma curva simples (a máscara esconde o que passar sob o texto).
+ */
+export function ligacao(a: NoCeu, b: NoCeu): string {
+  const r = (n: number) => +n.toFixed(2);
+  const coluna = (n: NoCeu) => (n.x < 50 ? 'esquerda' : 'direita');
+  if (coluna(a) === coluna(b) || !a.texto || !b.texto) {
+    // Sai e chega às estrelas pela esquerda, na horizontal, e desce rente à margem: passa à esquerda
+    // dos títulos e por baixo dos nomes das faixas.
+    const margem = Math.max(0.5, Math.min(a.x, b.x) - 6);
+    return ` C${r(margem)} ${r(a.y)}, ${r(margem)} ${r(b.y)}, ${r(b.x)} ${r(b.y)}`;
+  }
+  if (coluna(a) === 'esquerda') {
+    const baixo = a.texto.base + 6;
+    const vao = Math.min(a.texto.direita + 2, b.x - 2);
+    return (
+      ` C${r(a.x - 2)} ${r(a.y + (baixo - a.y) * 0.6)}, ${r(a.x)} ${r(baixo)}, ${r(a.x + 4)} ${r(baixo)}` +
+      ` L${r(vao - 2)} ${r(baixo)}` +
+      ` C${r(vao + 2)} ${r(baixo)}, ${r(b.x - 3)} ${r(b.y)}, ${r(b.x)} ${r(b.y)}`
+    );
+  }
+  const cima = b.texto.topo - 6;
+  const vao = a.x - 3;
+  return (
+    ` C${r(vao)} ${r(a.y + 8)}, ${r(vao)} ${r(cima - 8)}, ${r(vao - 3)} ${r(cima)}` +
+    ` L${r(b.x + 2)} ${r(cima)}` +
+    ` Q${r(b.x - 2)} ${r(cima)} ${r(b.x)} ${r(b.y)}`
+  );
+}
+
+// Um desejo entra em no máximo 5 constelações, mesmo com mais categorias.
+const LINHAS_POR_DESEJO = 5;
+// A margem em volta do texto que o fio respeita, em pontos.
+const FOLGA = 4;
+// A estrela e o espaço até o texto, à esquerda dele.
+const ANTES_DO_TEXTO = 13 + Spacing.two;
+
+type Caixa = { x: number; y: number; largura: number; altura: number };
+
 const DESENHO_DA_ESTRELA = 'M6 0.6 L7.3 4.6 L11.4 4.7 L8.1 7.2 L9.3 11.2 L6 8.8 L2.7 11.2 L3.9 7.2 L0.6 4.7 L4.7 4.6 Z';
 
-type EstrelaProps = { desejo: Experiencia; horizonte: Horizonte; x: number; y: number; largura: number; aceso: boolean; cintila: boolean; chegando: boolean };
+type EstrelaProps = {
+  desejo: Experiencia;
+  horizonte: Horizonte;
+  x: number;
+  y: number;
+  largura: number;
+  aceso: boolean;
+  cintila: boolean;
+  chegando: boolean;
+  /** As caixas dos textos, no céu: o fio não passa por elas. */
+  onMedir: (id: string, caixas: Caixa[]) => void;
+};
 
-function Estrela({ desejo, horizonte, x, y, largura, aceso, cintila, chegando }: EstrelaProps) {
+function Estrela({ desejo, horizonte, x, y, largura, aceso, cintila, chegando, onMedir }: EstrelaProps) {
   const theme = useTheme();
   // Na tela, a data curta ("12 dez."), para o local caber; o leitor de tela ouve a data inteira.
   const detalhes = [descreverCurto(desejo.referencia, new Date()), desejo.local].filter(Boolean).join(' · ');
@@ -233,6 +339,16 @@ function Estrela({ desejo, horizonte, x, y, largura, aceso, cintila, chegando }:
   }, [cintila, chegando, menosMovimento, brilho]);
   const estiloDoBrilho = useAnimatedStyle(() => ({ opacity: brilho.get() }));
 
+  // Onde a estrela está no céu e onde estão os textos dentro dela; juntando, as caixas dos textos.
+  const medidas = useRef<{ onde?: { x: number; y: number }; titulo?: Caixa; detalhe?: Caixa }>({});
+  const informar = () => {
+    const { onde, titulo, detalhe } = medidas.current;
+    if (!onde || !titulo) return;
+    const noCeu = (c: Caixa): Caixa => ({ ...c, x: onde.x + ANTES_DO_TEXTO + c.x, y: onde.y + c.y });
+    onMedir(desejo.id, [titulo, ...(detalhe ? [detalhe] : [])].map(noCeu));
+  };
+  const caixaDe = (l: { x: number; y: number; width: number; height: number }): Caixa => ({ x: l.x, y: l.y, largura: l.width, altura: l.height });
+
   // A recém-chegada brilha como as de perto, onde quer que caia.
   const { tamanho, apagada } = ESTRELA[chegando ? 'Em breve' : horizonte];
   const cor = apagada ? theme.textSecondary : theme.text;
@@ -244,6 +360,10 @@ function Estrela({ desejo, horizonte, x, y, largura, aceso, cintila, chegando }:
       hitSlop={8}
       // Apagada pelo filtro ou pela busca: fica como contexto no céu, sem ser anunciada nem tocada.
       disabled={!aceso}
+      onLayout={(e) => {
+        medidas.current.onde = { x: e.nativeEvent.layout.x, y: e.nativeEvent.layout.y };
+        informar();
+      }}
       importantForAccessibility={aceso ? 'auto' : 'no-hide-descendants'}
       accessibilityElementsHidden={!aceso}
       style={({ pressed }) => ({
@@ -267,11 +387,24 @@ function Estrela({ desejo, horizonte, x, y, largura, aceso, cintila, chegando }:
           numberOfLines={2}
           // As linhas do céu são medidas: a fonte cresce até 1,2x sem invadir a estrela de baixo.
           maxFontSizeMultiplier={1.2}
-          style={{ fontFamily: FontFamily.display, fontSize: 15, lineHeight: 19, color: theme.text }}>
+          // Do tamanho do texto (não da coluna), para o fio só se esconder onde há palavra.
+          onLayout={(e) => {
+            medidas.current.titulo = caixaDe(e.nativeEvent.layout);
+            informar();
+          }}
+          style={{ alignSelf: 'flex-start', fontFamily: FontFamily.display, fontSize: 15, lineHeight: 19, color: theme.text }}>
           {desejo.titulo}
         </ThemedText>
         {detalhes ? (
-          <ThemedText numberOfLines={2} maxFontSizeMultiplier={1.2} themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, fontSize: 13, lineHeight: 17 }}>
+          <ThemedText
+            numberOfLines={2}
+            maxFontSizeMultiplier={1.2}
+            themeColor="textSecondary"
+            onLayout={(e) => {
+              medidas.current.detalhe = caixaDe(e.nativeEvent.layout);
+              informar();
+            }}
+            style={{ alignSelf: 'flex-start', fontFamily: FontFamily.voz, fontSize: 13, lineHeight: 17 }}>
             {detalhes}
           </ThemedText>
         ) : null}

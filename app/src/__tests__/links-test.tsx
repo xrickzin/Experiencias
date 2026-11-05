@@ -130,7 +130,9 @@ describe('links na tela', () => {
   it('"Abrir no mapa" no Local pesquisa o texto no Google Maps', async () => {
     servico.listarLinks.mockResolvedValue({ ok: true, links: [] });
     await abrir('/experiencia/1');
-    await screen.findByRole('button', { name: 'Abrir no mapa' });
+    // No desejo, o local mora na pergunta "Onde?" (ADR 044).
+    await screen.findByRole('button', { name: 'Onde? Campos do Jordão' });
+    await tocar('Onde? Campos do Jordão');
     await tocar('Abrir no mapa');
     expect(abrirUrl).toHaveBeenCalledWith(enderecoNoMapa('Campos do Jordão'));
   });

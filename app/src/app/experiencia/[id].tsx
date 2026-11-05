@@ -21,6 +21,7 @@ import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo'
 import { RoteiroDaExperiencia } from '@/components/roteiro-da-experiencia';
 import { Screen } from '@/components/screen';
 import { SecoesDePlanejamento } from '@/components/secoes-de-planejamento';
+import { FormularioDoDesejo, type Detalhe } from '@/components/formulario-do-desejo';
 import { IconButton, ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily, Spacing } from '@/constants/theme';
@@ -128,7 +129,7 @@ type FormularioProps = {
 };
 
 function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: FormularioProps) {
-  const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar, definirRoteiro, definirOrcamentoAtivo } = useExperiencias();
+  const { atualizarExperiencia, excluirExperiencia, mudarEstado, finalizar, definirRoteiro, definirOrcamentoAtivo, definirNoAlbum } = useExperiencias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(() => valoresDe(experiencia));
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
@@ -142,9 +143,14 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   const [erroExclusao, setErroExclusao] = useState<string>();
   const [confirmandoFinal, setConfirmandoFinal] = useState(false);
   const [pedindoData, setPedindoData] = useState(false);
+  const [noAlbum, setNoAlbum] = useState(true);
+  const [mudandoAlbum, setMudandoAlbum] = useState(false);
+  const [erroAlbum, setErroAlbum] = useState<string>();
   const [quando, setQuando] = useState<CamposDaReferencia>(() => camposDaReferencia(SEM_DATA));
   const [erroQuando, setErroQuando] = useState<string>();
   const [erroFinal, setErroFinal] = useState<string>();
+  // No desejo, a pergunta aberta do formulário na voz do álbum (o mesmo do criar).
+  const [perguntaAberta, setPerguntaAberta] = useState<Detalhe | null>(null);
 
   const estado = experiencia.estado;
   const desejo = estado === 'desejo';
@@ -195,8 +201,10 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   async function salvar() {
     const tituloInvalido = validarTituloDoDesejo(valores.titulo);
     const referencia = lerReferencia(valores.referencia);
-    setErroTitulo(tituloInvalido);
+    // No desejo, o aviso fala na voz do criar; a validação é a mesma.
+    setErroTitulo(tituloInvalido && desejo ? 'Escrevam uma frase para o desejo virar estrela.' : tituloInvalido);
     setErroReferencia(referencia.ok ? undefined : referencia.erro);
+    if (!referencia.ok && desejo) setPerguntaAberta('quando');
     if (tituloInvalido || !referencia.ok) return;
 
     setEnviando(true);
@@ -269,7 +277,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   }
 
   /** Finalizar (lifecycle.md): sem data, primeiro pergunta quando viveram; sem volta, sempre confirmado. */
-  async function concluirFinal(comData: boolean) {
+  async function concluirFinal(comData: boolean, entraNoAlbum = noAlbum) {
     let referencia = null;
     if (comData) {
       const leitura = lerReferenciaDaMemoria(quando);
@@ -282,7 +290,7 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
     setMudando(true);
     setErroFinal(undefined);
     onFinalizando(true);
-    const r = await finalizar(experiencia.id, referencia);
+    const r = await finalizar(experiencia.id, referencia, entraNoAlbum);
     if (r.ok) {
       AccessibilityInfo.announceForAccessibility('Essa experiência virou uma memória.');
       onMarco('memoria');
@@ -300,13 +308,15 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
     }
   }
 
-  function confirmarFinal() {
+  // A resposta de "Isso entra no álbum?" (ADR 045) vale também depois de pedir a data.
+  function confirmarFinal(entraNoAlbum: boolean) {
+    setNoAlbum(entraNoAlbum);
     if (experiencia.referencia.precisao === 'sem_data') {
       setConfirmandoFinal(false);
       setErroQuando(undefined);
       setPedindoData(true);
     } else {
-      void concluirFinal(false);
+      void concluirFinal(false, entraNoAlbum);
     }
   }
 
@@ -324,19 +334,13 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
   }
 
   const ocupado = enviando || excluindo || mudando;
+  // Há algo a guardar? (compara com o que está no servidor)
+  const mudou = JSON.stringify(valores) !== JSON.stringify(valoresDe(experiencia));
 
   const detalhes = (
     <>
       {/* Mudança de estado: só as transições do ciclo; o servidor também confere. */}
       <View style={{ gap: Spacing.two, marginBottom: Spacing.four }}>
-        {estado === 'desejo' ? (
-          <Button
-            label="Começar planejamento"
-            loading={mudando}
-            disabled={ocupado}
-            onPress={() => irPara('planejamento', 'Planejamento começado')}
-          />
-        ) : null}
         {estado === 'planejamento' ? (
           <>
             <Button
@@ -356,9 +360,71 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
         {erroTransicao && estado !== 'vivendo' ? <MensagemErro>{erroTransicao}</MensagemErro> : null}
       </View>
 
-      {/* Na memória, os detalhes são só para ver (ADR 042). */}
+      {/* Na memória, os detalhes são só para ver (ADR 042); no desejo, o mesmo formulário do criar (ADR 044). */}
       {memoria ? (
         <DetalhesDaMemoria experiencia={experiencia} />
+      ) : desejo ? (
+        <View style={{ gap: Spacing.four }}>
+          <FormularioDoDesejo
+            valores={valores}
+            onChange={(novos) => {
+              setValores(novos);
+              setErroTitulo(undefined);
+              setErroReferencia(undefined);
+              setSalvo(false);
+              setErroGeral(undefined);
+            }}
+            erroTitulo={erroTitulo}
+            erroReferencia={erroReferencia}
+            aberto={perguntaAberta}
+            onAberto={setPerguntaAberta}
+            // O que já foi dito não fica escondido atrás de "mais um pouco".
+            tudoAVista={Boolean(
+              duracaoDe(valores) || valores.observacoes.trim() || experiencia.roteiroAtivo || experiencia.orcamentoAtivo
+            )}
+            planejar={{
+              resposta:
+                experiencia.roteiroAtivo && experiencia.orcamentoAtivo
+                  ? 'os dois'
+                  : experiencia.roteiroAtivo
+                    ? 'roteiro'
+                    : experiencia.orcamentoAtivo
+                      ? 'orçamento'
+                      : '',
+              conteudo: (
+                <>
+                  <CartaoDoRoteiro compacto ativo={experiencia.roteiroAtivo} resumo={resumoDoRoteiro} {...propsDoCard('roteiro')} />
+                  <CartaoDoOrcamento
+                    compacto
+                    ativo={experiencia.orcamentoAtivo}
+                    resumo={experiencia.orcamentoCentavos === null ? null : `R$ ${formatarReais(experiencia.orcamentoCentavos)}`}
+                    {...propsDoCard('orcamento')}
+                  />
+                </>
+              ),
+            }}
+          />
+          {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
+          {salvo ? (
+            <ThemedText accessibilityLiveRegion="polite" themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
+              Guardado.
+            </ThemedText>
+          ) : null}
+          {/* Só com algo mudado há o que guardar: sem mudança, a tela fica calma. */}
+          {mudou ? <Button label="Guardar as mudanças" loading={enviando} disabled={excluindo || mudando} onPress={salvar} /> : null}
+          <View style={{ gap: Spacing.one, marginTop: Spacing.three }}>
+            <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
+              Quando quiserem tentar de verdade:
+            </ThemedText>
+            <Button
+              label="Começar planejamento"
+              variant="secondary"
+              loading={mudando}
+              disabled={ocupado}
+              onPress={() => irPara('planejamento', 'Planejamento começado')}
+            />
+          </View>
+        </View>
       ) : (
         <View style={{ gap: Spacing.three }}>
           <CamposDaExperiencia
@@ -387,8 +453,9 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
         <SecoesDePlanejamento experiencia={experiencia} />
       </View>
 
-      {/* Na memória, roteiro e orçamento não começam: as guias só aparecem se já houver conteúdo. */}
-      {memoria ? null : (
+      {/* Na memória, roteiro e orçamento não começam: as guias só aparecem se já houver conteúdo. No
+          desejo, eles moram em "Querem já ir planejando?". */}
+      {memoria || desejo ? null : (
         <View style={{ marginTop: Spacing.five, gap: Spacing.four }}>
           <CartaoDoRoteiro ativo={experiencia.roteiroAtivo} resumo={resumoDoRoteiro} {...propsDoCard('roteiro')} />
           <CartaoDoOrcamento
@@ -411,6 +478,26 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
               onPress={() => irPara('planejamento', 'Voltou para planejamento')}
             />
             {erroTransicao ? <MensagemErro>{erroTransicao}</MensagemErro> : null}
+          </>
+        ) : null}
+        {memoria ? (
+          // O álbum e Nossos dias (ADR 045): livre na memória, para qualquer um dos dois.
+          <>
+            <Button
+              label={experiencia.noAlbum ? 'Tirar do álbum' : 'Levar para o álbum'}
+              variant="secondary"
+              loading={mudandoAlbum}
+              disabled={ocupado}
+              onPress={async () => {
+                setMudandoAlbum(true);
+                setErroAlbum(undefined);
+                const r = await definirNoAlbum(experiencia.id, !experiencia.noAlbum);
+                setMudandoAlbum(false);
+                if (!r.ok) return setErroAlbum(r.mensagem);
+                AccessibilityInfo.announceForAccessibility(r.experiencia.noAlbum ? 'Está no álbum.' : 'Está nos nossos dias.');
+              }}
+            />
+            {erroAlbum ? <MensagemErro>{erroAlbum}</MensagemErro> : null}
           </>
         ) : null}
         <Button
@@ -436,7 +523,13 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
           url={destaque}
         />
       ) : (
-        <ScreenHeader eyebrow={textos.eyebrow} title={experiencia.titulo} description={textos.frase} onBack={voltar} />
+        <ScreenHeader
+          eyebrow={desejo ? undefined : textos.eyebrow}
+          // No desejo sem guias, a frase editável logo abaixo já é o título (ADR 044): não repete.
+          title={desejo && abas.length === 1 ? 'Um desejo de vocês' : experiencia.titulo}
+          description={textos.frase}
+          onBack={voltar}
+        />
       )}
 
       {/* Registros existem a partir de Planejamento (memory.md); em Desejo, só há abas com o roteiro ligado. */}
@@ -493,12 +586,13 @@ function Formulario({ experiencia, recemFinalizada, onFinalizando, onMarco }: Fo
       <Confirmacao
         visible={confirmandoFinal}
         title="Finalizar experiência?"
-        description="Ela vira uma memória e não volta para Vivendo. Fotos e observações continuam com ela."
-        confirmLabel="Finalizar"
+        description="Ela vira uma memória e não volta para Vivendo. Isso entra no álbum, ou fica nos nossos dias? Dá para mudar depois."
+        confirmLabel="Sim, no álbum"
+        alternativa={{ label: 'Nos nossos dias', onPress: () => confirmarFinal(false) }}
         cancelLabel="Ainda não"
         loading={mudando}
         error={erroFinal}
-        onConfirm={confirmarFinal}
+        onConfirm={() => confirmarFinal(true)}
         onCancel={() => setConfirmandoFinal(false)}
       />
 

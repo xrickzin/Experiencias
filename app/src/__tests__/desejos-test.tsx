@@ -168,12 +168,15 @@ describe('editar e excluir', () => {
     });
     await abrirODesejo();
 
+    // A edição do desejo é o mesmo formulário do criar: as respostas à direita de cada pergunta.
     expect(screen.getByLabelText('Título, obrigatório').props.value).toBe('Ver o nascer do sol');
+    await tocar('Onde? Praia');
     expect(screen.getByLabelText('Local').props.value).toBe('Praia');
+    await tocar('Algo para não esquecer? Levar café');
     expect(screen.getByLabelText('Observações').props.value).toBe('Levar café');
 
     await preencher('Título, obrigatório', 'Ver o nascer do sol juntos');
-    await tocar('Salvar');
+    await tocar('Guardar as mudanças');
 
     expect(servico.atualizarExperiencia).toHaveBeenCalledWith('1', {
       titulo: 'Ver o nascer do sol juntos',
@@ -183,16 +186,16 @@ describe('editar e excluir', () => {
       tamanho: null,
       categorias: [],
     });
-    expect(await screen.findByText('Salvo.')).toBeTruthy();
+    expect(await screen.findByText('Guardado.')).toBeTruthy();
   });
 
   it('título vazio na edição não chama o servidor', async () => {
     await abrirODesejo();
 
     await preencher('Título, obrigatório', '');
-    await tocar('Salvar');
+    await tocar('Guardar as mudanças');
 
-    expect(screen.getByText('Escreva um título para continuar.')).toBeTruthy();
+    expect(screen.getByText('Escrevam uma frase para o desejo virar estrela.')).toBeTruthy();
     expect(servico.atualizarExperiencia).not.toHaveBeenCalled();
   });
 
@@ -243,7 +246,7 @@ describe('editar e excluir', () => {
     const { tela } = await abrirODesejo();
 
     await preencher('Título, obrigatório', 'Outro título');
-    await tocar('Salvar');
+    await tocar('Guardar as mudanças');
 
     expect(tela.getPathname()).toBe('/desejos');
   });

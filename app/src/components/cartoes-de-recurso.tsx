@@ -59,6 +59,7 @@ function CartaoDeRecurso({ recurso, ativo, sugestao, resumo, ocupado, erro, onUs
             accessibilityLabel={`Usar ${recurso.nome}`}
             accessibilityState={{ checked: ativo }}
             onPress={ativo ? onDesligar : onUsar}
+            disabled={ocupado}
             style={({ pressed }) => ({ flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: Spacing.three, opacity: pressed ? 0.7 : 1 })}>
             <Svg width={18} height={18} viewBox="0 0 18 18" accessible={false}>
               <Path d="M3 3 H15 V15 H3 Z" stroke={ativo ? theme.accent : theme.textSecondary} strokeWidth={1.4} fill="none" strokeLinejoin="round" />
@@ -79,14 +80,27 @@ function CartaoDeRecurso({ recurso, ativo, sugestao, resumo, ocupado, erro, onUs
           )}
         </View>
         {ativo ? (
-          <ThemedText themeColor="textSecondary" accessibilityLiveRegion="polite" style={{ fontFamily: FontFamily.voz, marginLeft: 18 + Spacing.three }}>
-            Vai junto com o desejo
-          </ThemedText>
+          // Ao criar, vai junto; já criado, diz o que há e leva à guia.
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginLeft: 18 + Spacing.three }}>
+            <ThemedText themeColor="textSecondary" accessibilityLiveRegion="polite" style={{ fontFamily: FontFamily.voz, flexShrink: 1 }}>
+              {criando ? 'Vai junto com o desejo' : (resumo ?? recurso.vazio)}
+            </ThemedText>
+            {onAbrir ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir o ${recurso.nome}`}
+                onPress={onAbrir}
+                style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+                <ThemedText style={{ fontFamily: FontFamily.voz, fontSize: 15, textDecorationLine: 'underline' }}>abrir →</ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
         ) : sugestao ? (
           <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, marginLeft: 18 + Spacing.three }}>
             {sugestao}
           </ThemedText>
         ) : null}
+        {erro ? <MensagemErro>{erro}</MensagemErro> : null}
         {vendoExemplo ? recurso.exemplo : null}
       </View>
     );

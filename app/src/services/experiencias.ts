@@ -28,6 +28,8 @@ export type Experiencia = {
   orcamentoAtivo: boolean;
   /** Total estimado do casal, em centavos; nulo sem valor. */
   orcamentoCentavos: number | null;
+  /** Na memória: no álbum (o marcante) ou em Nossos dias (o simples), ADR 045. */
+  noAlbum: boolean;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -47,6 +49,8 @@ export type CamposDaExperiencia = {
   roteiroAtivo?: boolean;
   /** Ao criar: já com o orçamento ligado (ADR 041). Na edição, usa-se `definirOrcamento`. */
   orcamentoAtivo?: boolean;
+  /** Ao registrar uma memória direto: no álbum ou em Nossos dias (ADR 045). */
+  noAlbum?: boolean;
 };
 
 type Linha = {
@@ -67,13 +71,14 @@ type Linha = {
   roteiro_ativo: boolean | null;
   orcamento_ativo: boolean | null;
   orcamento_centavos: number | null;
+  no_album: boolean | null;
   criado_em: string;
   atualizado_em: string;
 };
 
 const COLUNAS =
   'id, titulo, estado, local, observacoes, referencia_precisao, referencia_inicio, referencia_fim, ' +
-  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, roteiro_ativo, orcamento_ativo, orcamento_centavos, ' +
+  'referencia_horario, inicio_em, criado_em, atualizado_em, foto_destaque_id, tamanho, roteiro_ativo, orcamento_ativo, orcamento_centavos, no_album, ' +
   'categorias:experiencia_categorias(categoria_id), ' +
   // Há duas ligações entre as tabelas; o nome da chave diz qual é a do destaque.
   'foto_destaque:registros!experiencias_foto_destaque_id_fkey(caminho)';
@@ -98,6 +103,7 @@ export const paraExperiencia = (l: Linha): Experiencia => ({
   roteiroAtivo: l.roteiro_ativo ?? false,
   orcamentoAtivo: l.orcamento_ativo ?? false,
   orcamentoCentavos: l.orcamento_centavos ?? null,
+  noAlbum: l.no_album ?? true,
   criadoEm: l.criado_em,
   atualizadoEm: l.atualizado_em ?? l.criado_em,
 });
@@ -121,6 +127,8 @@ const paraColunas = (campos: CamposDaExperiencia) => {
     tamanho: campos.tamanho ?? null,
     ...(campos.roteiroAtivo === undefined ? {} : { roteiro_ativo: campos.roteiroAtivo }),
     ...(campos.orcamentoAtivo === undefined ? {} : { orcamento_ativo: campos.orcamentoAtivo }),
+    // Só "Nos nossos dias" vai na escrita; o álbum é o padrão da coluna (ADR 045).
+    ...(campos.noAlbum === false ? { no_album: false } : {}),
   };
 };
 
@@ -284,6 +292,9 @@ export const definirRoteiro = (id: string, ativo: boolean) => atualizarParte(id,
 /** Liga ou desliga o orçamento na hora (ADR 041). Desligar apaga o valor, no servidor. */
 export const definirOrcamentoAtivo = (id: string, ativo: boolean) => atualizarParte(id, { orcamento_ativo: ativo });
 
+/** Leva a memória para o álbum ou para Nossos dias (ADR 045); livre mesmo com os detalhes travados. */
+export const definirNoAlbum = (id: string, noAlbum: boolean) => atualizarParte(id, { no_album: noAlbum });
+
 /** O total estimado, em centavos (nulo tira o valor). Acima do limite, ou com o orçamento desligado, o servidor recusa. */
 export const definirOrcamento = (id: string, centavos: number | null) =>
   atualizarParte(id, { orcamento_centavos: centavos }, (erro) =>
@@ -322,7 +333,7 @@ export async function registrarMemoria(campos: CamposDaExperiencia): Promise<Res
  * Vivendo → Memória, sem volta. Sem data, a referência informada vai junto; se a outra pessoa
  * definiu uma antes, vale a dela (o primeiro a definir fixa) e quem chama relê a experiência.
  */
-export async function finalizarExperiencia(id: string, referencia: ReferenciaTemporal | null): Promise<Resultado> {
+export async function finalizarExperiencia(id: string, referencia: ReferenciaTemporal | null, noAlbum = true): Promise<Resultado> {
   if (!supabase) return falha('sem_configuracao');
   try {
     const { data, error } = await supabase.rpc('finalizar_experiencia', {
@@ -341,6 +352,9 @@ export async function finalizarExperiencia(id: string, referencia: ReferenciaTem
     if (!resposta.ok) {
       return falha(resposta.codigo === 'experiencia_inexistente' ? 'desejo_inexistente' : (resposta.codigo ?? 'desconhecido'));
     }
+    // ponytail: segunda escrita, fora da RPC. Se falhar, a memória fica no álbum (o padrão) e o casal
+    // muda depois na aba Detalhes; para ficar atômico, a escolha vira um parâmetro de finalizar_experiencia.
+    if (!noAlbum) await supabase.from('experiencias').update({ no_album: false }).eq('id', id);
     return { ok: true };
   } catch {
     return falha('rede');

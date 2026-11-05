@@ -13,6 +13,7 @@ import {
   definirRoteiro as definirRoteiroNoServidor,
   definirOrcamento as definirOrcamentoNoServidor,
   definirOrcamentoAtivo as definirOrcamentoAtivoNoServidor,
+  definirNoAlbum as definirNoAlbumNoServidor,
   finalizarExperiencia,
   mudarEstado as mudarEstadoNoServidor,
   registrarMemoria as registrarNoServidor,
@@ -38,10 +39,11 @@ type Experiencias = {
   definirDestaque: (id: string, fotoId: string | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
   definirRoteiro: (id: string, ativo: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
   definirOrcamentoAtivo: (id: string, ativo: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
+  definirNoAlbum: (id: string, noAlbum: boolean) => Promise<Resultado<{ experiencia: Experiencia }>>;
   definirOrcamento: (id: string, centavos: number | null) => Promise<Resultado<{ experiencia: Experiencia }>>;
   registrarMemoria: (campos: CamposDaExperiencia) => Promise<Resultado<{ memoria: Experiencia }>>;
   /** Vivendo → Memória. `referencia` só quando a experiência está sem data. */
-  finalizar: (id: string, referencia: ReferenciaTemporal | null) => Promise<Resultado>;
+  finalizar: (id: string, referencia: ReferenciaTemporal | null, noAlbum?: boolean) => Promise<Resultado>;
 };
 
 const ExperienciasContext = createContext<Experiencias | null>(null);
@@ -167,6 +169,10 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
     async (id: string, ativo: boolean) => aplicar(id, await definirOrcamentoAtivoNoServidor(id, ativo)),
     [aplicar]
   );
+  const definirNoAlbum = useCallback(
+    async (id: string, noAlbum: boolean) => aplicar(id, await definirNoAlbumNoServidor(id, noAlbum)),
+    [aplicar]
+  );
   const definirOrcamento = useCallback(
     async (id: string, centavos: number | null) => aplicar(id, await definirOrcamentoNoServidor(id, centavos)),
     [aplicar]
@@ -182,8 +188,8 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
   );
 
   const finalizar = useCallback(
-    async (id: string, referencia: ReferenciaTemporal | null) => {
-      const r = await finalizarExperiencia(id, referencia);
+    async (id: string, referencia: ReferenciaTemporal | null, noAlbum = true) => {
+      const r = await finalizarExperiencia(id, referencia, noAlbum);
       // Relê: a data que vale pode ter sido a que a outra pessoa definiu primeiro.
       if (r.ok) await recarregar();
       else if (r.codigo === 'desejo_inexistente') alterar((atuais) => atuais.filter((e) => e.id !== id));
@@ -207,6 +213,7 @@ export function ExperienciasProvider({ children }: { children: ReactNode }) {
         definirDestaque,
         definirRoteiro,
         definirOrcamentoAtivo,
+        definirNoAlbum,
         definirOrcamento,
         registrarMemoria,
         finalizar,

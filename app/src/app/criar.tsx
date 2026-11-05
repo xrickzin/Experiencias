@@ -1,34 +1,26 @@
 import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
-import { useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Pressable, TextInput, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { useRef, useState } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CartaoDoOrcamento, CartaoDoRoteiro } from '@/components/cartoes-de-recurso';
 import {
   CamposDaExperiencia,
-  Categorias,
-  Duracao,
   duracaoDe,
   valoresVazios,
   type ValoresDaExperiencia,
 } from '@/components/campos-da-experiencia';
 import { Confirmacao } from '@/components/confirmacao';
-import { LinhaDeCaderno } from '@/components/linha-de-caderno';
+import { FormularioDoDesejo, type Detalhe } from '@/components/formulario-do-desejo';
 import { MensagemErro } from '@/components/mensagem-erro';
-import { ReferenciaTemporalCampo } from '@/components/referencia-temporal-campo';
+import { Opcoes } from '@/components/opcoes';
 import { Screen } from '@/components/screen';
 import { ScreenHeader, voltar } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily, Spacing } from '@/constants/theme';
-import { useCategorias } from '@/hooks/use-categorias';
 import { useExperiencias } from '@/hooks/use-experiencias';
-import { useTheme } from '@/hooks/use-theme';
-import { TAMANHOS } from '@/services/tamanho';
-import { descreverReferencia, lerReferencia, lerReferenciaDaMemoria } from '@/services/referencia-temporal';
+import { lerReferencia, lerReferenciaDaMemoria } from '@/services/referencia-temporal';
 import { validarTituloDoDesejo } from '@/services/validacao';
-
-type Detalhe = 'quando' | 'duracao' | 'onde' | 'tipo' | 'lembranca' | 'planejar';
 
 /**
  * Criar só existe em Desejo ou, para algo vivido antes do aplicativo, em Memória (ADR 008).
@@ -39,9 +31,7 @@ export default function Criar() {
   // `semente`: um começo de frase que vira o exemplo do campo (as sementes de Desejos).
   const { tipo, semente } = useLocalSearchParams<{ tipo?: string; semente?: string }>();
   const memoria = tipo === 'memoria';
-  const theme = useTheme();
   const { adicionarDesejo, registrarMemoria } = useExperiencias();
-  const { categorias } = useCategorias();
   const [valores, setValores] = useState<ValoresDaExperiencia>(valoresVazios);
   const [erroTitulo, setErroTitulo] = useState<string>();
   const [erroReferencia, setErroReferencia] = useState<string>();
@@ -49,8 +39,8 @@ export default function Criar() {
   const [enviando, setEnviando] = useState(false);
   const [aberto, setAberto] = useState<Detalhe | null>(null);
   const [descartando, setDescartando] = useState(false);
-  // Duração, lembrança e planejar ficam atrás de "mais um pouco": de começo, só três perguntas.
-  const [maisUmPouco, setMaisUmPouco] = useState(false);
+  // Memória registrada direto: no álbum (o padrão) ou em Nossos dias (ADR 045).
+  const [noAlbum, setNoAlbum] = useState<'sim' | 'nao'>('sim');
   // Roteiro e orçamento (ADR 040 e 041): valem junto com o desejo guardado.
   const [roteiroAtivo, setRoteiroAtivo] = useState(false);
   const [orcamentoAtivo, setOrcamentoAtivo] = useState(false);
@@ -76,7 +66,7 @@ export default function Criar() {
     setErroGeral(undefined);
     const campos = { ...valores, tamanho: duracaoDe(valores), referencia: referencia.referencia, roteiroAtivo: !memoria && roteiroAtivo, orcamentoAtivo: !memoria && orcamentoAtivo };
     if (memoria) {
-      const r = await registrarMemoria(campos);
+      const r = await registrarMemoria({ ...campos, noAlbum: noAlbum === 'sim' });
       if (r.ok) {
         AccessibilityInfo.announceForAccessibility('Memória guardada');
         // Abre a memória: é ali que entram fotos, impressão e momento favorito.
@@ -126,6 +116,18 @@ export default function Criar() {
             erroReferencia={erroReferencia}
             onChange={mudar}
           />
+          <View style={{ gap: Spacing.two }}>
+            <ThemedText type="smallBold">Isso entra no álbum?</ThemedText>
+            <Opcoes
+              rotulo="Isso entra no álbum?"
+              opcoes={[
+                { valor: 'sim', rotulo: 'Sim, no álbum' },
+                { valor: 'nao', rotulo: 'Nos nossos dias' },
+              ]}
+              atual={noAlbum}
+              onChange={setNoAlbum}
+            />
+          </View>
           {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
           <View style={{ gap: Spacing.two }}>
             <Button label="Guardar memória" loading={enviando} onPress={enviar} />
@@ -136,124 +138,48 @@ export default function Criar() {
     );
   }
 
-  const leitura = lerReferencia(valores.referencia);
-  // "sem pressa" só quando é mesmo sem data; com a data ainda pela metade, a linha fica sem resposta.
-  const quando = !leitura.ok ? '' : leitura.referencia.precisao === 'sem_data' ? 'sem pressa' : (descreverReferencia(leitura.referencia) ?? '');
-  const tipos = categorias.filter((c) => valores.categorias.includes(c.id)).map((c) => c.nome).join(', ');
   const planos = roteiroAtivo && orcamentoAtivo ? 'os dois' : roteiroAtivo ? 'roteiro' : orcamentoAtivo ? 'orçamento' : '';
   const duracao = duracaoDe(valores);
-  const quantoTempo = duracao ? (TAMANHOS.find((t) => t.valor === duracao)?.rotulo ?? '') : '';
-  const alternar = (d: Detalhe) => setAberto((atual) => (atual === d ? null : d));
 
   return (
     <Screen edges={['top', 'bottom']}>
       <ScreenHeader title="O que vocês sonham viver?" onBack={enviando ? undefined : voltar} />
 
       <View style={{ gap: Spacing.five, marginTop: -Spacing.three }}>
-        <View style={{ gap: Spacing.two }}>
-          <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
-            Uma frase basta. O resto pode esperar.
-          </ThemedText>
-          {/* A frase do desejo: grande, sem caixa, sublinhada pelo fio, como num caderno. */}
-          <TextInput
-            value={valores.titulo}
-            // Uma frase, sem quebras: o Enter fecha o teclado.
-            onChangeText={(titulo) => mudar({ ...valores, titulo: titulo.replace(/\n/g, ' ') })}
-            submitBehavior="blurAndSubmit"
-            returnKeyType="done"
-            placeholder={semente ? `${semente}…` : 'Ver o nascer do sol juntos…'}
-            placeholderTextColor={theme.textSecondary}
-            accessibilityLabel="Título, obrigatório"
-            autoFocus
-            multiline
-            maxLength={120}
-            // O exemplo em itálico (sugestão); o que o casal escreve, reto (é deles).
-            style={{
-              fontFamily: valores.titulo ? FontFamily.display : FontFamily.voz,
-              fontSize: 26,
-              lineHeight: 34,
-              color: theme.text,
-              paddingVertical: Spacing.two,
-              borderBottomWidth: 1.5,
-              borderBottomColor: erroTitulo ? theme.error : theme.accent,
-            }}
-          />
-          {erroTitulo ? <MensagemErro>{erroTitulo}</MensagemErro> : null}
-        </View>
-
-        {/* O resto, só se quiserem: perguntas leves que se abrem ao toque. */}
-        <View>
-          <Pergunta pergunta="Quando?" resposta={quando} aberta={aberto === 'quando'} onPress={() => alternar('quando')}>
-            <ReferenciaTemporalCampo
-              vozDoAlbum
-              campos={valores.referencia}
-              erro={erroReferencia}
-              onChange={(referencia) => mudar({ ...valores, referencia })}
-            />
-          </Pergunta>
-          <Pergunta pergunta="Onde?" resposta={valores.local.trim()} aberta={aberto === 'onde'} onPress={() => alternar('onde')}>
-            <LinhaDeCaderno
-              autoFocus
-              rotulo="Local"
-              exemplo="Uma cidade, um restaurante, a varanda de casa…"
-              valor={valores.local}
-              limite={120}
-              onChange={(local) => mudar({ ...valores, local })}
-            />
-          </Pergunta>
-          <Pergunta pergunta="Que tipo de desejo?" resposta={tipos} aberta={aberto === 'tipo'} onPress={() => alternar('tipo')}>
-            <Categorias semRotulo editavel={false} marcadas={valores.categorias} onChange={(ids) => mudar({ ...valores, categorias: ids })} />
-          </Pergunta>
-          {maisUmPouco ? null : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Mais um pouco"
-              onPress={() => setMaisUmPouco(true)}
-              style={({ pressed }) => ({ minHeight: 48, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-              <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz }}>
-                e, se quiserem, mais um pouco…
-              </ThemedText>
-            </Pressable>
-          )}
-          {maisUmPouco ? (
-            <>
-          <Pergunta pergunta="Por quanto tempo?" resposta={quantoTempo} aberta={aberto === 'duracao'} onPress={() => alternar('duracao')}>
-            <Duracao semRotulo valores={valores} onChange={(tamanho) => mudar({ ...valores, tamanho })} />
-          </Pergunta>
-          <Pergunta
-            pergunta="Algo para não esquecer?"
-            resposta={valores.observacoes.trim()}
-            aberta={aberto === 'lembranca'}
-            onPress={() => alternar('lembranca')}>
-            <LinhaDeCaderno
-              autoFocus
-              rotulo="Observações"
-              exemplo="Algo que não querem esquecer…"
-              valor={valores.observacoes}
-              limite={2000}
-              varias
-              onChange={(observacoes) => mudar({ ...valores, observacoes })}
-            />
-          </Pergunta>
-          <Pergunta pergunta="Querem já ir planejando?" resposta={planos} aberta={aberto === 'planejar'} onPress={() => alternar('planejar')}>
-            <CartaoDoRoteiro
-              compacto
-              ativo={roteiroAtivo}
-              tamanho={duracao}
-              onUsar={() => setRoteiroAtivo(true)}
-              onDesligar={() => setRoteiroAtivo(false)}
-            />
-            <CartaoDoOrcamento
-              compacto
-              ativo={orcamentoAtivo}
-              tamanho={duracao}
-              onUsar={() => setOrcamentoAtivo(true)}
-              onDesligar={() => setOrcamentoAtivo(false)}
-            />
-          </Pergunta>
-            </>
-          ) : null}
-        </View>
+        <ThemedText themeColor="textSecondary" style={{ fontFamily: FontFamily.voz, marginBottom: -Spacing.three }}>
+          Uma frase basta. O resto pode esperar.
+        </ThemedText>
+        <FormularioDoDesejo
+          valores={valores}
+          onChange={mudar}
+          erroTitulo={erroTitulo}
+          erroReferencia={erroReferencia}
+          aberto={aberto}
+          onAberto={setAberto}
+          exemplo={semente ? `${semente}…` : undefined}
+          autoFocus
+          planejar={{
+            resposta: planos,
+            conteudo: (
+              <>
+                <CartaoDoRoteiro
+                  compacto
+                  ativo={roteiroAtivo}
+                  tamanho={duracao}
+                  onUsar={() => setRoteiroAtivo(true)}
+                  onDesligar={() => setRoteiroAtivo(false)}
+                />
+                <CartaoDoOrcamento
+                  compacto
+                  ativo={orcamentoAtivo}
+                  tamanho={duracao}
+                  onUsar={() => setOrcamentoAtivo(true)}
+                  onDesligar={() => setOrcamentoAtivo(false)}
+                />
+              </>
+            ),
+          }}
+        />
 
         {erroGeral ? <MensagemErro>{erroGeral}</MensagemErro> : null}
         <Button label="Guardar no céu" loading={enviando} onPress={enviar} />
@@ -277,47 +203,3 @@ export default function Criar() {
   );
 }
 
-type PerguntaProps = { pergunta: string; resposta: string; aberta: boolean; onPress: () => void; children: ReactNode };
-
-/**
- * Uma pergunta em voz de álbum, numa linha só, com a resposta à direita quando já existe. Tocar abre
- * o controle ali mesmo; nada aqui parece obrigatório.
- */
-function Pergunta({ pergunta, resposta, aberta, onPress, children }: PerguntaProps) {
-  const theme = useTheme();
-  return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={resposta ? `${pergunta} ${resposta}` : pergunta}
-        accessibilityState={{ expanded: aberta }}
-        onPress={onPress}
-        style={({ pressed }) => ({
-          minHeight: 56,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: Spacing.three,
-          paddingVertical: Spacing.three,
-          opacity: pressed ? 0.7 : 1,
-        })}>
-        <ThemedText style={{ flexShrink: 1, fontFamily: FontFamily.voz, fontSize: 18 }}>{pergunta}</ThemedText>
-        <ThemedText
-          numberOfLines={1}
-          themeColor="textSecondary"
-          style={{ flex: 1, textAlign: 'right', fontFamily: FontFamily.voz, fontSize: 15 }}>
-          {resposta}
-        </ThemedText>
-        {/* Um "+" desenhado diz que a linha se abre (mais calmo quando já tem resposta); aberta, vira "−". */}
-        <Svg width={12} height={12} viewBox="0 0 12 12" accessible={false}>
-          <Path
-            d={aberta ? 'M2 6 H10' : 'M2 6 H10 M6 2 V10'}
-            stroke={resposta && !aberta ? theme.textSecondary : theme.accent}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-          />
-        </Svg>
-      </Pressable>
-      {aberta ? <View style={{ gap: Spacing.three, paddingBottom: Spacing.four }}>{children}</View> : null}
-    </View>
-  );
-}
