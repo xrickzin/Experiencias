@@ -86,7 +86,7 @@ Exemplo de crescimento: "Campos do Jordão" → + "Outubro" → + "12 a 15 de ou
 
 ## Finalização
 
-Vivendo → Memória é **manual** no MVP. Depois de finalizar, o casal pode completar a memória (impressões, momento favorito, fotos). Nada disso é obrigatório e não há quantidade mínima.
+Vivendo → Memória é **manual** no MVP. A confirmação pergunta se a memória entra no álbum ou em Nossos dias ([ADR 045](../decisions/045-album-and-our-days.md)). Depois de finalizar, o casal pode completar a memória (impressões, momento favorito, fotos). Nada disso é obrigatório e não há quantidade mínima.
 
 ## Cancelamento
 

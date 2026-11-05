@@ -67,6 +67,8 @@ A memória é a experiência que terminou, no estado final **Memória**. **Não 
 - A quantidade de registros não define a importância na história.
 - Ao abrir uma memória, o casal encontra o contexto acumulado, com a sensação de revisitar um momento, não de ler um relatório.
 
+- **O álbum e Nossos dias** ([ADR 045](../decisions/045-album-and-our-days.md)): toda memória está no álbum (o marcante) ou em Nossos dias (o simples, como um filme no fim de semana). Nossa História abre no álbum; Nossos dias é uma lista leve por mês. A escolha é feita ao finalizar ("Isso entra no álbum?") ou ao registrar uma memória direto (o álbum vem marcado), e qualquer um dos dois muda depois, na memória, mesmo com os detalhes travados. As duas são memória, com as mesmas regras. Em Nossos dias, cada um vê as impressões que a regra permite e escreve a sua ali mesmo, e dá para procurar por texto, tema e mês.
+
 > **Memória guarda. Nossa História conta.**
 
 ## Foto excluída

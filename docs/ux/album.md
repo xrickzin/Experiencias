@@ -11,6 +11,9 @@ Como Nossa História e a memória aberta se apresentam no app. Direção pedida 
 
 ## Lista de Nossa História
 
+No topo, "O álbum · Nossos dias" em palavras com fio; abre no álbum. Nossos dias é o caderninho + calendário, com as impressões no caderno e a busca por texto, tema e mês ([ADR 045](../decisions/045-album-and-our-days.md)).
+
+
 Cada mês é uma página: a memória mais recente como foto grande colada no papel, com o título e quando foi escritos no pé; as outras em duas colunas, com até três linhas de título. Do mais recente ao mais antigo, inclusive dentro do mês ([our-story.md](./our-story.md)).
 
 ## Memória aberta

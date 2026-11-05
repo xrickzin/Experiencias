@@ -54,6 +54,7 @@ Status: *Aceita* · *Substituída por NNN*. Uma decisão aceita só muda por um 
 | [040](./040-itinerary-tab.md) | Roteiro por dia: card próprio, guia, ordem por arrastar e links nos itens | [mvp.md](../product/mvp.md) |
 | [041](./041-budget-tab.md) | Orçamento estimado: card próprio e guia, como o roteiro | [mvp.md](../product/mvp.md) |
 | [044](./044-wish-sky-and-home.md) | Desejos como céu (busca, lista por horizonte, sementes) e o Início na voz do álbum | [wishes-and-planning.md](../ux/wishes-and-planning.md) |
+| [045](./045-album-and-our-days.md) | O álbum e Nossos dias: a memória marcante e a simples, escolhidas ao finalizar | [memory.md](../product/memory.md#nossa-história) |
 | [043](./043-profile-photo.md) | Foto de perfil de cada pessoa, discreta ao lado do nome | [navigation.md](../product/navigation.md) |
 | [042](./042-memory-details-locked.md) | Detalhes travados na memória; registros e impressões continuam livres | [memory.md](../product/memory.md#memória) |
 

@@ -32,6 +32,7 @@ Escopo atual. **Decisão:** [009](../decisions/009-mvp-scope-and-offline.md).
 - Impressão pessoal e momento favorito (uma foto) individuais, com a regra única de privacidade, protegida também no backend.
 - Foto de destaque escolhida manualmente.
 - Nossa História com agrupamento por mês/ano (mês de início, em períodos) e foto de destaque.
+- O álbum e Nossos dias: a escolha ao finalizar, editável na memória ([ADR 045](../decisions/045-album-and-our-days.md)).
 
 **Início, Desejos e Nossa História** como as três áreas de navegação.
 

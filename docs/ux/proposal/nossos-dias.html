@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laço · Nossos dias (caderninho + calendário)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1815; --el: #26221E; --sel: #322D28; --text: #F3EDE2; --sec: #B5ACA0;
+    --border: #3D3731; --outline: #7F766B; --accent: #E5636A; --accentSoft: #944548;
+    --papel: #2A2520; --pauta: #3A332C; --fita: rgba(243, 237, 226, .14);
+  }
+  .claro {
+    --bg: #FAF6EE; --el: #F2ECE0; --sel: #E8E0D1; --text: #2B2724; --sec: #6A6258;
+    --border: #D9CFBD; --outline: #8A806F; --accent: #B3242B; --accentSoft: #D38283;
+    --papel: #FFFCF5; --pauta: #E9E1D2; --fita: rgba(179, 36, 43, .10);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #0E0C0A; font-family: Figtree, sans-serif; color: var(--text); min-height: 100vh;
+    display: flex; gap: 40px; justify-content: center; align-items: flex-start; padding: 32px 16px; flex-wrap: wrap; }
+  body.claro { background: #D8D0C2; }
+  .voz { font-family: Fraunces, serif; font-style: italic; font-weight: 400; }
+  .titulo { font-family: Fraunces, serif; font-weight: 600; }
+
+  .telefone { width: 411px; max-width: 100%; height: 860px; background: var(--bg); border-radius: 36px; overflow: hidden;
+    position: relative; box-shadow: 0 30px 80px rgba(0,0,0,.5); border: 1px solid #000; display: flex; flex-direction: column; }
+  .rolagem { flex: 1; overflow-y: auto; padding: 28px 24px 120px; scrollbar-width: none; }
+  .rolagem::-webkit-scrollbar { display: none; }
+  .fiozinho { width: 32px; height: 2px; background: var(--accent); border-radius: 2px; margin-bottom: 16px; }
+  h1 { font-size: 32px; line-height: 40px; }
+  .descricao { color: var(--sec); margin-top: 4px; font-size: 15px; }
+
+  .lados { display: flex; align-items: center; gap: 8px; margin: 22px 0 26px; }
+  .lado { background: none; border: 0; color: var(--sec); font-size: 17px; padding: 10px 2px 2px; cursor: pointer; border-bottom: 1.5px solid transparent; }
+  .lado.ativo { color: var(--text); border-bottom-color: var(--accent); }
+  .ponto { color: var(--outline); }
+
+  .mes { margin-bottom: 40px; }
+  .cabeca-do-mes { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .cabeca-do-mes h2 { font-size: 22px; }
+  .contagem { color: var(--sec); font-size: 14px; }
+
+  /* O calendário: os dias com memória ganham um nó no fio, e o fio passa por eles. */
+  .calendario { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; margin-bottom: 18px; }
+  .semana { text-align: center; color: var(--outline); font-size: 11px; letter-spacing: .04em; padding-bottom: 6px; }
+  .dia { position: relative; z-index: 1; height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--outline); border-radius: 10px; }
+  .dia.vivido { color: var(--text); cursor: pointer; font-weight: 600; }
+  .dia.vivido::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 3px; }
+  .dia.hoje { outline: 1px dashed var(--outline); outline-offset: -4px; }
+  .dia.aceso { background: var(--sel); }
+  .fio { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: visible; }
+
+  /* O caderninho: papel pautado, a margem vermelha e a letra de quem escreveu. */
+  .caderno { position: relative; background-color: var(--papel); border-radius: 4px 14px 14px 4px; padding: 6px 16px 18px 70px;
+    background-image: repeating-linear-gradient(to bottom, transparent 0 51px, var(--pauta) 51px 52px);
+    background-position: 0 6px; box-shadow: 0 1px 0 var(--border), inset 4px 0 0 rgba(0,0,0,.06); }
+  .caderno::before { content: ""; position: absolute; top: 0; bottom: 0; left: 56px; width: 1px; background: var(--accentSoft); }
+  .linha { position: relative; min-height: 52px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 6px; transition: background .3s; }
+  .linha.acesa { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .quando { position: absolute; left: -64px; width: 50px; text-align: right; color: var(--sec); font-size: 13px; line-height: 1.1; }
+  .quando b { display: block; font-family: Fraunces, serif; font-style: normal; font-weight: 600; font-size: 17px; color: var(--text); }
+  .oque { flex: 1; font-size: 18px; line-height: 24px; }
+  .rabisco { width: 20px; height: 20px; flex: none; color: var(--sec); }
+  .polaroide { position: absolute; right: -6px; top: -10px; width: 58px; padding: 4px 4px 12px; background: #F6F1E7; border-radius: 2px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.35); transform: rotate(5deg); z-index: 2; }
+  .polaroide i { display: block; height: 46px; border-radius: 1px; }
+  .polaroide::before { content: ""; position: absolute; top: -6px; left: 18px; width: 24px; height: 11px; background: var(--fita); transform: rotate(-6deg); }
+  .linha.com-foto .oque { padding-right: 58px; }
+  .fim { color: var(--sec); text-align: center; margin-top: 8px; font-size: 15px; }
+
+  .barra { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; height: 84px; background: var(--bg); border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around; font-size: 12px; color: var(--sec); }
+  .barra .mais { width: 52px; height: 52px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 26px; margin-top: -20px; }
+  .barra .ativa { color: var(--text); font-weight: 600; }
+
+  .notas { max-width: 380px; color: #D8D0C2; font-size: 15px; line-height: 1.55; }
+  body.claro .notas { color: #2B2724; }
+  .notas h3 { font-family: Fraunces, serif; font-size: 22px; margin-bottom: 10px; }
+  .notas li { margin: 0 0 10px 18px; }
+  .notas button { margin-top: 12px; font: inherit; padding: 10px 16px; border-radius: 999px; border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { .linha { transition: none; } }
+</style>
+</head>
+<body>
+<div class="telefone">
+  <div class="rolagem" id="rolagem">
+    <div class="fiozinho"></div>
+    <h1 class="titulo">O álbum de vocês</h1>
+    <p class="descricao">Tudo o que já vivemos juntos.</p>
+    <div class="lados" role="radiogroup" aria-label="Qual lado da história">
+      <button class="lado voz" role="radio" aria-checked="false">O álbum</button>
+      <span class="ponto" aria-hidden="true">·</span>
+      <button class="lado voz ativo" role="radio" aria-checked="true">Nossos dias</button>
+    </div>
+    <div id="meses"></div>
+    <p class="fim voz">E os próximos dias ainda vão ser escritos.</p>
+  </div>
+  <nav class="barra" aria-hidden="true">
+    <span>Início</span><span>Desejos</span><span class="mais">+</span><span class="ativa">Nossa História</span>
+  </nav>
+</div>
+
+<aside class="notas">
+  <h3>Nossos dias: caderninho + calendário</h3>
+  <ul>
+    <li><b>Calendário no topo do mês:</b> os dias vividos ganham um nó vermelho, e o fio do Laço passa por eles, na ordem. O mês se lê de relance: "quanta coisa a gente fez".</li>
+    <li><b>Caderninho embaixo:</b> papel pautado com a margem vermelha. O dia fica na margem e o que fizeram, em letra de caderno (Fraunces itálico). Um rabisco discreto indica a categoria.</li>
+    <li><b>Foto só quando houver:</b> uma polaroide pequena presa com fita na ponta da linha. Sem foto grande: aqui é o simples.</li>
+    <li><b>Os dois conversam:</b> tocar num dia do calendário acende a linha; tocar numa linha acende o dia. No app, tocar de novo abre a memória.</li>
+    <li>Do mais recente ao mais antigo, como o álbum. Os dados são fictícios.</li>
+  </ul>
+  <button id="tema">Ver no tema claro</button>
+</aside>
+
+<script>
+const RABISCO = {
+  filme: '<rect x="3" y="5" width="14" height="11" rx="2"/><path d="M3 8h14M6 5v3M10 5v3M14 5v3"/>',
+  comida: '<path d="M6 3v6a2 2 0 0 0 4 0V3M8 9v8M14 3c-2 2-2 6 0 7v7"/>',
+  passeio: '<path d="M4 16c3-6 6-9 12-11M10 12l2 4M8 7a2 2 0 1 0 0-.1"/>',
+  casa: '<path d="M3 10l7-6 7 6v7H3z M8 17v-4h4v4"/>',
+  musica: '<path d="M8 15V5l9-2v10M8 15a2 2 0 1 1-2-2 2 2 0 0 1 2 2zM17 13a2 2 0 1 1-2-2 2 2 0 0 1 2 2z"/>',
+};
+const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const FOTOS = ['linear-gradient(135deg,#C9906B,#6E4B3A)', 'linear-gradient(135deg,#7FA0B8,#3E5466)', 'linear-gradient(135deg,#D7B66A,#8A6A2E)'];
+const HOJE = new Date(2026, 10, 3);
+
+// Dados fictícios: [ano, mês (0-11), dia, o quê, rabisco, índice da foto ou -1]
+const DIAS = [
+  [2026, 10, 1, 'Feira de domingo no parque', 'passeio', 2],
+  [2026, 9, 31, 'Pipoca e terror pro Halloween', 'filme', -1],
+  [2026, 9, 25, 'Almoço na casa da vó', 'comida', 0],
+  [2026, 9, 24, 'Duna 2 no sofá', 'filme', -1],
+  [2026, 9, 18, 'Caminhada no fim da tarde', 'passeio', -1],
+  [2026, 9, 12, 'Pizza feita em casa', 'casa', 1],
+  [2026, 9, 4, 'Show no barzinho da esquina', 'musica', -1],
+  [2026, 8, 27, 'Maratona de série até as 3h', 'filme', -1],
+  [2026, 8, 20, 'Café da manhã sem pressa', 'comida', -1],
+  [2026, 8, 13, 'Piquenique com a turma', 'passeio', 0],
+  [2026, 8, 6, 'Cozinhamos aquela receita nova', 'casa', -1],
+];
+
+const porMes = new Map();
+for (const d of DIAS) {
+  const k = `${d[0]}-${d[1]}`;
+  if (!porMes.has(k)) porMes.set(k, []);
+  porMes.get(k).push(d);
+}
+
+const meses = document.getElementById('meses');
+for (const [k, itens] of porMes) {
+  const [ano, mes] = k.split('-').map(Number);
+  const vividos = new Set(itens.map((d) => d[2]));
+  const sec = document.createElement('section');
+  sec.className = 'mes';
+  const n = itens.length;
+  sec.innerHTML = `
+    <div class="cabeca-do-mes">
+      <h2 class="titulo">${MESES[mes][0].toUpperCase() + MESES[mes].slice(1)} de ${ano}</h2>
+      <span class="contagem voz">${n === 1 ? '1 dia simples' : n + ' dias simples'}</span>
+    </div>
+    <div class="calendario" role="grid" aria-label="Dias vividos em ${MESES[mes]}"></div>
+    <div class="caderno"></div>`;
+  const cal = sec.querySelector('.calendario');
+  for (const s of ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']) cal.insertAdjacentHTML('beforeend', `<span class="semana">${s}</span>`);
+  const primeiro = new Date(ano, mes, 1).getDay();
+  const total = new Date(ano, mes + 1, 0).getDate();
+  for (let i = 0; i < primeiro; i++) cal.insertAdjacentHTML('beforeend', '<span></span>');
+  for (let dia = 1; dia <= total; dia++) {
+    const hoje = ano === HOJE.getFullYear() && mes === HOJE.getMonth() && dia === HOJE.getDate();
+    const v = vividos.has(dia);
+    cal.insertAdjacentHTML('beforeend',
+      `<span class="dia${v ? ' vivido' : ''}${hoje ? ' hoje' : ''}" data-dia="${k}-${dia}" ${v ? `role="button" tabindex="0" aria-label="${dia} de ${MESES[mes]}"` : ''}>${dia}</span>`);
+  }
+  const caderno = sec.querySelector('.caderno');
+  for (const d of itens) {
+    const semana = SEMANA[new Date(d[0], d[1], d[2]).getDay()];
+    caderno.insertAdjacentHTML('beforeend', `
+      <div class="linha${d[5] >= 0 ? ' com-foto' : ''}" data-dia="${k}-${d[2]}" tabindex="0" role="button" aria-label="${semana}, ${d[2]}: ${d[3]}">
+        <span class="quando voz"><b>${d[2]}</b>${semana}</span>
+        <span class="oque voz">${d[3]}</span>
+        <svg class="rabisco" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RABISCO[d[4]]}</svg>
+        ${d[5] >= 0 ? `<span class="polaroide" aria-hidden="true"><i style="background:${FOTOS[d[5]]}"></i></span>` : ''}
+      </div>`);
+  }
+  meses.appendChild(sec);
+}
+
+// O fio passa pelos dias vividos do mês, do primeiro ao último, numa curva suave.
+function desenharFios() {
+  document.querySelectorAll('.calendario').forEach((cal) => {
+    cal.querySelector('.fio')?.remove();
+    const caixa = cal.getBoundingClientRect();
+    const pontos = [...cal.querySelectorAll('.dia.vivido')].map((el) => {
+      const r = el.getBoundingClientRect();
+      return [r.left - caixa.left + r.width / 2, r.top - caixa.top + r.height / 2 + 9];
+    });
+    if (pontos.length < 2) return;
+    let d = `M${pontos[0][0]} ${pontos[0][1]}`;
+    for (let i = 1; i < pontos.length; i++) {
+      const [ax, ay] = pontos[i - 1], [bx, by] = pontos[i];
+      d += ` C${ax + (bx - ax) * 0.5} ${ay + 14}, ${ax + (bx - ax) * 0.5} ${by - 14}, ${bx} ${by}`;
+    }
+    cal.insertAdjacentHTML('beforeend',
+      `<svg class="fio" width="${caixa.width}" height="${caixa.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--accentSoft)" stroke-width="1.4" stroke-linecap="round"/></svg>`);
+  });
+}
+desenharFios();
+addEventListener('resize', desenharFios);
+document.fonts?.ready.then(desenharFios);
+
+// Dia e linha se acendem juntos.
+function acender(chave, rolar) {
+  document.querySelectorAll('.acesa, .aceso').forEach((el) => el.classList.remove('acesa', 'aceso'));
+  document.querySelectorAll(`[data-dia="${chave}"]`).forEach((el) => el.classList.add(el.classList.contains('linha') ? 'acesa' : 'aceso'));
+  if (rolar) document.querySelector(`.linha[data-dia="${chave}"]`)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+}
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('.dia.vivido, .linha');
+  if (el) acender(el.dataset.dia, el.classList.contains('dia'));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest?.('.dia.vivido, .linha');
+  if (el) { e.preventDefault(); acender(el.dataset.dia, el.classList.contains('dia')); }
+});
+
+const botao = document.getElementById('tema');
+botao.addEventListener('click', () => {
+  document.body.classList.toggle('claro');
+  botao.textContent = document.body.classList.contains('claro') ? 'Ver no tema escuro' : 'Ver no tema claro';
+  desenharFios();
+});
+</script>
+</body>
+</html>
