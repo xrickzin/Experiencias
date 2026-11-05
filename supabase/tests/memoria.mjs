@@ -138,6 +138,14 @@ r = await ana
   .select('id, estado');
 const direta = r.data?.[0];
 confere('memória direta com título e mês', direta?.estado === 'memoria', j(r));
+// Registrar direto já nos nossos dias (ADR 045).
+r = await ana
+  .from('experiencias')
+  .insert({ titulo: 'Pizza em casa', estado: 'memoria', referencia_precisao: 'data', referencia_inicio: '2026-10-05', no_album: false })
+  .select('id, no_album');
+const simples = r.data?.[0];
+confere('memória direta já nos nossos dias', simples?.no_album === false, j(r));
+if (simples) await ana.from('experiencias').delete().eq('id', simples.id);
 
 r = await ana.from('experiencias').insert({ titulo: 'Atalho', estado: 'vivendo' }).select('id');
 confere('não se cria direto em Vivendo', Boolean(r.error), j(r));
@@ -227,6 +235,12 @@ r = await bia.from('experiencias').update({ foto_destaque_id: fTravada.id }).eq(
 confere('a foto de destaque continua livre', r.data?.[0]?.foto_destaque_id === fTravada.id, j(r));
 r = await bia.from('registros').update({ legenda: 'Que noite' }).eq('id', fTravada.id).select('legenda');
 confere('a legenda também', r.data?.[0]?.legenda === 'Que noite', j(r));
+
+// O álbum e Nossos dias (ADR 045): a escolha muda na memória, mesmo com os detalhes travados.
+r = await bia.from('experiencias').update({ no_album: false }).eq('id', travada.id).select('no_album');
+confere('na memória, sair do álbum é livre', r.data?.[0]?.no_album === false, j(r));
+r = await ana.from('experiencias').update({ no_album: true }).eq('id', travada.id).select('no_album');
+confere('e voltar para o álbum também', r.data?.[0]?.no_album === true, j(r));
 
 r = await bia.from('links').insert({ experiencia_id: travada.id, titulo: 'Novo', url: 'https://exemplo.test/2' }).select('id');
 confere('nenhum link novo na memória', Boolean(r.error), j(r));
